@@ -80,4 +80,12 @@ describe("k8s-manifests", () => {
     expect(yaml).toContain("LIBREBASE_SCHEMA_NAMESPACE");
     expect(yaml).toContain('librebase.io/project: "proj_xyz"');
   });
+
+  it("includes runtimeClassName when containerRuntime is licontainer", () => {
+    const yaml = buildDedicatedManifests({
+      instance: baseInstance,
+      containerRuntime: "licontainer",
+    });
+    expect(yaml).toContain("runtimeClassName: licontainer");
+  });
 });

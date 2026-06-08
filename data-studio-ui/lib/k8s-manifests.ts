@@ -3,6 +3,10 @@ import type { Instance, Project } from "./types";
 /** Default dev image for local clusters (kind/minikube). Override with LIBREBASE_K8S_IMAGE. */
 export const DEFAULT_DEV_RUNTIME_IMAGE = "librebase/lidb-runtime:dev";
 
+/** Production OCI+squashfs image on licontainer (Phase 6). Override with LIBREBASE_K8S_IMAGE. */
+export const DEFAULT_OCI_SQUASHFS_IMAGE =
+  "ghcr.io/librebase-official/lidb-runtime:oci-squashfs";
+
 export const LIDB_RUNTIME_IMAGE =
   process.env.LIBREBASE_K8S_IMAGE ?? DEFAULT_DEV_RUNTIME_IMAGE;
 
@@ -54,6 +58,8 @@ export interface DedicatedManifestInput {
   image?: string;
   apiPort?: number;
   postgresPort?: number;
+  /** When "licontainer", adds runtimeClassName to pod spec. */
+  containerRuntime?: "containerd" | "licontainer";
 }
 
 export function buildDedicatedManifests(input: DedicatedManifestInput): string {
@@ -66,6 +72,10 @@ export function buildDedicatedManifests(input: DedicatedManifestInput): string {
   const labelLines = Object.entries(labels)
     .map(([k, v]) => `    ${k}: "${v}"`)
     .join("\n");
+  const runtimeClassLine =
+    input.containerRuntime === "licontainer"
+      ? "      runtimeClassName: licontainer\n"
+      : "";
 
   return `---
 apiVersion: v1
@@ -134,7 +144,7 @@ spec:
       labels:
 ${labelLines}
     spec:
-      containers:
+${runtimeClassLine}      containers:
         - name: lis-lidb
           image: ${image}
           imagePullPolicy: IfNotPresent

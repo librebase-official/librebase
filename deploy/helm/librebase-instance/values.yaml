@@ -10,6 +10,9 @@ image:
 
 runtimeMode: dev
 
+# containerd (default) or licontainer (RuntimeClass licontainer)
+containerRuntime: containerd
+
 ports:
   api: 54320
   postgres: 54322

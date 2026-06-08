@@ -16,6 +16,9 @@ spec:
       labels:
         {{- include "librebase.labels" . | nindent 8 }}
     spec:
+      {{- if eq .Values.containerRuntime "licontainer" }}
+      runtimeClassName: licontainer
+      {{- end }}
       containers:
         - name: lis-lidb
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"

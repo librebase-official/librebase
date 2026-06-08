@@ -7,7 +7,7 @@ import {
   dedicatedNamespace,
   sharedNamespace,
 } from "./k8s-manifests";
-import { getKubeconfigPath } from "./runtime-env";
+import { getKubeconfigPath, getK8sContainerRuntime } from "./runtime-env";
 import type { Instance, InstanceStatus, Project } from "./types";
 
 export interface K8sProvisionResult {
@@ -108,7 +108,10 @@ export function provisionDedicatedInstance(instance: Instance): K8sProvisionResu
   const yaml =
     instance.deploymentMode === "shared"
       ? buildSharedInstanceManifests({ instance })
-      : buildDedicatedManifests({ instance });
+      : buildDedicatedManifests({
+          instance,
+          containerRuntime: getK8sContainerRuntime(),
+        });
 
   const result = applyManifests(yaml);
   if (result.ok) {

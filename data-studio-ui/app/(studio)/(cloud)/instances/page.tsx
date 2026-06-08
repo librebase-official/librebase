@@ -4,23 +4,25 @@ import { getInstanceStatus } from "@/lib/k8s-provisioner";
 import { listInstances } from "@/lib/instances-store";
 import { listProjectsByInstance } from "@/lib/projects-store";
 import { probeInstanceDb } from "@/lib/project-runtime";
-import { getLibrebaseRuntime } from "@/lib/runtime-env";
+import { getLibrebaseRuntime, getK8sContainerRuntime, runtimeBackendLabel } from "@/lib/runtime-env";
 
 export const dynamic = "force-dynamic";
 
 export default async function InstancesPage() {
   const instances = listInstances("default");
   const defaultRuntime = getLibrebaseRuntime();
+  const k8sRuntime = getK8sContainerRuntime();
 
   const rows = await Promise.all(
     instances.map(async (instance) => {
       const probe = await probeInstanceDb(instance);
       const linked = listProjectsByInstance(instance.id);
+      const backend = runtimeBackendLabel(instance.runtimeTarget, k8sRuntime);
       const k8s =
         instance.runtimeTarget === "kubernetes"
           ? getInstanceStatus(instance.id)
           : undefined;
-      return { instance, probe, linked, k8s };
+      return { instance, probe, linked, k8s, backend };
     }),
   );
 
@@ -43,11 +45,11 @@ export default async function InstancesPage() {
         </div>
       ) : (
         <div className="card-grid">
-          {rows.map(({ instance, probe, linked, k8s }) => (
+          {rows.map(({ instance, probe, linked, k8s, backend }) => (
             <article key={instance.id} className="card">
               <h2>{instance.name}</h2>
               <p className="muted" style={{ fontSize: "0.85rem" }}>
-                {instance.deploymentMode} · {instance.runtimeTarget} · API {instance.ports.api} · PG{" "}
+                {instance.deploymentMode} · backend {backend} · API {instance.ports.api} · PG{" "}
                 {instance.ports.postgres}
               </p>
               {instance.runtimeTarget === "kubernetes" && (

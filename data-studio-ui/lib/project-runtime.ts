@@ -6,6 +6,10 @@ import {
   getK8sServiceUrl,
   provisionDedicatedInstance,
 } from "./k8s-provisioner";
+import {
+  getLicontainerInstanceStatus,
+  provisionLicontainerInstance,
+} from "./licontainer-provisioner";
 import { DEFAULT_DEV_RUNTIME_IMAGE, LIDB_RUNTIME_IMAGE } from "./k8s-manifests";
 import { getInstance, updateInstanceStatus } from "./instances-store";
 import { getProject } from "./projects-store";
@@ -138,9 +142,25 @@ async function probeK8sInstance(instance: Instance): Promise<DbProbeResult> {
   };
 }
 
+async function probeLicontainerInstance(instance: Instance): Promise<DbProbeResult> {
+  const lc = getLicontainerInstanceStatus(instance.id);
+  const reachable = lc.status === "running" && !lc.degraded;
+  return {
+    reachable,
+    status: lc.status,
+    degraded: lc.degraded,
+    message: lc.message,
+    runtimeMode: inferK8sRuntimeMode(),
+  };
+}
+
 export async function probeInstanceDb(instance: Instance): Promise<DbProbeResult> {
   if (instance.runtimeTarget === "kubernetes") {
     return probeK8sInstance(instance);
+  }
+
+  if (instance.runtimeTarget === "licontainer") {
+    return probeLicontainerInstance(instance);
   }
 
   const engine = runEngine("status", instance);
@@ -249,6 +269,16 @@ export async function launchProjectDb(projectId: string): Promise<{
     };
   }
 
+  if (instance.runtimeTarget === "licontainer") {
+    const provision = provisionLicontainerInstance(instance);
+    const probe = await probeInstanceDb(instance);
+    return {
+      ok: provision.ok && probe.reachable,
+      probe,
+      launchMessage: provision.message,
+    };
+  }
+
   const engine = runEngine("ensure", instance);
   const launchMessage = String(
     engine.payload.message ??
@@ -289,6 +319,16 @@ export async function launchInstanceDb(instanceId: string): Promise<{
 
   if (instance.runtimeTarget === "kubernetes") {
     const provision = provisionDedicatedInstance(instance);
+    const probe = await probeInstanceDb(instance);
+    return {
+      ok: provision.ok && probe.reachable,
+      probe,
+      launchMessage: provision.message,
+    };
+  }
+
+  if (instance.runtimeTarget === "licontainer") {
+    const provision = provisionLicontainerInstance(instance);
     const probe = await probeInstanceDb(instance);
     return {
       ok: provision.ok && probe.reachable,

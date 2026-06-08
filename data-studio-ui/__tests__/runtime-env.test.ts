@@ -15,6 +15,11 @@ describe("runtime-env", () => {
     expect(getLibrebaseRuntime()).toBe("kubernetes");
   });
 
+  it("reads licontainer from env", () => {
+    process.env.LIBREBASE_RUNTIME = "licontainer";
+    expect(getLibrebaseRuntime()).toBe("licontainer");
+  });
+
   it("resolveRuntimeTarget prefers explicit override", () => {
     process.env.LIBREBASE_RUNTIME = "kubernetes";
     expect(resolveRuntimeTarget("local")).toBe("local");
