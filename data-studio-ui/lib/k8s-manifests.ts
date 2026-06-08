@@ -1,8 +1,10 @@
 import type { Instance, Project } from "./types";
 
-/** Placeholder image until a published lidb runtime exists. */
+/** Default dev image for local clusters (kind/minikube). Override with LIBREBASE_K8S_IMAGE. */
+export const DEFAULT_DEV_RUNTIME_IMAGE = "librebase/lidb-runtime:dev";
+
 export const LIDB_RUNTIME_IMAGE =
-  process.env.LIBREBASE_K8S_IMAGE ?? "ghcr.io/librebase-official/lidb-runtime:stub";
+  process.env.LIBREBASE_K8S_IMAGE ?? DEFAULT_DEV_RUNTIME_IMAGE;
 
 const DEFAULT_API_PORT = 54320;
 const DEFAULT_POSTGRES_PORT = 54322;
@@ -96,6 +98,7 @@ metadata:
 ${labelLines}
 data:
   LI_DATA_DIR: "/data"
+  LIDB_RUNTIME_MODE: "dev"
   LIBREBASE_API_PORT: "${apiPort}"
   LIBREBASE_PG_PORT: "${postgresPort}"
   LIBREBASE_INSTANCE_ID: "${instance.id}"
@@ -269,6 +272,7 @@ metadata:
 ${labelLines}
 data:
   LI_DATA_DIR: "/data"
+  LIDB_RUNTIME_MODE: "dev"
   LIBREBASE_API_PORT: "${apiPort}"
   LIBREBASE_PG_PORT: "${postgresPort}"
   LIBREBASE_INSTANCE_ID: "${instance.id}"

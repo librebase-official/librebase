@@ -29,6 +29,7 @@ metadata:
   namespace: librebase-inst-example
 data:
   LI_DATA_DIR: "/data"
+  LIDB_RUNTIME_MODE: "dev"
   LIBREBASE_API_PORT: "54320"
   LIBREBASE_PG_PORT: "54322"
   LIBREBASE_INSTANCE_ID: "inst_example"
@@ -64,7 +65,7 @@ spec:
     spec:
       containers:
         - name: lis-lidb
-          image: ghcr.io/librebase-official/lidb-runtime:stub
+          image: librebase/lidb-runtime:dev
           imagePullPolicy: IfNotPresent
           ports:
             - name: api

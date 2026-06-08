@@ -61,6 +61,16 @@ export default async function InstancesPage() {
                 <span className={`badge ${probe.status}`}>
                   {probe.reachable ? "Running" : probe.status}
                 </span>
+                {probe.runtimeMode === "dev" && (
+                  <span className="badge" style={{ marginLeft: "0.5rem" }}>
+                    dev runtime
+                  </span>
+                )}
+                {probe.runtimeMode === "production" && (
+                  <span className="badge" style={{ marginLeft: "0.5rem" }}>
+                    production
+                  </span>
+                )}
                 {probe.degraded && (
                   <span className="badge" style={{ marginLeft: "0.5rem" }}>
                     degraded

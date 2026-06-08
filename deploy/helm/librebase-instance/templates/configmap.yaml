@@ -7,6 +7,7 @@ metadata:
     {{- include "librebase.labels" . | nindent 4 }}
 data:
   LI_DATA_DIR: "/data"
+  LIDB_RUNTIME_MODE: {{ .Values.runtimeMode | quote }}
   LIBREBASE_API_PORT: {{ .Values.ports.api | quote }}
   LIBREBASE_PG_PORT: {{ .Values.ports.postgres | quote }}
   LIBREBASE_INSTANCE_ID: {{ .Values.instanceId | quote }}

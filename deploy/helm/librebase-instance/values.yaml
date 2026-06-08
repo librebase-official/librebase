@@ -4,9 +4,11 @@ deploymentMode: dedicated
 projectId: ""
 
 image:
-  repository: ghcr.io/librebase-official/lidb-runtime
-  tag: stub
+  repository: librebase/lidb-runtime
+  tag: dev
   pullPolicy: IfNotPresent
+
+runtimeMode: dev
 
 ports:
   api: 54320

@@ -51,7 +51,9 @@ Cloud workflow routes:
 | `/projects/new` | Create project (new instance vs existing) |
 | `/projects/:id` | Project home + launch database |
 
-Optional: set `LIDB_ROOT` to a lidb checkout and ensure `lis` is on `PATH` for non-degraded launch via `scripts/lidb_engine.py`.
+**Local runtime without lidb:** Studio defaults to `LIDB_RUNTIME_MODE=dev`, which starts `scripts/dev_runtime_stub.py` via `scripts/lidb_engine.py` when `LIDB_ROOT` is unset.
+
+**Production local runtime:** set `LIDB_ROOT` to a lidb checkout and ensure `lis` is on `PATH`.
 
 ## Kubernetes
 
@@ -64,12 +66,21 @@ $env:KUBECONFIG = "C:\path\to\kubeconfig"
 
 | Path | Purpose |
 |------|---------|
+| `deploy/docker/lidb-runtime/` | Dev runtime Docker image (`librebase/lidb-runtime:dev`) |
 | `deploy/kubernetes/` | Reference manifests (dedicated + shared) |
 | `deploy/helm/librebase-instance/` | Helm chart for manual installs |
 | `docs/kubernetes.md` | Architecture, kind/minikube steps, Studio flow |
 | `data-studio-ui/lib/k8s-provisioner.ts` | Provisioner used by API and launch routes |
 
-Create a project with **Deploy to Kubernetes** on `/projects/new`, or set `LIBREBASE_RUNTIME=kubernetes` globally. Health stays honest when the cluster or runtime image is unavailable.
+Build the runtime image, load into kind/minikube, then create a project with **Deploy to Kubernetes** on `/projects/new` (or set `LIBREBASE_RUNTIME=kubernetes` globally):
+
+```powershell
+.\deploy\docker\lidb-runtime\build.ps1
+kind load docker-image librebase/lidb-runtime:dev --name librebase
+$env:LIBREBASE_K8S_IMAGE = "librebase/lidb-runtime:dev"
+```
+
+Health stays honest: green only when probes see real open ports.
 
 ## Testing
 
@@ -84,7 +95,12 @@ npm run test:coverage
 | Layer | Tool | Focus |
 |-------|------|-------|
 | Studio stores / bridge | Vitest | `instances-store`, `projects-store`, dedicated vs shared |
-| lidb embed | pytest (planned) | `lidb_engine.py` lifecycle |
+| lidb embed / dev runtime | Python unittest | `lidb_engine.py` lifecycle, port probes |
 | E2E | Playwright (planned) | create flow, Instances view, honest health UI |
 
-GitHub Actions (`.github/workflows/test.yml`) runs on push and PR to `main`: `npm ci`, `npm test`, optional coverage report, and `npm run build` in `data-studio-ui` (Node 20).
+```powershell
+cd data-studio-ui && npm test
+python -m unittest discover -s tests -p "test_*.py"
+```
+
+GitHub Actions (`.github/workflows/test.yml`) runs on push and PR to `main`: Vitest + Python tests + `npm run build` in `data-studio-ui` (Node 20).

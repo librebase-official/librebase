@@ -64,9 +64,12 @@ export interface CreateInstanceInput {
   runtime?: RuntimeTarget;
 }
 
+export type RuntimeMode = "dev" | "production" | "unavailable";
+
 export interface DbProbeResult {
   reachable: boolean;
   status: InstanceStatus;
   degraded: boolean;
   message: string;
+  runtimeMode?: RuntimeMode;
 }

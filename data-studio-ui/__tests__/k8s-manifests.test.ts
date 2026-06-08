@@ -58,7 +58,8 @@ describe("k8s-manifests", () => {
     expect(yaml).toContain("lidb_engine.py");
     expect(yaml).toContain("kind: Service");
     expect(yaml).toContain('librebase.io/deployment-mode: "dedicated"');
-    expect(yaml).toContain("ghcr.io/librebase-official/lidb-runtime:stub");
+    expect(yaml).toContain("librebase/lidb-runtime:dev");
+    expect(yaml).toContain('LIDB_RUNTIME_MODE: "dev"');
   });
 
   it("generates shared instance base manifests", () => {

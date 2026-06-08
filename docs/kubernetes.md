@@ -9,7 +9,7 @@ Librebase Studio can provision instance runtimes on Kubernetes instead of local 
 | `kubectl` on PATH | Apply and status queries |
 | `KUBECONFIG` (or default kube context) | Cluster credentials |
 | Cluster with default StorageClass | PVC for `LI_DATA_DIR` |
-| Runtime image (see below) | `lis` + lidb in pod |
+| Runtime image (see below) | Dev stub or production `lis` + lidb in pod |
 
 Set Studio runtime target:
 
@@ -49,17 +49,31 @@ flowchart LR
 
 - **Liveness:** exec `lidb_engine.py status` (same JSON contract as local `scripts/lidb_engine.py`)
 - **Readiness:** TCP on API port
+- Status JSON includes `running`, `api_reachable`, `postgres_reachable`, and `runtime_mode` (`dev` | `production` | `unavailable`)
+- `running: true` only when both API and postgres-wire ports accept TCP connections
 - If `kubectl cluster-info` fails → `degraded: true`, status `stopped` — Studio never shows fake green
 
 ## Container image
 
-Placeholder until a published build exists:
+Build the dev runtime image from the repo root:
 
-```
-ghcr.io/librebase-official/lidb-runtime:stub
+```powershell
+.\deploy\docker\lidb-runtime\build.ps1
 ```
 
-Override: `LIBREBASE_K8S_IMAGE`. The image must ship `lidb_engine.py` at `/opt/librebase/scripts/lidb_engine.py`.
+```bash
+./deploy/docker/lidb-runtime/build.sh
+```
+
+Default tag: **`librebase/lidb-runtime:dev`**
+
+Override in Studio: `LIBREBASE_K8S_IMAGE`. The image ships:
+
+- `lidb_engine.py` and `dev_runtime_stub.py` at `/opt/librebase/scripts/`
+- `entrypoint.sh` — starts `lis db start` when `LIDB_ROOT` + `lis` exist, otherwise dev stub when `LIDB_RUNTIME_MODE=dev`
+- Writable `/data` mount (`LI_DATA_DIR`)
+
+Production image (future): same layout with real `lis` + lidb embed and `LIDB_RUNTIME_MODE=production`.
 
 ## Studio integration
 
@@ -68,8 +82,10 @@ Override: `LIBREBASE_K8S_IMAGE`. The image must ship `lidb_engine.py` at `/opt/l
 | Create project + "Deploy to Kubernetes" | Creates instance with `runtimeTarget: kubernetes`, calls `provisionDedicatedInstance` |
 | Shared project on K8s instance | `attachSharedProject` applies project ConfigMap |
 | Launch instance/project | Re-applies manifests, then `getInstanceStatus` |
-| `/instances` UI | Shows `runtimeTarget`, namespace, pod phase |
+| `/instances` UI | Shows `runtimeTarget`, namespace, pod phase, **dev runtime** vs **production** badge |
 | `GET /api/instances/:id/status` | Local or K8s probe |
+
+Local launch without `LIDB_ROOT` defaults to `LIDB_RUNTIME_MODE=dev` via `project-runtime.ts`.
 
 ## Entitlements
 
@@ -92,18 +108,40 @@ helm install my-instance deploy/helm/librebase-instance `
 
 ```powershell
 kind create cluster --name librebase
+
+# Build and load the dev runtime image into kind
+.\deploy\docker\lidb-runtime\build.ps1
+kind load docker-image librebase/lidb-runtime:dev --name librebase
+
 $env:KUBECONFIG = "$env:USERPROFILE\.kube\config"
 $env:LIBREBASE_RUNTIME = "kubernetes"
+$env:LIBREBASE_K8S_IMAGE = "librebase/lidb-runtime:dev"
 cd data-studio-ui
 npm run dev
 ```
 
-Create a project with **Deploy to Kubernetes** checked. Studio applies manifests; status stays degraded until a real runtime image is available.
+Create a project with **Deploy to Kubernetes** checked. Studio applies manifests; the pod should reach **Running** and **Ready** once the dev runtime binds API (54320) and postgres (54322) ports.
+
+### Verify green health on kind
+
+```powershell
+# After provisioning an instance in Studio:
+kubectl get pods -A -l app.kubernetes.io/name=librebase-instance
+kubectl get pods -n librebase-inst-<instanceId> -o wide
+
+# Pod should show 1/1 Ready; liveness uses lidb_engine.py status
+kubectl exec -n librebase-inst-<instanceId> deploy/librebase-runtime -- \
+  python3 /opt/librebase/scripts/lidb_engine.py status --data-dir /data --api-port 54320 --postgres-port 54322
+
+# Expect JSON with "status":"running", "running":true, "runtime_mode":"dev"
+```
 
 ### minikube
 
 ```powershell
 minikube start
+.\deploy\docker\lidb-runtime\build.ps1
+minikube image load librebase/lidb-runtime:dev
 $env:KUBECONFIG = "$env:USERPROFILE\.kube\config"
 # same Studio steps as kind
 ```
@@ -112,10 +150,11 @@ Optional: `kubectl port-forward -n librebase-inst-<id> svc/librebase-api 54320:5
 
 ## CI
 
-Vitest mocks `kubectl` — no cluster in GitHub Actions. Optional kind/minikube job can be added later; not required for merge.
+Vitest mocks `kubectl` — no cluster in GitHub Actions. Python `unittest` covers `lidb_engine.py` dev mode and port probes without Docker. Optional kind job can be added later.
 
 ## Related
 
 - `docs/architecture-instances.md` — instance/project model
 - `deploy/kubernetes/README.md` — manifest reference
+- `deploy/docker/lidb-runtime/README.md` — image build
 - `data-studio-ui/lib/k8s-provisioner.ts` — provisioner API

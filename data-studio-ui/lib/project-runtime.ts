@@ -6,9 +6,10 @@ import {
   getK8sServiceUrl,
   provisionDedicatedInstance,
 } from "./k8s-provisioner";
+import { DEFAULT_DEV_RUNTIME_IMAGE, LIDB_RUNTIME_IMAGE } from "./k8s-manifests";
 import { getInstance, updateInstanceStatus } from "./instances-store";
 import { getProject } from "./projects-store";
-import type { DbProbeResult, Instance, Project } from "./types";
+import type { DbProbeResult, Instance, Project, RuntimeMode } from "./types";
 
 const REPO_ROOT = path.resolve(process.cwd(), "..");
 const LIDB_ENGINE = path.join(REPO_ROOT, "scripts", "lidb_engine.py");
@@ -25,6 +26,35 @@ function isPortOpen(host: string, port: number, timeoutMs = 500): Promise<boolea
     socket.on("timeout", () => done(false));
     socket.on("error", () => done(false));
   });
+}
+
+function engineEnv(instance: Instance): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    LI_DATA_DIR: instance.dataDir,
+  };
+  if (!process.env.LIDB_RUNTIME_MODE && !process.env.LIDB_ROOT) {
+    env.LIDB_RUNTIME_MODE = "dev";
+  }
+  return env;
+}
+
+function parseRuntimeMode(value: unknown): RuntimeMode | undefined {
+  if (value === "dev" || value === "production" || value === "unavailable") {
+    return value;
+  }
+  return undefined;
+}
+
+function inferK8sRuntimeMode(): RuntimeMode {
+  const image = LIDB_RUNTIME_IMAGE;
+  if (image === DEFAULT_DEV_RUNTIME_IMAGE || image.endsWith(":dev")) {
+    return "dev";
+  }
+  if (image.includes(":stub")) {
+    return "unavailable";
+  }
+  return "production";
 }
 
 function runEngine(
@@ -46,10 +76,7 @@ function runEngine(
     ],
     {
       encoding: "utf8",
-      env: {
-        ...process.env,
-        LI_DATA_DIR: instance.dataDir,
-      },
+      env: engineEnv(instance),
     },
   );
 
@@ -107,6 +134,7 @@ async function probeK8sInstance(instance: Instance): Promise<DbProbeResult> {
     status: k8s.status,
     degraded: k8s.degraded,
     message: k8s.message,
+    runtimeMode: inferK8sRuntimeMode(),
   };
 }
 
@@ -118,6 +146,7 @@ export async function probeInstanceDb(instance: Instance): Promise<DbProbeResult
   const engine = runEngine("status", instance);
   const engineStatus = String(engine.payload.status ?? "unknown");
   const degraded = Boolean(engine.payload.degraded);
+  const runtimeMode = parseRuntimeMode(engine.payload.runtime_mode);
   const message = String(
     engine.payload.message ??
       engine.stderr ??
@@ -125,25 +154,28 @@ export async function probeInstanceDb(instance: Instance): Promise<DbProbeResult
   );
 
   const portOpen = await isPortOpen("127.0.0.1", instance.ports.api);
+  const postgresOpen = await isPortOpen("127.0.0.1", instance.ports.postgres);
+  const portsUp = portOpen && postgresOpen;
 
   let status = instance.status;
-  if (engine.ok && engineStatus === "running" && portOpen) {
+  if (engine.ok && engineStatus === "running" && portsUp) {
     status = "running";
   } else if (engineStatus === "starting") {
     status = "starting";
-  } else if (degraded || !engine.ok) {
+  } else if ((degraded && !portsUp) || !engine.ok) {
     status = "stopped";
-  } else if (!portOpen) {
+  } else if (!portsUp) {
     status = "stopped";
   }
 
   updateInstanceStatus(instance.id, status);
 
   return {
-    reachable: portOpen && status === "running",
+    reachable: portsUp && status === "running",
     status,
     degraded: degraded || !engine.ok,
     message,
+    runtimeMode,
   };
 }
 
