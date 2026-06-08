@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Next.js
+data-studio-ui/.next/
+data-studio-ui/out/
+
+# Build / cache
+*.tsbuildinfo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env (never commit secrets)
+.env
+.env.*
+
+# Test artifacts
+coverage/
+
+# Studio local persistence (user machine)
+# JSON stores live under ~/.local/share/librebase/studio — not in repo

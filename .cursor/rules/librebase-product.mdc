@@ -1,0 +1,56 @@
+---
+description: Librebase product context — monetized lidb and Studio, repo layout, and build boundaries
+alwaysApply: true
+---
+
+# Librebase product context
+
+Librebase is the branded open data platform (Supabase-shaped) powered by **lidb**. **Librebase Studio** is the web console for org/project/database workflows. This repository is the canonical home for platform code, Studio UI, docs, and agent rules.
+
+## Monetization (product intent)
+
+**lidb** and **Librebase Studio** are paid/commercial features in this product. Treat them as monetized even though billing gates are not implemented yet.
+
+When adding features or integrations:
+- Do not expose paid capabilities without entitlement checks (plan, license, or auth).
+- Prefer gating at Studio UI entry points and API/bridge layers before database launch or catalog access.
+- Keep the open `lis` supervisor/registry core separable from the commercial Librebase layer where possible.
+
+## Instance & project model
+
+Librebase supports **two deployment patterns** (both required):
+
+| Pattern | Mapping | Use when |
+|---------|---------|----------|
+| **Dedicated** (Supabase-like) | 1 instance → 1 project | Strong isolation, per-customer stacks, cloud default |
+| **Shared** | 1 instance → N projects | Cost-efficient dev/staging, team sandboxes on one VM/container |
+
+**Hierarchy:** `Organization` → `Instance` (runtime: container or VM running `lis` + lidb) → `Project` (logical workspace: schema namespace, ports/keys, Studio scope).
+
+- **Instance** = launchable runtime unit (`LI_DATA_DIR`, ports, health). Cloud: provision container/VM; local: `lis db start` or per-project compose (planned).
+- **Project** = user-facing unit in Studio (tables, SQL, settings). Always belongs to one org; references zero or one instance.
+- **Dedicated:** creating a project provisions a new instance (today: unique `dataDir` + port block per project in `projects-store`).
+- **Shared:** user picks an existing instance; new project adds a namespace/schema on that runtime without new container/VM.
+
+UI: primary nav stays **Org → Projects** (Supabase parity). **Instances** is a secondary/cloud view for launch, health, and shared-runtime assignment. Project create flow offers **New instance** (default) vs **Add to existing instance**.
+
+Phase 1 Studio (`data-studio-ui/`): explicit `Instance` entity in `instances-store.ts`, projects with `instanceId` + `deploymentMode`, `launchProjectDb`, `(cloud)` routes. `orgId` stubbed `"default"`.
+
+## Key locations (this repo)
+
+| Component | Path |
+|-----------|------|
+| Platform + Studio UI | `data-studio-ui/` |
+| Instance model doc | `docs/architecture-instances.md` |
+| Architecture docs | `docs/architecture.md`, `docs/cli-db.md` |
+| Agent rules | `.cursor/rules/librebase-product.mdc` |
+
+## Conventions
+
+- PH-DB phased delivery; honest degraded modes (no fake green status).
+- `registry-min.toml` excludes Studio from the lean bundle — Studio is opt-in/commercial-shaped.
+- License: GPL-3.0-or-later; commercial packaging may diverge for paid tiers.
+
+## Not product billing
+
+`lic/li-tests/schema_catalog/migrations/004_billing_secret.sql` is a schema-leak test fixture, not subscription billing.
