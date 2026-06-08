@@ -42,6 +42,9 @@ Phase 1 Studio (`data-studio-ui/`): explicit `Instance` entity in `instances-sto
 |-----------|------|
 | Platform + Studio UI | `data-studio-ui/` |
 | Instance model doc | `docs/architecture-instances.md` |
+| Kubernetes runtime | `docs/kubernetes.md`, `deploy/kubernetes/`, `deploy/helm/librebase-instance/` |
+| K8s provisioner | `data-studio-ui/lib/k8s-provisioner.ts`, `k8s-manifests.ts` |
+| Runtime switch | `LIBREBASE_RUNTIME=local\|kubernetes` (default `local`) |
 | Architecture docs | `docs/architecture.md`, `docs/cli-db.md` |
 | Agent rules | `.cursor/rules/librebase-product.mdc` |
 
