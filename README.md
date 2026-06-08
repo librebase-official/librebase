@@ -1,5 +1,7 @@
 # Librebase
 
+**Repository:** [github.com/librebase-official/librebase](https://github.com/librebase-official/librebase) (private)
+
 **Librebase** is the open data platform powered by **lidb** — a Supabase-shaped stack with org/project/database workflows and a web console (**Librebase Studio**).
 
 This repository is the canonical product home: platform code, Studio UI, docs, and Cursor agent rules.
