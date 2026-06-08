@@ -1,0 +1,26 @@
+[package]
+name = "licontainerd"
+description = "licontainer daemon — container and image management"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "licontainerd"
+path = "src/main.rs"
+
+[dependencies]
+clap = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["net", "io-util", "sync", "rt-multi-thread", "macros"] }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+uuid = { workspace = true }
+licontainer-proto = { workspace = true }
+liimg = { path = "../liimg" }
+
+[dev-dependencies]
+tempfile = "3"

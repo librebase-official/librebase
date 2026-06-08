@@ -44,7 +44,12 @@ Phase 1 Studio (`data-studio-ui/`): explicit `Instance` entity in `instances-sto
 | Instance model doc | `docs/architecture-instances.md` |
 | Kubernetes runtime | `docs/kubernetes.md`, `deploy/kubernetes/`, `deploy/helm/librebase-instance/` |
 | K8s provisioner | `data-studio-ui/lib/k8s-provisioner.ts`, `k8s-manifests.ts` |
-| Runtime switch | `LIBREBASE_RUNTIME=local\|kubernetes` (default `local`) |
+| Runtime switch | `LIBREBASE_RUNTIME=local\|kubernetes\|licontainer` (default `local`) |
+| **licontainer engine** | `licontainer/` — `lirun`, `licontainerd`, `lictl`, `liimg`, `licri`; docs: `docs/licontainer.md` |
+| licontainer provisioner | `data-studio-ui/lib/licontainer-provisioner.ts` |
+| licontainer daemon socket | `/run/licontainer/licontainerd.sock` (mode `0600`) — **TODO:** entitlement gate on pull/create for cloud |
+| K8s licontainer RuntimeClass | `deploy/kubernetes/runtime-class-licontainer.yaml`, Helm `values.containerRuntime: licontainer` |
+| Windows licontainer | `deploy/windows/install-licontainer-wsl.ps1` (WSL2 bridge; native Windows containers out of v1 scope) |
 | Dev runtime (unblocks health) | `scripts/dev_runtime_stub.py`, `LIDB_RUNTIME_MODE=dev` via `lidb_engine.py` |
 | Runtime image | `deploy/docker/lidb-runtime/` → `librebase/lidb-runtime:dev` (K8s: `LIBREBASE_K8S_IMAGE`) |
 | Architecture docs | `docs/architecture.md`, `docs/cli-db.md` |

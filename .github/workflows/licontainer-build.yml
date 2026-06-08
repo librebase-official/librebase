@@ -1,0 +1,47 @@
+name: licontainer-build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "licontainer/**"
+      - ".github/workflows/licontainer-build.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "licontainer/**"
+      - ".github/workflows/licontainer-build.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: licontainer
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install libseccomp
+        run: sudo apt-get update && sudo apt-get install -y libseccomp-dev
+
+      - name: Cargo build
+        run: cargo build --release
+
+      - name: lirun --version
+        run: ./target/release/lirun version
+
+      - name: Unit tests
+        run: cargo test
+
+      - name: Integration tests (lirun + busybox)
+        working-directory: licontainer
+        env:
+          LI_CONTAINER_INTEGRATION: "1"
+          LI_CONTAINER_SKIP_SECCOMP: "1"
+        run: |
+          sudo mkdir -p /sys/fs/cgroup/licontainer
+          cargo test -p lirun --test integration -- --nocapture
+        continue-on-error: true

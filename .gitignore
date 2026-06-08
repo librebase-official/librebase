@@ -16,8 +16,15 @@ Thumbs.db
 .env
 .env.*
 
-# Test artifacts
-coverage/
+# Rust / licontainer
+licontainer/target/
+
+# Python
+__pycache__/
+*.pyc
+
+# Build output
+dist/
 
 # Studio local persistence (user machine)
 # JSON stores live under ~/.local/share/librebase/studio — not in repo
