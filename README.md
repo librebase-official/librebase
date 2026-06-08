@@ -58,7 +58,10 @@ Optional: set `LIDB_ROOT` to a lidb checkout and ensure `lis` is on `PATH` for n
 ```powershell
 cd data-studio-ui
 npm test
+npm run test:coverage
 ```
+
+`test:coverage` reports line coverage for `lib/**` (30% line threshold locally). CI runs the same report without failing on coverage thresholds while the suite grows.
 
 | Layer | Tool | Focus |
 |-------|------|-------|
@@ -66,4 +69,4 @@ npm test
 | lidb embed | pytest (planned) | `lidb_engine.py` lifecycle |
 | E2E | Playwright (planned) | create flow, Instances view, honest health UI |
 
-CI (GitHub Actions) for lint + unit on PR is planned.
+GitHub Actions (`.github/workflows/test.yml`) runs on push and PR to `main`: `npm ci`, `npm test`, optional coverage report, and `npm run build` in `data-studio-ui` (Node 20).
