@@ -45,6 +45,8 @@ Phase 1 Studio (`data-studio-ui/`): explicit `Instance` entity in `instances-sto
 | Kubernetes runtime | `docs/kubernetes.md`, `deploy/kubernetes/`, `deploy/helm/librebase-instance/` |
 | K8s provisioner | `data-studio-ui/lib/k8s-provisioner.ts`, `k8s-manifests.ts` |
 | Runtime switch | `LIBREBASE_RUNTIME=local\|kubernetes` (default `local`) |
+| Dev runtime (unblocks health) | `scripts/dev_runtime_stub.py`, `LIDB_RUNTIME_MODE=dev` via `lidb_engine.py` |
+| Runtime image | `deploy/docker/lidb-runtime/` → `librebase/lidb-runtime:dev` (K8s: `LIBREBASE_K8S_IMAGE`) |
 | Architecture docs | `docs/architecture.md`, `docs/cli-db.md` |
 | Agent rules | `.cursor/rules/librebase-product.mdc` |
 
