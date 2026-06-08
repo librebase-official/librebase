@@ -1,0 +1,19 @@
+# Shared pattern: per-project ConfigMap in org shared namespace.
+# Base Deployment/Service/PVC are provisioned once per shared instance.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: librebase-project-proj_example
+  namespace: librebase-shared-default
+  labels:
+    app.kubernetes.io/name: librebase-instance
+    librebase.io/org: default
+    librebase.io/instance: inst_shared
+    librebase.io/deployment-mode: shared
+    librebase.io/project: proj_example
+data:
+  LIBREBASE_PROJECT_ID: "proj_example"
+  LIBREBASE_PROJECT_NAME: "Example project"
+  LIBREBASE_INSTANCE_ID: "inst_shared"
+  LIBREBASE_SCHEMA_NAMESPACE: "proj_example"

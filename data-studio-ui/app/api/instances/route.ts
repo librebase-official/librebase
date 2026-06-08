@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
+import { provisionDedicatedInstance } from "@/lib/k8s-provisioner";
 import { createInstance, listInstances } from "@/lib/instances-store";
+import { getLibrebaseRuntime } from "@/lib/runtime-env";
 import type { CreateInstanceInput } from "@/lib/types";
 
 export async function GET() {
   const instances = listInstances("default");
-  return NextResponse.json({ instances });
+  return NextResponse.json({
+    instances,
+    defaultRuntime: getLibrebaseRuntime(),
+  });
 }
 
 export async function POST(request: Request) {
@@ -17,8 +22,17 @@ export async function POST(request: Request) {
       name: body.name.trim(),
       orgId: body.orgId ?? "default",
       deploymentMode: body.deploymentMode,
+      runtime: body.runtime,
     });
-    return NextResponse.json({ instance }, { status: 201 });
+
+    let provision:
+      | { ok: boolean; degraded: boolean; message: string; namespace?: string }
+      | undefined;
+    if (instance.runtimeTarget === "kubernetes") {
+      provision = provisionDedicatedInstance(instance);
+    }
+
+    return NextResponse.json({ instance, provision }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to create instance";
     return NextResponse.json({ error: message }, { status: 500 });

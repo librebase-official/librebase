@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ if eq .Values.deploymentMode "shared" }}librebase-runtime-{{ .Values.instanceId }}{{ else }}librebase-runtime{{ end }}
+  namespace: {{ include "librebase.namespace" . }}
+  labels:
+    {{- include "librebase.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: librebase-instance
+      librebase.io/instance: {{ .Values.instanceId | quote }}
+  template:
+    metadata:
+      labels:
+        {{- include "librebase.labels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: lis-lidb
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: api
+              containerPort: {{ .Values.ports.api }}
+            - name: postgres
+              containerPort: {{ .Values.ports.postgres }}
+          envFrom:
+            - configMapRef:
+                name: {{ if eq .Values.deploymentMode "shared" }}librebase-config-{{ .Values.instanceId }}{{ else }}librebase-config{{ end }}
+            {{- if ne .Values.deploymentMode "shared" }}
+            - secretRef:
+                name: librebase-secrets
+            {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          livenessProbe:
+            exec:
+              command:
+                - python3
+                - /opt/librebase/scripts/lidb_engine.py
+                - status
+                - --data-dir
+                - /data
+                - --api-port
+                - {{ .Values.ports.api | quote }}
+                - --postgres-port
+                - {{ .Values.ports.postgres | quote }}
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            tcpSocket:
+              port: api
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ if eq .Values.deploymentMode "shared" }}librebase-data-{{ .Values.instanceId }}{{ else }}librebase-data{{ end }}

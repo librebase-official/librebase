@@ -1,5 +1,9 @@
 import type { CreateProjectInput, DeploymentMode, Project } from "./types";
 import {
+  attachSharedProject,
+  provisionDedicatedInstance,
+} from "./k8s-provisioner";
+import {
   createInstance,
   defaultInstanceName,
   getInstance,
@@ -47,9 +51,14 @@ export function createProject(input: CreateProjectInput): CreateProjectResult {
       name: defaultInstanceName(input.name),
       orgId,
       deploymentMode: "dedicated",
+      runtime: input.runtime,
     });
     instanceId = instance.id;
     instanceCreated = true;
+
+    if (instance.runtimeTarget === "kubernetes") {
+      provisionDedicatedInstance(instance);
+    }
   } else {
     deploymentMode = "shared";
     if (!instanceId) {
@@ -79,6 +88,13 @@ export function createProject(input: CreateProjectInput): CreateProjectResult {
   const projects = loadProjects();
   projects.push(project);
   saveProjects(projects);
+
+  if (deploymentMode === "shared") {
+    const linked = getInstance(instanceId!);
+    if (linked?.runtimeTarget === "kubernetes") {
+      attachSharedProject(linked, project);
+    }
+  }
 
   return { project, instanceCreated };
 }

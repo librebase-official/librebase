@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import type { Instance } from "@/lib/types";
+import type { Instance, RuntimeTarget } from "@/lib/types";
 
 type RuntimeChoice = "new" | "existing";
 
@@ -13,13 +13,19 @@ export default function NewProjectPage() {
   const [runtimeChoice, setRuntimeChoice] = useState<RuntimeChoice>("new");
   const [instanceId, setInstanceId] = useState("");
   const [instances, setInstances] = useState<Instance[]>([]);
+  const [defaultRuntime, setDefaultRuntime] = useState<RuntimeTarget>("local");
+  const [deployToK8s, setDeployToK8s] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     fetch("/api/instances")
       .then((r) => r.json())
-      .then((data: { instances?: Instance[] }) => setInstances(data.instances ?? []))
+      .then((data: { instances?: Instance[]; defaultRuntime?: RuntimeTarget }) => {
+        setInstances(data.instances ?? []);
+        setDefaultRuntime(data.defaultRuntime ?? "local");
+        setDeployToK8s(data.defaultRuntime === "kubernetes");
+      })
       .catch(() => setInstances([]));
   }, []);
 
@@ -37,6 +43,7 @@ export default function NewProjectPage() {
           region,
           runtimeChoice,
           instanceId: runtimeChoice === "existing" ? instanceId : undefined,
+          runtime: deployToK8s ? "kubernetes" : "local",
         }),
       });
       const data = (await res.json()) as { project?: { id: string }; error?: string };
@@ -139,6 +146,23 @@ export default function NewProjectPage() {
             </label>
           </div>
         </fieldset>
+
+        <div className="field">
+          <label className="radio-option" style={{ display: "flex", gap: "0.5rem" }}>
+            <input
+              type="checkbox"
+              checked={deployToK8s}
+              onChange={(e) => setDeployToK8s(e.target.checked)}
+            />
+            <div>
+              <strong>Deploy to Kubernetes</strong>
+              <p className="muted" style={{ margin: "0.25rem 0 0", fontSize: "0.85rem" }}>
+                Provision instance manifests on the configured cluster (requires KUBECONFIG). Studio
+                default runtime: {defaultRuntime}.
+              </p>
+            </div>
+          </label>
+        </div>
 
         {error && <div className="alert warn">{error}</div>}
 

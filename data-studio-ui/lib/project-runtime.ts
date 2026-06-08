@@ -1,6 +1,11 @@
 import { spawnSync } from "node:child_process";
 import net from "node:net";
 import path from "node:path";
+import {
+  getInstanceStatus,
+  getK8sServiceUrl,
+  provisionDedicatedInstance,
+} from "./k8s-provisioner";
 import { getInstance, updateInstanceStatus } from "./instances-store";
 import { getProject } from "./projects-store";
 import type { DbProbeResult, Instance, Project } from "./types";
@@ -66,10 +71,19 @@ function runEngine(
 }
 
 export function getApiUrl(instance: Instance): string {
+  if (instance.runtimeTarget === "kubernetes") {
+    return getK8sServiceUrl(instance);
+  }
   return `http://127.0.0.1:${instance.ports.api}`;
 }
 
 export function getPostgresUrl(instance: Instance): string {
+  if (instance.runtimeTarget === "kubernetes") {
+    const host = getK8sServiceUrl(instance)
+      .replace("http://", "")
+      .replace(/:\d+$/, "");
+    return `postgresql://${host}:${instance.ports.postgres}/librebase`;
+  }
   return `postgresql://127.0.0.1:${instance.ports.postgres}/librebase`;
 }
 
@@ -85,7 +99,22 @@ export function getProjectUrls(project: Project): {
   };
 }
 
+async function probeK8sInstance(instance: Instance): Promise<DbProbeResult> {
+  const k8s = getInstanceStatus(instance.id);
+  const reachable = k8s.status === "running" && !k8s.degraded;
+  return {
+    reachable,
+    status: k8s.status,
+    degraded: k8s.degraded,
+    message: k8s.message,
+  };
+}
+
 export async function probeInstanceDb(instance: Instance): Promise<DbProbeResult> {
+  if (instance.runtimeTarget === "kubernetes") {
+    return probeK8sInstance(instance);
+  }
+
   const engine = runEngine("status", instance);
   const engineStatus = String(engine.payload.status ?? "unknown");
   const degraded = Boolean(engine.payload.degraded);
@@ -178,6 +207,16 @@ export async function launchProjectDb(projectId: string): Promise<{
 
   updateInstanceStatus(instance.id, "starting");
 
+  if (instance.runtimeTarget === "kubernetes") {
+    const provision = provisionDedicatedInstance(instance);
+    const probe = await probeInstanceDb(instance);
+    return {
+      ok: provision.ok && probe.reachable,
+      probe,
+      launchMessage: provision.message,
+    };
+  }
+
   const engine = runEngine("ensure", instance);
   const launchMessage = String(
     engine.payload.message ??
@@ -215,6 +254,17 @@ export async function launchInstanceDb(instanceId: string): Promise<{
   }
 
   updateInstanceStatus(instance.id, "starting");
+
+  if (instance.runtimeTarget === "kubernetes") {
+    const provision = provisionDedicatedInstance(instance);
+    const probe = await probeInstanceDb(instance);
+    return {
+      ok: provision.ok && probe.reachable,
+      probe,
+      launchMessage: provision.message,
+    };
+  }
+
   const engine = runEngine("ensure", instance);
   const launchMessage = String(
     engine.payload.message ??

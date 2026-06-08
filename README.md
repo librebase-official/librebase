@@ -53,6 +53,24 @@ Cloud workflow routes:
 
 Optional: set `LIDB_ROOT` to a lidb checkout and ensure `lis` is on `PATH` for non-degraded launch via `scripts/lidb_engine.py`.
 
+## Kubernetes
+
+Studio can target a Kubernetes cluster instead of local processes:
+
+```powershell
+$env:LIBREBASE_RUNTIME = "kubernetes"
+$env:KUBECONFIG = "C:\path\to\kubeconfig"
+```
+
+| Path | Purpose |
+|------|---------|
+| `deploy/kubernetes/` | Reference manifests (dedicated + shared) |
+| `deploy/helm/librebase-instance/` | Helm chart for manual installs |
+| `docs/kubernetes.md` | Architecture, kind/minikube steps, Studio flow |
+| `data-studio-ui/lib/k8s-provisioner.ts` | Provisioner used by API and launch routes |
+
+Create a project with **Deploy to Kubernetes** on `/projects/new`, or set `LIBREBASE_RUNTIME=kubernetes` globally. Health stays honest when the cluster or runtime image is unavailable.
+
 ## Testing
 
 ```powershell

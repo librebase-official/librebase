@@ -1,4 +1,8 @@
+import type { RuntimeTarget } from "./runtime-env";
+
 export type DeploymentMode = "dedicated" | "shared";
+
+export type { RuntimeTarget };
 
 export type InstanceStatus =
   | "stopped"
@@ -20,6 +24,12 @@ export interface Instance {
   ports: InstancePorts;
   status: InstanceStatus;
   deploymentMode: DeploymentMode;
+  /** Where this instance runs: local lis process or Kubernetes. */
+  runtimeTarget: RuntimeTarget;
+  /** Populated when runtimeTarget is kubernetes. */
+  k8sNamespace?: string;
+  k8sDegraded?: boolean;
+  k8sMessage?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -43,12 +53,15 @@ export interface CreateProjectInput {
   region?: string;
   runtimeChoice: RuntimeChoice;
   instanceId?: string;
+  /** Override LIBREBASE_RUNTIME for this project/instance. */
+  runtime?: RuntimeTarget;
 }
 
 export interface CreateInstanceInput {
   name: string;
   orgId?: string;
   deploymentMode?: DeploymentMode;
+  runtime?: RuntimeTarget;
 }
 
 export interface DbProbeResult {

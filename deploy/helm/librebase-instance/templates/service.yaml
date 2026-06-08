@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ if eq .Values.deploymentMode "shared" }}librebase-api-{{ .Values.instanceId }}{{ else }}librebase-api{{ end }}
+  namespace: {{ include "librebase.namespace" . }}
+  labels:
+    {{- include "librebase.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: librebase-instance
+    librebase.io/instance: {{ .Values.instanceId | quote }}
+  ports:
+    - name: api
+      port: {{ .Values.ports.api }}
+      targetPort: api
+    - name: postgres
+      port: {{ .Values.ports.postgres }}
+      targetPort: postgres

@@ -1,10 +1,12 @@
 import fs from "node:fs";
+import { resolveRuntimeTarget } from "./runtime-env";
 import type {
   CreateInstanceInput,
   DeploymentMode,
   Instance,
   InstancePorts,
   InstanceStatus,
+  RuntimeTarget,
 } from "./types";
 import {
   generateId,
@@ -21,8 +23,15 @@ const BASE_API_PORT = 54320;
 const BASE_POSTGRES_PORT = 54322;
 const PORT_BLOCK = 10;
 
+function normalizeInstance(raw: Instance): Instance {
+  return {
+    ...raw,
+    runtimeTarget: raw.runtimeTarget ?? "local",
+  };
+}
+
 function loadInstances(): Instance[] {
-  return readJsonFile<Instance[]>(INSTANCES_FILE, []);
+  return readJsonFile<Instance[]>(INSTANCES_FILE, []).map(normalizeInstance);
 }
 
 function saveInstances(instances: Instance[]): void {
@@ -60,6 +69,7 @@ export function createInstance(input: CreateInstanceInput): Instance {
   fs.mkdirSync(dataDir, { recursive: true });
 
   const now = new Date().toISOString();
+  const runtimeTarget: RuntimeTarget = resolveRuntimeTarget(input.runtime);
   const instance: Instance = {
     id,
     name: input.name,
@@ -68,6 +78,7 @@ export function createInstance(input: CreateInstanceInput): Instance {
     ports: allocatePorts(instances),
     status: "stopped",
     deploymentMode,
+    runtimeTarget,
     createdAt: now,
     updatedAt: now,
   };
@@ -96,7 +107,12 @@ export function updateInstanceStatus(
 
 export function updateInstance(
   id: string,
-  patch: Partial<Pick<Instance, "name" | "status">>,
+  patch: Partial<
+    Pick<
+      Instance,
+      "name" | "status" | "k8sNamespace" | "k8sDegraded" | "k8sMessage" | "runtimeTarget"
+    >
+  >,
 ): Instance | undefined {
   const instances = loadInstances();
   const index = instances.findIndex((i) => i.id === id);

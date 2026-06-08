@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createProject, listProjects } from "@/lib/projects-store";
+import { getLibrebaseRuntime } from "@/lib/runtime-env";
 import type { CreateProjectInput } from "@/lib/types";
 
 export async function GET() {
@@ -28,9 +29,13 @@ export async function POST(request: Request) {
       region: body.region ?? "local",
       runtimeChoice,
       instanceId: body.instanceId,
+      runtime: body.runtime,
     });
 
-    return NextResponse.json(result, { status: 201 });
+    return NextResponse.json(
+      { ...result, defaultRuntime: getLibrebaseRuntime() },
+      { status: 201 },
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to create project";
     return NextResponse.json({ error: message }, { status: 400 });

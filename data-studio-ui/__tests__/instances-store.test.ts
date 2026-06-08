@@ -33,6 +33,12 @@ describe("instances-store", () => {
     expect(fs.existsSync(a.dataDir)).toBe(true);
     expect(a.status).toBe("stopped");
     expect(a.orgId).toBe("default");
+    expect(a.runtimeTarget).toBe("local");
+  });
+
+  it("creates kubernetes instance when runtime override set", () => {
+    const inst = createInstance({ name: "k8s", runtime: "kubernetes" });
+    expect(inst.runtimeTarget).toBe("kubernetes");
   });
 
   it("lists instances scoped to org", () => {

@@ -44,6 +44,7 @@ describe("probeInstanceDb degraded path", () => {
     ports: { api: 54320, postgres: 54322 },
     status: "running",
     deploymentMode: "dedicated",
+    runtimeTarget: "local",
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
   };

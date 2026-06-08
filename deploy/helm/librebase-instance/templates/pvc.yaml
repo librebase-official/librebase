@@ -1,0 +1,15 @@
+{{- if .Values.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ if eq .Values.deploymentMode "shared" }}librebase-data-{{ .Values.instanceId }}{{ else }}librebase-data{{ end }}
+  namespace: {{ include "librebase.namespace" . }}
+  labels:
+    {{- include "librebase.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.persistence.size }}
+{{- end }}

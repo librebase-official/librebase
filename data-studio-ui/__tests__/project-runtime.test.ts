@@ -11,6 +11,7 @@ describe("project-runtime url helpers", () => {
     ports: { api: 54320, postgres: 54322 },
     status: "stopped",
     deploymentMode: "dedicated",
+    runtimeTarget: "local",
     createdAt: "",
     updatedAt: "",
   };

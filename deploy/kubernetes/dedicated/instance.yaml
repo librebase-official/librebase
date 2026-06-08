@@ -1,0 +1,122 @@
+# Example dedicated instance — replace placeholders before apply.
+# Studio generates equivalent manifests per instance id.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: librebase-inst-example
+  labels:
+    app.kubernetes.io/name: librebase-instance
+    librebase.io/org: default
+    librebase.io/instance: inst_example
+    librebase.io/deployment-mode: dedicated
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: librebase-data
+  namespace: librebase-inst-example
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: librebase-config
+  namespace: librebase-inst-example
+data:
+  LI_DATA_DIR: "/data"
+  LIBREBASE_API_PORT: "54320"
+  LIBREBASE_PG_PORT: "54322"
+  LIBREBASE_INSTANCE_ID: "inst_example"
+  LIBREBASE_ORG_ID: "default"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: librebase-secrets
+  namespace: librebase-inst-example
+type: Opaque
+stringData:
+  POSTGRES_PASSWORD: "librebase-dev-only"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: librebase-runtime
+  namespace: librebase-inst-example
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: librebase-instance
+      librebase.io/instance: inst_example
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: librebase-instance
+        librebase.io/org: default
+        librebase.io/instance: inst_example
+        librebase.io/deployment-mode: dedicated
+    spec:
+      containers:
+        - name: lis-lidb
+          image: ghcr.io/librebase-official/lidb-runtime:stub
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: api
+              containerPort: 54320
+            - name: postgres
+              containerPort: 54322
+          envFrom:
+            - configMapRef:
+                name: librebase-config
+            - secretRef:
+                name: librebase-secrets
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          livenessProbe:
+            exec:
+              command:
+                - python3
+                - /opt/librebase/scripts/lidb_engine.py
+                - status
+                - --data-dir
+                - /data
+                - --api-port
+                - "54320"
+                - --postgres-port
+                - "54322"
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            tcpSocket:
+              port: api
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: librebase-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: librebase-api
+  namespace: librebase-inst-example
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: librebase-instance
+    librebase.io/instance: inst_example
+  ports:
+    - name: api
+      port: 54320
+      targetPort: api
+    - name: postgres
+      port: 54322
+      targetPort: postgres

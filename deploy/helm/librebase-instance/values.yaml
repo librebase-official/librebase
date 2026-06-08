@@ -1,0 +1,28 @@
+orgId: default
+instanceId: inst_example
+deploymentMode: dedicated
+projectId: ""
+
+image:
+  repository: ghcr.io/librebase-official/lidb-runtime
+  tag: stub
+  pullPolicy: IfNotPresent
+
+ports:
+  api: 54320
+  postgres: 54322
+
+persistence:
+  enabled: true
+  size: 5Gi
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi
+
+secrets:
+  postgresPassword: librebase-dev-only
