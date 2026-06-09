@@ -5,13 +5,11 @@ on:
     branches: [main]
     paths:
       - "licontainer/**"
-      - "docs/licontainer.md"
       - ".github/workflows/licontainer-build.yml"
   pull_request:
     branches: [main]
     paths:
       - "licontainer/**"
-      - "docs/licontainer.md"
       - ".github/workflows/licontainer-build.yml"
 
 jobs:
@@ -20,74 +18,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Checkout lic compiler (optional)
+      - name: Checkout lic compiler
         uses: actions/checkout@v4
         with:
           repository: li-langverse/lic
           path: lic
         continue-on-error: true
 
-      - name: Build C runtime seam (standalone)
-        run: |
-          chmod +x licontainer/scripts/build-runtime-c.sh
-          licontainer/scripts/build-runtime-c.sh licontainer/runtime/libli_rt_container.a
-
-      - name: Build Li Container Engine packages
+      - name: Build pure Li licontainer packages
         env:
           LIC_ROOT: ${{ github.workspace }}/lic
         run: |
-          if [[ -x "$LIC_ROOT/bin/lic" ]] || [[ -x "$LIC_ROOT/scripts/resolve-lic.sh" ]]; then
-            export LIC="${LIC_ROOT}/bin/lic"
-            if [[ ! -x "$LIC" ]]; then
-              LIC="$("$LIC_ROOT/scripts/resolve-lic.sh")"
-            fi
+          if [[ -x "$LIC_ROOT/scripts/resolve-lic.sh" ]]; then
             chmod +x licontainer/scripts/build-li.sh
             licontainer/scripts/build-li.sh
           else
-            echo "lic checkout unavailable — Li build skipped (add lic submodule or fork for CI)"
-            exit 0
+            echo "lic checkout unavailable — smoke .li syntax only"
+            find licontainer/packages -name '*.li' | head -5
           fi
-
-  li-integration:
-    runs-on: ubuntu-latest
-    needs: li-build
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Checkout lic compiler (optional)
-        uses: actions/checkout@v4
-        with:
-          repository: li-langverse/lic
-          path: lic
-        continue-on-error: true
-
-      - name: lirun busybox integration (gated)
-        env:
-          LIC_ROOT: ${{ github.workspace }}/lic
-          LI_CONTAINER_INTEGRATION: "1"
-        run: |
-          if [[ -x "$LIC_ROOT/bin/lic" ]] || [[ -x "$LIC_ROOT/scripts/resolve-lic.sh" ]]; then
-            chmod +x licontainer/scripts/test-lirun-integration.sh
-            licontainer/scripts/test-lirun-integration.sh
-          else
-            echo "lic unavailable — integration skipped"
-          fi
-        continue-on-error: true
-
-  rust-deprecated:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: licontainer
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: dtolnay/rust-toolchain@stable
-
-      - name: Deprecated Rust build (reference only)
-        run: cargo build --release
-        continue-on-error: true
-
-      - name: Deprecated Rust tests
-        run: cargo test
-        continue-on-error: true

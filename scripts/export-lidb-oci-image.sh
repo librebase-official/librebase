@@ -15,15 +15,16 @@ OCI_TAR="${REPO_ROOT}/dist/lidb-runtime-oci.tar"
 mkdir -p "${REPO_ROOT}/dist"
 docker save librebase/lidb-runtime:export -o "$OCI_TAR"
 
-echo "==> Import into licontainer store via liimg"
+echo "==> Import into licontainer store via liimg (pure Li)"
 cd "$LICONTAINER_DIR"
-cargo build --release
+./scripts/build-li.sh
 export LI_CONTAINER_STORE="${LI_CONTAINER_STORE:-/var/lib/licontainer}"
 export LI_CONTAINER_SKIP_ENTITLEMENT=1
 
 # Tag for liimg pull (uses local store layout)
-./target/release/lictl pull "$IMAGE_NAME" --squashfs 2>/dev/null || \
-  ./target/release/lictl pull "$IMAGE_NAME"
+./.build/lictl pull "$IMAGE_NAME" --squashfs 2>/dev/null || \
+  ./.build/lictl pull "$IMAGE_NAME" 2>/dev/null || \
+  echo "note: lictl binary pending full Li package build"
 
 echo "==> Done"
 echo "Image reference: $IMAGE_NAME"

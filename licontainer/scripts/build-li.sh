@@ -48,9 +48,4 @@ if [[ -f "$ROOT/packages/li-container-run/src/main.li" ]]; then
   "$LIC" build --allow-open-vc --no-lean-verify "$ROOT/packages/li-container-run/src/main.li" -o "$ROOT/.build/lirun"
 fi
 
-if [[ -x "$ROOT/scripts/build-runtime-c.sh" ]]; then
-  chmod +x "$ROOT/scripts/build-runtime-c.sh" 2>/dev/null || true
-  "$ROOT/scripts/build-runtime-c.sh" "$ROOT/runtime/libli_rt_container.a" || echo "note: C runtime standalone build skipped"
-fi
-
-echo "licontainer Li build: ok"
+echo "licontainer Li build: ok (pure Li — runtime impl in lic upstream)"

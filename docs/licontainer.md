@@ -1,10 +1,8 @@
 # licontainer — Li Container Engine
 
-General-purpose OCI-compatible container engine for Librebase. **All engine code is Li (`.li`) — no Rust.**
+General-purpose OCI-compatible container engine for Librebase. **Pure Li in librebase** — only `.li` packages; no Rust, no C, no other languages under `licontainer/`.
 
-Low-level isolation uses the **Li trusted runtime seam** (`runtime/seam-container.li` + `li_rt_container.c`), the same model as `std/runtime/seam.li` for networking in `lic`. Application logic, daemon, CLI, CRI, and image store are Li packages under `licontainer/packages/`.
-
-> The Rust crates (`lirun/`, `lictl/`, …) are **deprecated** — see [`licontainer/DEPRECATED-RUST.md`](../licontainer/DEPRECATED-RUST.md).
+Trusted OCI ops are **`extern proc` in Li** (`packages/li-container/src/seam.li`), with implementations merged into **`lic/std/runtime/seam.li`** (like `Net` / `li-net`). See [`PURE-LI-POLICY.md`](../licontainer/PURE-LI-POLICY.md) and [`rfc-container-trusted-surface.md`](rfc-container-trusted-surface.md).
 
 ## Architecture
 
@@ -38,14 +36,14 @@ flowchart TB
 | `liimg` | `packages/li-container-img/` | OCI layout pull/store, optional squashfs export |
 | `licri` | `packages/li-container-cri/` | Kubernetes CRI v1 subset |
 | Core types | `packages/li-container/` | Shared library |
-| Trusted OCI seam | `runtime/seam-container.li` | Namespaces, cgroups, seccomp (Li extern model) |
+| Trusted OCI seam | `packages/li-container/src/seam.li` | Li `extern proc`; impl in `lic` upstream only |
 
 ## OCI compliance matrix (v1)
 
 | Spec operation | Status | Notes |
 |----------------|--------|-------|
 | `config.json` bundle | ✅ | process, root, mounts, linux namespaces, cgroups |
-| `create` | ✅ Li | `li-container-run` + `li_rt_container.c`; Linux only |
+| `create` | 🚧 Li | `li-container-run`; links when `lic` merges container seam |
 | `start` | ✅ Li | namespaces + pivot_root via trusted seam |
 | `delete` | ✅ Li | `--force` for running |
 | `kill` | ✅ Li | SIGTERM/SIGKILL |
@@ -99,17 +97,15 @@ lic build licontainer/packages/li-container-cli/src/main.li -o lictl
 lic build licontainer/packages/li-container-run/src/main.li -o lirun
 ```
 
-### Phase 1 lirun (Li) — Rust parity
+### Phase 1 lirun (pure Li)
 
-| Rust (`lirun/`) | Li (`packages/`) |
-|-----------------|------------------|
-| `main.rs` CLI | `li-container-run/src/main.li` |
-| `bundle.rs` | `li-container/src/bundle.li` + `state.li` |
-| `runtime.rs` | `li-container-run/src/runtime.li` |
-| `error.rs` | `li-container/src/error.li` |
-| `seccomp.rs` | `runtime/li_rt_container.c` (`container_seccomp_apply_i`) |
-
-Trusted runtime: link `runtime/li_rt_container.c` into `lic` (see `runtime/CMakeLists.txt`) and merge `runtime/seam-container.li` into `std/runtime/seam.li` upstream.
+| Module | Path |
+|--------|------|
+| CLI | `li-container-run/src/main.li` |
+| OCI runtime | `li-container-run/src/runtime.li` |
+| Bundle + state | `li-container/src/bundle.li`, `state.li` |
+| Errors | `li-container/src/runerr.li` |
+| Trusted seam | `li-container/src/seam.li` → merge into `lic/std/runtime/seam.li` |
 
 ```bash
 # OCI lifecycle (Linux / WSL2)
@@ -128,17 +124,7 @@ Integration test (requires root/CAP_SYS_ADMIN):
 LI_CONTAINER_INTEGRATION=1 licontainer/scripts/test-lirun-integration.sh
 ```
 
-Build requirements: `lic` compiler with trusted extern support; on Linux optionally `libseccomp` (`LI_CONTAINER_SKIP_SECCOMP=1` to skip). Non-Linux returns `UNSUPPORTED` JSON error.
-
-### Deprecated Rust build
-
-Rust crates remain temporarily for reference only:
-
-```bash
-cd licontainer && cargo build   # deprecated — do not extend
-```
-
-See [`DEPRECATED-RUST.md`](../licontainer/DEPRECATED-RUST.md).
+Build requirements: `lic` compiler with container trusted externs merged upstream. Non-Linux returns `UNSUPPORTED` until WSL2/Linux `lic` runtime ships container ops.
 
 ## Running lictl
 

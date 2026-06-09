@@ -5,7 +5,7 @@ Compare memory footprint (RSS) and cold-start time between licontainer and Docke
 ## Prerequisites
 
 - Linux host with cgroup v2
-- `lictl` and `licontainerd` built (`cargo build --release` in `licontainer/`)
+- `lictl` and `licontainerd` built (`./licontainer/scripts/build-li.sh` with `LIC_ROOT`)
 - Docker installed (for comparison only)
 - `bc`, `curl`
 

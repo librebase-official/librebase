@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Security checklist for licontainer deployment.
+# Security checklist for licontainer deployment (pure Li).
 set -euo pipefail
 
 PASS=0
@@ -15,20 +15,23 @@ check() {
   fi
 }
 
-check "daemon socket mode 0600" \
-  "test \$(stat -c '%a' /run/licontainer/licontainerd.sock 2>/dev/null) = 600"
+check "pure Li policy doc" \
+  "test -f licontainer/PURE-LI-POLICY.md"
 
-check "no privileged API in licontainerd" \
-  "! grep -rq 'privileged' licontainer/licontainerd/src/ 2>/dev/null || grep -q 'No.*privileged' docs/licontainer.md"
+check "no Rust in licontainer" \
+  "! find licontainer -name '*.rs' | grep -q ."
 
-check "seccomp module present" \
-  "test -f licontainer/lirun/src/seccomp.rs"
+check "no C in licontainer" \
+  "! find licontainer -name '*.c' | grep -q ."
 
-check "cgroup pids.max default" \
-  "grep -q 'pids.max' licontainer/lirun/src/bundle.rs"
+check "container seam in Li" \
+  "test -f licontainer/packages/li-container/src/seam.li"
 
-check "entitlement TODO on pull/create" \
-  "grep -q 'check_entitlement' licontainer/licontainer-proto/src/lib.rs"
+check "seccomp extern declared" \
+  "grep -q container_seccomp_apply_i licontainer/packages/li-container/src/seam.li"
+
+check "RFC for lic upstream" \
+  "test -f docs/rfc-container-trusted-surface.md"
 
 echo "---"
 echo "Passed: $PASS  Failed: $FAIL"

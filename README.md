@@ -107,7 +107,7 @@ GitHub Actions (`.github/workflows/test.yml`) runs on push and PR to `main`: Vit
 
 ## licontainer (Li Container Engine)
 
-**Li-only** OCI engine — product code in `.li` packages; trusted OCI isolation via Li runtime seam. No Rust in the engine path (legacy Rust deprecated).
+**Pure Li** OCI engine — `licontainer/` contains only `.li` packages. No Rust, no C in librebase. Trusted OCI impl merges into `lic` (like `li-net`).
 
 ```bash
 export LIC_ROOT=/path/to/lic
@@ -117,10 +117,9 @@ export LIC_ROOT=/path/to/lic
 | Path | Purpose |
 |------|---------|
 | `licontainer/packages/` | Li workspace: run, daemon, CLI, img, cri |
-| `licontainer/runtime/` | Trusted OCI seam |
-| `docs/licontainer.md` | Architecture, OCI matrix, security |
-| `licontainer/DEPRECATED-RUST.md` | Legacy Rust — do not extend |
+| `licontainer/PURE-LI-POLICY.md` | Repo language policy |
+| `docs/rfc-container-trusted-surface.md` | Upstream `lic` merge RFC |
 
 Studio: `LIBREBASE_RUNTIME=licontainer`. K8s: Helm `containerRuntime: licontainer`.
 
-CI: `.github/workflows/licontainer-build.yml` (Li build primary; Rust deprecated).
+CI: `.github/workflows/licontainer-build.yml` (pure Li `lic build` only).

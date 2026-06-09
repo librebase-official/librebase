@@ -45,7 +45,7 @@ Phase 1 Studio (`data-studio-ui/`): explicit `Instance` entity in `instances-sto
 | Kubernetes runtime | `docs/kubernetes.md`, `deploy/kubernetes/`, `deploy/helm/librebase-instance/` |
 | K8s provisioner | `data-studio-ui/lib/k8s-provisioner.ts`, `k8s-manifests.ts` |
 | Runtime switch | `LIBREBASE_RUNTIME=local\|kubernetes\|licontainer` (default `local`) |
-| **licontainer (Li-only)** | `licontainer/packages/` — `.li` engine; trusted OCI seam: `licontainer/runtime/`; Rust deprecated — see `DEPRECATED-RUST.md` |
+| **licontainer (pure Li)** | `licontainer/packages/` — `.li` only; no Rust/C in librebase; trusted impl merges into `lic/std/runtime/seam.li` — see `PURE-LI-POLICY.md` |
 | licontainer provisioner | `data-studio-ui/lib/licontainer-provisioner.ts` |
 | Runtime image | `deploy/docker/lidb-runtime/` → `librebase/lidb-runtime:dev` (K8s: `LIBREBASE_K8S_IMAGE`) |
 | Dev runtime (unblocks health) | `scripts/dev_runtime_stub.py`, `LIDB_RUNTIME_MODE=dev` via `lidb_engine.py` |
@@ -55,7 +55,7 @@ Phase 1 Studio (`data-studio-ui/`): explicit `Instance` entity in `instances-sto
 ## Conventions
 
 - PH-DB phased delivery; honest degraded modes (no fake green status).
-- **Li-only engine policy:** licontainer product code is `.li` + Li trusted runtime seam — no Rust in the engine path.
+- **Pure Li engine policy:** licontainer in librebase is `.li` only — no Rust, no C, no Python in `licontainer/`. Trusted OCI impl lives in `lic` upstream (like `Net`).
 - `registry-min.toml` excludes Studio from the lean bundle — Studio is opt-in/commercial-shaped.
 - License: GPL-3.0-or-later; commercial packaging may diverge for paid tiers.
 
