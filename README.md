@@ -1,6 +1,6 @@
 # Librebase
 
-**Repository:** [github.com/librebase-official/librebase](https://github.com/librebase-official/librebase) (private)
+**Repository (origin):** [gitlab.lilangverse.xyz/librebase-official/librebase](https://gitlab.lilangverse.xyz/librebase-official/librebase) — [GitHub](https://github.com/librebase-official/librebase) is a read-only mirror.
 
 **Librebase** is the open data platform powered by **lidb** — a Supabase-shaped stack with org/project/database workflows and a web console (**Librebase Studio**).
 
