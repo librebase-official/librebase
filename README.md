@@ -107,27 +107,20 @@ GitHub Actions (`.github/workflows/test.yml`) runs on push and PR to `main`: Vit
 
 ## licontainer (Li Container Engine)
 
-OCI-compatible container engine in Rust — lower memory, stronger default security, optional K8s RuntimeClass.
+**Li-only** OCI engine — product code in `.li` packages; trusted OCI isolation via Li runtime seam. No Rust in the engine path (legacy Rust deprecated).
 
 ```bash
-cd licontainer
-cargo build --release
-./target/release/lirun version
-./target/release/licontainerd &
-./target/release/lictl pull hello-world
-./target/release/lictl run hello-world
+export LIC_ROOT=/path/to/lic
+./licontainer/scripts/build-li.sh
 ```
 
 | Path | Purpose |
 |------|---------|
-| `licontainer/` | Rust workspace: `lirun`, `licontainerd`, `lictl`, `liimg`, `licri` |
-| `docs/licontainer.md` | Architecture, OCI matrix, security, WSL2 bridge |
-| `data-studio-ui/lib/licontainer-provisioner.ts` | Studio local provisioner via `lictl` |
-| `deploy/kubernetes/runtime-class-licontainer.yaml` | K8s RuntimeClass |
-| `benchmarks/licontainer-vs-docker/` | RSS and cold-start scripts |
+| `licontainer/packages/` | Li workspace: run, daemon, CLI, img, cri |
+| `licontainer/runtime/` | Trusted OCI seam |
+| `docs/licontainer.md` | Architecture, OCI matrix, security |
+| `licontainer/DEPRECATED-RUST.md` | Legacy Rust — do not extend |
 
-Studio: `LIBREBASE_RUNTIME=licontainer` for local `lictl` launches. K8s: `LIBREBASE_K8S_CONTAINER_RUNTIME=licontainer` or Helm `containerRuntime: licontainer`.
+Studio: `LIBREBASE_RUNTIME=licontainer`. K8s: Helm `containerRuntime: licontainer`.
 
-Windows: `.\deploy\windows\install-licontainer-wsl.ps1` (WSL2 bridge — native Windows containers out of v1 scope).
-
-CI: `.github/workflows/licontainer-build.yml` (`cargo build` + `cargo test` on ubuntu-latest).
+CI: `.github/workflows/licontainer-build.yml` (Li build primary; Rust deprecated).

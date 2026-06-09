@@ -1,0 +1,9 @@
+import container
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  # licri: CRI v1 subset for kubelet
+  return 0

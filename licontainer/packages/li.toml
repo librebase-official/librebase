@@ -1,0 +1,11 @@
+# Li Container Engine workspace — all engine code in Li (.li), not Rust.
+[workspace]
+members = [
+  "li-container",
+  "li-container-run",
+  "li-containerd",
+  "li-container-cli",
+  "li-container-img",
+  "li-container-cri",
+]
+resolver = "path"

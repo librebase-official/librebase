@@ -1,0 +1,9 @@
+import container
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  # lictl: pull, run, ps, stop — wired to licontainerd (Li implementation in progress)
+  return 0

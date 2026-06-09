@@ -1,0 +1,29 @@
+# Li Container Engine — core library (Li-only; no Rust).
+
+def container_engine_name() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+def container_version_major() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return 0
+
+def container_version_minor() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+def container_version_patch() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  return 0

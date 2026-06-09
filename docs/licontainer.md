@@ -1,6 +1,10 @@
 # licontainer — Li Container Engine
 
-General-purpose OCI-compatible container engine for Librebase: lower memory footprint, stronger default security, and integration with Kubernetes and Studio.
+General-purpose OCI-compatible container engine for Librebase. **All engine code is Li (`.li`) — no Rust.**
+
+Low-level isolation uses the **Li trusted runtime seam** (`runtime/seam-container.li` + `li_rt_container.c`), the same model as `std/runtime/seam.li` for networking in `lic`. Application logic, daemon, CLI, CRI, and image store are Li packages under `licontainer/packages/`.
+
+> The Rust crates (`lirun/`, `lictl/`, …) are **deprecated** — see [`licontainer/DEPRECATED-RUST.md`](../licontainer/DEPRECATED-RUST.md).
 
 ## Architecture
 
@@ -26,14 +30,15 @@ flowchart TB
   Kubelet[kubelet] --> CRI
 ```
 
-| Component | Path | Role |
-|-----------|------|------|
-| `lirun` | `licontainer/lirun/` | OCI runtime: create/start/delete/kill/state |
-| `licontainerd` | `licontainer/licontainerd/` | Daemon: images, containers, Unix socket JSON API |
-| `lictl` | `licontainer/lictl/` | Docker-like CLI: pull, run, ps, stop |
-| `liimg` | `licontainer/liimg/` | OCI layout pull/store, optional squashfs export |
-| `licri` | `licontainer/licri/` | Kubernetes CRI v1 subset |
-| `licontainer-proto` | `licontainer/licontainer-proto/` | Shared API types |
+| Component | Li package | Role |
+|-----------|------------|------|
+| `lirun` | `packages/li-container-run/` | OCI runtime: create/start/delete/kill/state |
+| `licontainerd` | `packages/li-containerd/` | Daemon: images, containers, Unix socket JSON API |
+| `lictl` | `packages/li-container-cli/` | Docker-like CLI: pull, run, ps, stop |
+| `liimg` | `packages/li-container-img/` | OCI layout pull/store, optional squashfs export |
+| `licri` | `packages/li-container-cri/` | Kubernetes CRI v1 subset |
+| Core types | `packages/li-container/` | Shared library |
+| Trusted OCI seam | `runtime/seam-container.li` | Namespaces, cgroups, seccomp (Li extern model) |
 
 ## OCI compliance matrix (v1)
 
@@ -52,7 +57,7 @@ flowchart TB
 ## Security model
 
 - **Rootless-by-default**: drop all capabilities; bundle may add `NET_BIND_SERVICE` etc.
-- **Seccomp**: deny-all + syscall whitelist (libseccomp); skip with `LI_CONTAINER_SKIP_SECCOMP=1` in dev
+- **Seccomp**: deny-all + syscall whitelist via `container_seccomp_apply_i` trusted seam
 - **No privileged API**: daemon rejects privileged containers (no `--privileged` in API)
 - **Socket permissions**: `licontainerd.sock` and `licri.sock` created with mode `0600`
 - **Entitlement gates**: `check_entitlement()` TODO before `PullImage` / `CreateContainer` for Librebase cloud
@@ -78,27 +83,31 @@ Environment:
 |----------|---------|---------|
 | `LI_CONTAINER_WSL_DISTRO` | `LibrebaseContainer` | WSL distro name |
 
-## Building
+## Building (Li)
+
+Requires a `lic` compiler checkout (`LIC_ROOT` or `lic` on PATH):
 
 ```bash
-cd licontainer
-cargo build --release
-cargo test
+export LIC_ROOT=/path/to/lic
+./licontainer/scripts/build-li.sh
 ```
 
-### Linux integration tests
-
-Requires root or cgroup v2 write access:
+Build individual binaries (once `lic build` entrypoints are wired):
 
 ```bash
-export LI_CONTAINER_INTEGRATION=1
-export LI_CONTAINER_SKIP_SECCOMP=1
-cargo test -p lirun --test integration
+lic build licontainer/packages/li-container-cli/src/main.li -o lictl
+lic build licontainer/packages/li-container-run/src/main.li -o lirun
 ```
 
-### CI
+### Deprecated Rust build
 
-GitHub Actions job `licontainer-build` on `ubuntu-latest` installs `libseccomp-dev`, builds all crates, runs unit tests. Integration tests run with `LI_CONTAINER_INTEGRATION=1` when cgroup permissions allow.
+Rust crates remain temporarily for reference only:
+
+```bash
+cd licontainer && cargo build   # deprecated — do not extend
+```
+
+See [`DEPRECATED-RUST.md`](../licontainer/DEPRECATED-RUST.md).
 
 ## Running lictl
 

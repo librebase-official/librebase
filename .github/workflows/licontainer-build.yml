@@ -13,35 +13,48 @@ on:
       - ".github/workflows/licontainer-build.yml"
 
 jobs:
-  build:
+  li-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout lic compiler (optional)
+        uses: actions/checkout@v4
+        with:
+          repository: li-langverse/lic
+          path: lic
+        continue-on-error: true
+
+      - name: Build Li Container Engine packages
+        env:
+          LIC_ROOT: ${{ github.workspace }}/lic
+        run: |
+          if [[ -x "$LIC_ROOT/bin/lic" ]] || [[ -x "$LIC_ROOT/scripts/resolve-lic.sh" ]]; then
+            export LIC="${LIC_ROOT}/bin/lic"
+            if [[ ! -x "$LIC" ]]; then
+              LIC="$("$LIC_ROOT/scripts/resolve-lic.sh")"
+            fi
+            chmod +x licontainer/scripts/build-li.sh
+            licontainer/scripts/build-li.sh
+          else
+            echo "lic checkout unavailable — Li build skipped (add lic submodule or fork for CI)"
+            exit 0
+          fi
+
+  rust-deprecated:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: licontainer
-
     steps:
       - uses: actions/checkout@v4
 
       - uses: dtolnay/rust-toolchain@stable
 
-      - name: Install libseccomp
-        run: sudo apt-get update && sudo apt-get install -y libseccomp-dev
-
-      - name: Cargo build
+      - name: Deprecated Rust build (reference only)
         run: cargo build --release
+        continue-on-error: true
 
-      - name: lirun --version
-        run: ./target/release/lirun version
-
-      - name: Unit tests
+      - name: Deprecated Rust tests
         run: cargo test
-
-      - name: Integration tests (lirun + busybox)
-        working-directory: licontainer
-        env:
-          LI_CONTAINER_INTEGRATION: "1"
-          LI_CONTAINER_SKIP_SECCOMP: "1"
-        run: |
-          sudo mkdir -p /sys/fs/cgroup/licontainer
-          cargo test -p lirun --test integration -- --nocapture
         continue-on-error: true

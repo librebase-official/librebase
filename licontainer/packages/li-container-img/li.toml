@@ -1,0 +1,15 @@
+[package]
+name = "li-container-img"
+version = "0.1.0"
+edition = "2026"
+license = "GPL-3.0-or-later"
+description = "liimg — OCI image pull and store (Li)"
+
+[dependencies]
+li-container = { path = "../li-container" }
+
+[package.metadata.li]
+import_name = "container.img"
+min_lic = "0.1.0"
+maintainer = "librebase-official"
+pkg_id = "PKG-li-container-img"

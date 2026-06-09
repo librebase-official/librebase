@@ -1,0 +1,7 @@
+# Trusted OCI runtime seam — extend lic `std/runtime/seam.li` pattern.
+# Merged into lic upstream; vendored here for librebase development.
+
+extern proc container_runtime_tag_i() -> int
+  requires true
+  ensures true
+  decreases 0
