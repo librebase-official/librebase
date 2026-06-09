@@ -1,0 +1,68 @@
+import seam
+
+def state_exists(container_id: var ptr) -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  var path: ptr = container_buf_alloc_i(4096)
+  container_state_path_i(container_id, path, 4096)
+  var ok: int = container_file_exists_i(path)
+  container_buf_free_i(path)
+  return ok
+
+def state_load(container_id: var ptr, buf: var ptr, cap: int) raises IO, Alloc -> int
+  requires 0 < cap
+  ensures true
+  decreases 0
+=
+  if state_exists(container_id) != 1:
+    return 1
+  if container_state_read_i(container_id, buf, cap) < 0:
+    return 2
+  return 0
+
+def state_save_created(container_id: var ptr, oci_version: var ptr, bundle_path: var ptr) raises IO -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  var status: ptr = "created"
+  return container_state_write_i(container_id, oci_version, status, 0, 0, bundle_path, 0, 0)
+
+def state_save_running(container_id: var ptr, oci_version: var ptr, bundle_path: var ptr, pid: int) raises IO -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  var status: ptr = "running"
+  return container_state_write_i(container_id, oci_version, status, pid, 1, bundle_path, 0, 0)
+
+def state_save_stopped(container_id: var ptr, oci_version: var ptr, bundle_path: var ptr, pid: int) raises IO -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  var status: ptr = "stopped"
+  return container_state_write_i(container_id, oci_version, status, pid, 1, bundle_path, 0, 0)
+
+def state_delete(container_id: var ptr) raises IO -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  return container_state_delete_i(container_id)
+
+def state_status(state_json: var ptr, out: var ptr, cap: int) -> int
+  requires 0 < cap
+  ensures true
+  decreases 0
+=
+  return container_json_status_i(state_json, out, cap)
+
+def state_pid(state_json: var ptr, pid_out: var ptr, has_pid: var ptr) -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  return container_json_pid_i(state_json, pid_out, has_pid)

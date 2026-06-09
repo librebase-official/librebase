@@ -1,0 +1,77 @@
+import seam
+
+def error_bundle_not_found() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1
+
+def error_invalid_config() -> int
+  requires true
+  ensures result == 2
+  decreases 0
+=
+  return 2
+
+def error_container_not_found() -> int
+  requires true
+  ensures result == 3
+  decreases 0
+=
+  return 3
+
+def error_container_exists() -> int
+  requires true
+  ensures result == 4
+  decreases 0
+=
+  return 4
+
+def error_invalid_state() -> int
+  requires true
+  ensures result == 5
+  decreases 0
+=
+  return 5
+
+def error_unsupported() -> int
+  requires true
+  ensures result == 6
+  decreases 0
+=
+  return 6
+
+def error_runtime() -> int
+  requires true
+  ensures result == 7
+  decreases 0
+=
+  return 7
+
+def emit_error_json(code_tag: int, message: var ptr) raises IO -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  var code: ptr = "RUNTIME_ERROR"
+  if code_tag == error_bundle_not_found():
+    code = "BUNDLE_NOT_FOUND"
+  if code_tag == error_invalid_config():
+    code = "INVALID_CONFIG"
+  if code_tag == error_container_not_found():
+    code = "CONTAINER_NOT_FOUND"
+  if code_tag == error_container_exists():
+    code = "CONTAINER_EXISTS"
+  if code_tag == error_invalid_state():
+    code = "INVALID_STATE"
+  if code_tag == error_unsupported():
+    code = "UNSUPPORTED"
+  if code_tag == error_runtime():
+    code = "RUNTIME_ERROR"
+  container_eprint_i("{\"ok\":false,\"code\":\"")
+  container_eprint_i(code)
+  container_eprint_i("\",\"message\":\"")
+  container_eprint_i(message)
+  container_eprint_i("\"}\n")
+  return 1

@@ -15,6 +15,7 @@ fi
 members=(li-container li-container-run li-containerd li-container-cli li-container-img li-container-cri)
 for m in "${members[@]}"; do
   smoke="$ROOT/packages/$m/li-tests/smoke/builds.li"
+  integration="$ROOT/packages/$m/li-tests/integration"
   main="$ROOT/packages/$m/src/main.li"
   lib="$ROOT/packages/$m/src/lib.li"
   if [[ -f "$smoke" ]]; then
@@ -27,5 +28,24 @@ for m in "${members[@]}"; do
     echo "build: $m (lib)"
     "$LIC" build --allow-open-vc --no-lean-verify "$lib" -o /dev/null
   fi
+  if [[ -d "$integration" ]]; then
+    for t in "$integration"/*.li; do
+      [[ -f "$t" ]] || continue
+      echo "build: $m (integration $(basename "$t"))"
+      "$LIC" build --allow-open-vc --no-lean-verify "$t" -o /dev/null
+    done
+  fi
 done
+
+if [[ -f "$ROOT/packages/li-container-run/src/main.li" ]]; then
+  mkdir -p "$ROOT/.build"
+  echo "build: lirun binary"
+  "$LIC" build --allow-open-vc --no-lean-verify "$ROOT/packages/li-container-run/src/main.li" -o "$ROOT/.build/lirun"
+fi
+
+if [[ -x "$ROOT/scripts/build-runtime-c.sh" ]]; then
+  chmod +x "$ROOT/scripts/build-runtime-c.sh" 2>/dev/null || true
+  "$ROOT/scripts/build-runtime-c.sh" "$ROOT/runtime/libli_rt_container.a" || echo "note: C runtime standalone build skipped"
+fi
+
 echo "licontainer Li build: ok"

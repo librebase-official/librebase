@@ -5,11 +5,13 @@ on:
     branches: [main]
     paths:
       - "licontainer/**"
+      - "docs/licontainer.md"
       - ".github/workflows/licontainer-build.yml"
   pull_request:
     branches: [main]
     paths:
       - "licontainer/**"
+      - "docs/licontainer.md"
       - ".github/workflows/licontainer-build.yml"
 
 jobs:
@@ -24,6 +26,11 @@ jobs:
           repository: li-langverse/lic
           path: lic
         continue-on-error: true
+
+      - name: Build C runtime seam (standalone)
+        run: |
+          chmod +x licontainer/scripts/build-runtime-c.sh
+          licontainer/scripts/build-runtime-c.sh licontainer/runtime/libli_rt_container.a
 
       - name: Build Li Container Engine packages
         env:
@@ -40,6 +47,32 @@ jobs:
             echo "lic checkout unavailable — Li build skipped (add lic submodule or fork for CI)"
             exit 0
           fi
+
+  li-integration:
+    runs-on: ubuntu-latest
+    needs: li-build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout lic compiler (optional)
+        uses: actions/checkout@v4
+        with:
+          repository: li-langverse/lic
+          path: lic
+        continue-on-error: true
+
+      - name: lirun busybox integration (gated)
+        env:
+          LIC_ROOT: ${{ github.workspace }}/lic
+          LI_CONTAINER_INTEGRATION: "1"
+        run: |
+          if [[ -x "$LIC_ROOT/bin/lic" ]] || [[ -x "$LIC_ROOT/scripts/resolve-lic.sh" ]]; then
+            chmod +x licontainer/scripts/test-lirun-integration.sh
+            licontainer/scripts/test-lirun-integration.sh
+          else
+            echo "lic unavailable — integration skipped"
+          fi
+        continue-on-error: true
 
   rust-deprecated:
     runs-on: ubuntu-latest

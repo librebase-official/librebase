@@ -45,11 +45,11 @@ flowchart TB
 | Spec operation | Status | Notes |
 |----------------|--------|-------|
 | `config.json` bundle | ✅ | process, root, mounts, linux namespaces, cgroups |
-| `create` | ✅ | Linux only |
-| `start` | ✅ | namespaces + pivot_root |
-| `delete` | ✅ | `--force` for running |
-| `kill` | ✅ | SIGTERM/SIGKILL |
-| `state` | ✅ | JSON on stdout |
+| `create` | ✅ Li | `li-container-run` + `li_rt_container.c`; Linux only |
+| `start` | ✅ Li | namespaces + pivot_root via trusted seam |
+| `delete` | ✅ Li | `--force` for running |
+| `kill` | ✅ Li | SIGTERM/SIGKILL |
+| `state` | ✅ Li | JSON on stdout |
 | checkpoint | ❌ | deferred |
 | hooks (all types) | ❌ | deferred |
 | events | ❌ | deferred |
@@ -92,12 +92,43 @@ export LIC_ROOT=/path/to/lic
 ./licontainer/scripts/build-li.sh
 ```
 
-Build individual binaries (once `lic build` entrypoints are wired):
+Build individual binaries:
 
 ```bash
 lic build licontainer/packages/li-container-cli/src/main.li -o lictl
 lic build licontainer/packages/li-container-run/src/main.li -o lirun
 ```
+
+### Phase 1 lirun (Li) — Rust parity
+
+| Rust (`lirun/`) | Li (`packages/`) |
+|-----------------|------------------|
+| `main.rs` CLI | `li-container-run/src/main.li` |
+| `bundle.rs` | `li-container/src/bundle.li` + `state.li` |
+| `runtime.rs` | `li-container-run/src/runtime.li` |
+| `error.rs` | `li-container/src/error.li` |
+| `seccomp.rs` | `runtime/li_rt_container.c` (`container_seccomp_apply_i`) |
+
+Trusted runtime: link `runtime/li_rt_container.c` into `lic` (see `runtime/CMakeLists.txt`) and merge `runtime/seam-container.li` into `std/runtime/seam.li` upstream.
+
+```bash
+# OCI lifecycle (Linux / WSL2)
+export LI_CONTAINER_STATE_DIR=/run/licontainer/containers
+lirun create --bundle /path/to/bundle --id myctr
+lirun start --id myctr
+lirun state --id myctr          # JSON on stdout
+lirun kill --id myctr SIGTERM
+lirun delete --id myctr --force
+lirun version
+```
+
+Integration test (requires root/CAP_SYS_ADMIN):
+
+```bash
+LI_CONTAINER_INTEGRATION=1 licontainer/scripts/test-lirun-integration.sh
+```
+
+Build requirements: `lic` compiler with trusted extern support; on Linux optionally `libseccomp` (`LI_CONTAINER_SKIP_SECCOMP=1` to skip). Non-Linux returns `UNSUPPORTED` JSON error.
 
 ### Deprecated Rust build
 

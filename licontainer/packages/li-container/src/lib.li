@@ -1,11 +1,7 @@
-# Li Container Engine — core library (Li-only; no Rust).
-
-def container_engine_name() -> int
-  requires true
-  ensures result == 1
-  decreases 0
-=
-  return 1
+import bundle
+import state
+import error
+import seam
 
 def container_version_major() -> int
   requires true
@@ -27,3 +23,17 @@ def container_version_patch() -> int
   decreases 0
 =
   return 0
+
+def container_version_tag() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return container_runtime_tag_i()
+
+def container_linux_available() -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  return container_is_linux_i()

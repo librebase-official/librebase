@@ -1,0 +1,192 @@
+import container
+import container.bundle
+import container.state
+import container.error
+import container.seam
+
+def runtime_require_linux() -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  if container_linux_available() != 1:
+    return error_unsupported()
+  return 0
+
+def runtime_create(container_id: var ptr, bundle_path: var ptr) raises IO, Alloc -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  if runtime_require_linux() != 0:
+    return error_unsupported()
+  if state_exists(container_id) == 1:
+    return error_container_exists()
+  var config: ptr = container_buf_alloc_i(65536)
+  if bundle_read_config(bundle_path, config, 65536) != 0:
+    container_buf_free_i(config)
+    return error_bundle_not_found()
+  if bundle_validate_rootfs(bundle_path, config) != 0:
+    container_buf_free_i(config)
+    return error_invalid_config()
+  var oci: ptr = container_buf_alloc_i(64)
+  if bundle_oci_version(config, oci, 64) != 0:
+    container_buf_free_i(oci)
+    container_buf_free_i(config)
+    return error_invalid_config()
+  if state_save_created(container_id, oci, bundle_path) != 0:
+    container_buf_free_i(oci)
+    container_buf_free_i(config)
+    return error_runtime()
+  if container_cgroup_create_i(container_id) != 0:
+    container_buf_free_i(oci)
+    container_buf_free_i(config)
+    return error_runtime()
+  var cgroup: ptr = container_buf_alloc_i(4096)
+  container_cgroup_path_i(container_id, cgroup, 4096)
+  bundle_apply_cgroup_limits(cgroup, config)
+  container_buf_free_i(cgroup)
+  container_buf_free_i(oci)
+  container_buf_free_i(config)
+  return 0
+
+def runtime_child_setup(container_id: var ptr, bundle_path: var ptr, config: var ptr) -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  var flags: int = container_namespace_flags_i(config)
+  container_unshare_i(flags)
+  container_cgroup_join_i(container_id)
+  container_setup_rootfs_i(bundle_path, config)
+  var uid: int = bundle_process_uid(config)
+  var gid: int = bundle_process_gid(config)
+  container_drop_privileges_i(uid, gid)
+  container_seccomp_apply_i(config)
+  var cwd: ptr = "/"
+  container_exec_i(cwd, config)
+  return error_runtime()
+
+def runtime_start(container_id: var ptr) raises IO, Alloc -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  if runtime_require_linux() != 0:
+    return error_unsupported()
+  var state_json: ptr = container_buf_alloc_i(4096)
+  if state_load(container_id, state_json, 4096) != 0:
+    container_buf_free_i(state_json)
+    return error_container_not_found()
+  var status: ptr = container_buf_alloc_i(64)
+  state_status(state_json, status, 64)
+  var running: ptr = "running"
+  if container_str_cmp_i(status, running) == 0:
+    container_buf_free_i(status)
+    container_buf_free_i(state_json)
+    return error_invalid_state()
+  var bundle: ptr = container_buf_alloc_i(4096)
+  container_json_field_str_i(state_json, "bundle", bundle, 4096)
+  var config: ptr = container_buf_alloc_i(65536)
+  if bundle_read_config(bundle, config, 65536) != 0:
+    container_buf_free_i(bundle)
+    container_buf_free_i(status)
+    container_buf_free_i(state_json)
+    container_buf_free_i(config)
+    return error_invalid_config()
+  var oci: ptr = container_buf_alloc_i(64)
+  bundle_oci_version(config, oci, 64)
+  var child: int = container_fork_child_i()
+  if child < 0:
+    container_buf_free_i(oci)
+    container_buf_free_i(bundle)
+    container_buf_free_i(status)
+    container_buf_free_i(state_json)
+    container_buf_free_i(config)
+    return error_runtime()
+  if child > 0:
+    state_save_running(container_id, oci, bundle, child)
+    container_buf_free_i(oci)
+    container_buf_free_i(bundle)
+    container_buf_free_i(status)
+    container_buf_free_i(state_json)
+    container_buf_free_i(config)
+    return 0
+  runtime_child_setup(container_id, bundle, config)
+  return error_runtime()
+
+def runtime_delete(container_id: var ptr, force: int) raises IO, Alloc -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  if runtime_require_linux() != 0:
+    return error_unsupported()
+  var state_json: ptr = container_buf_alloc_i(4096)
+  if state_load(container_id, state_json, 4096) != 0:
+    container_buf_free_i(state_json)
+    return error_container_not_found()
+  var status: ptr = container_buf_alloc_i(64)
+  state_status(state_json, status, 64)
+  var running: ptr = "running"
+  if container_str_cmp_i(status, running) == 0:
+    if force != 1:
+      container_buf_free_i(status)
+      container_buf_free_i(state_json)
+      return error_invalid_state()
+    var pid: int = container_state_pid_value_i(state_json)
+    if pid > 0:
+      container_kill_i(pid, 9)
+  container_cgroup_remove_i(container_id)
+  state_delete(container_id)
+  container_buf_free_i(status)
+  container_buf_free_i(state_json)
+  return 0
+
+def runtime_kill(container_id: var ptr, signal: int) raises IO, Alloc -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  if runtime_require_linux() != 0:
+    return error_unsupported()
+  var state_json: ptr = container_buf_alloc_i(4096)
+  if state_load(container_id, state_json, 4096) != 0:
+    container_buf_free_i(state_json)
+    return error_container_not_found()
+  var pid: int = container_state_pid_value_i(state_json)
+  if pid > 0:
+    container_kill_i(pid, signal)
+  container_buf_free_i(state_json)
+  return 0
+
+def runtime_state(container_id: var ptr) raises IO, Alloc -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  if runtime_require_linux() != 0:
+    return error_unsupported()
+  var state_json: ptr = container_buf_alloc_i(4096)
+  if state_load(container_id, state_json, 4096) != 0:
+    container_buf_free_i(state_json)
+    return error_container_not_found()
+  var status: ptr = container_buf_alloc_i(64)
+  state_status(state_json, status, 64)
+  var running: ptr = "running"
+  if container_str_cmp_i(status, running) == 0:
+    var pid: int = container_state_pid_value_i(state_json)
+    if pid > 0:
+      if container_pid_alive_i(pid) != 1:
+        var bundle: ptr = container_buf_alloc_i(4096)
+        container_json_field_str_i(state_json, "bundle", bundle, 4096)
+        var oci: ptr = container_buf_alloc_i(64)
+        container_json_field_str_i(state_json, "ociVersion", oci, 64)
+        state_save_stopped(container_id, oci, bundle, pid)
+        state_load(container_id, state_json, 4096)
+        container_buf_free_i(oci)
+        container_buf_free_i(bundle)
+  container_stdout_i(state_json)
+  container_buf_free_i(status)
+  container_buf_free_i(state_json)
+  return 0

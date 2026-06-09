@@ -1,0 +1,57 @@
+import seam
+
+def bundle_config_cap() -> int
+  requires true
+  ensures result == 65536
+  decreases 0
+=
+  return 65536
+
+def bundle_read_config(bundle_path: var ptr, buf: var ptr, cap: int) raises IO -> int
+  requires 0 < cap
+  ensures true
+  decreases 0
+=
+  var n: int = container_bundle_read_config_i(bundle_path, buf, cap)
+  if n < 0:
+    return 1
+  return 0
+
+def bundle_validate_rootfs(bundle_path: var ptr, config_json: var ptr) -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  if container_bundle_rootfs_exists_i(bundle_path, config_json) != 1:
+    return 1
+  return 0
+
+def bundle_oci_version(config_json: var ptr, out: var ptr, cap: int) -> int
+  requires 0 < cap
+  ensures true
+  decreases 0
+=
+  if container_json_field_str_i(config_json, "ociVersion", out, cap) == 0:
+    return 0
+  return 1
+
+def bundle_process_uid(config_json: var ptr) -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  return container_json_process_uid_i(config_json)
+
+def bundle_process_gid(config_json: var ptr) -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  return container_json_process_gid_i(config_json)
+
+def bundle_apply_cgroup_limits(cgroup_path: var ptr, config_json: var ptr) raises IO -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  return container_cgroup_apply_limits_i(cgroup_path, config_json)

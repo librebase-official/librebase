@@ -15,4 +15,7 @@ were an interim scaffold and **must not be extended**.
 
 Build Li packages with `scripts/build-li.sh` and `LIC_ROOT` pointing at a `lic` checkout.
 
-Rust CI remains temporarily with `continue-on-error: true` until Li parity lands.
+**Phase 1 `lirun`** (create/start/delete/kill/state) is ported to Li:
+`packages/li-container-run/` + `runtime/li_rt_container.c` + `runtime/seam-container.li`.
+
+Rust CI remains temporarily with `continue-on-error: true` until full daemon/CLI parity lands.

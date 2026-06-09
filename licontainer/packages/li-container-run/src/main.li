@@ -1,9 +1,172 @@
 import container
+import container.error
+import runtime
 
-def main() -> int
+extern proc li_rt_argc() -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern proc li_rt_argv_i(index: int) -> ptr
+  requires 0 <= index
+  ensures true
+  decreases 0
+
+extern proc container_str_cmp_i(a: var ptr, b: var ptr) -> int
+  requires true
+  ensures true
+  decreases 0
+
+def parse_signal(name: var ptr) -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  var sigterm: ptr = "SIGTERM"
+  var term: ptr = "TERM"
+  var sigkill: ptr = "SIGKILL"
+  if container_str_cmp_i(name, sigterm) == 0:
+    return 15
+  if container_str_cmp_i(name, term) == 0:
+    return 15
+  return 9
+
+def cmd_version() raises IO -> int
   requires true
   ensures result == 0
   decreases 0
 =
-  # lirun: OCI create/start/delete/kill/state — Linux namespaces via trusted runtime seam
+  echo "lirun 0.1.0"
   return 0
+
+def cmd_create(bundle: var ptr, container_id: var ptr) raises IO, Alloc -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  var rc: int = runtime_create(container_id, bundle)
+  if rc != 0:
+    var msg: ptr = "create failed"
+    if rc == error_container_exists():
+      msg = "container already exists"
+    if rc == error_bundle_not_found():
+      msg = "bundle not found"
+    if rc == error_invalid_config():
+      msg = "invalid bundle config"
+    if rc == error_unsupported():
+      msg = "lirun requires Linux (use WSL2 bridge on Windows)"
+    emit_error_json(rc, msg)
+    return 1
+  return 0
+
+def cmd_start(container_id: var ptr) raises IO, Alloc -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  var rc: int = runtime_start(container_id)
+  if rc != 0:
+    var msg: ptr = "start failed"
+    emit_error_json(rc, msg)
+    return 1
+  return 0
+
+def cmd_delete(container_id: var ptr, force: int) raises IO, Alloc -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  var rc: int = runtime_delete(container_id, force)
+  if rc != 0:
+    var msg: ptr = "delete failed"
+    emit_error_json(rc, msg)
+    return 1
+  return 0
+
+def cmd_kill(container_id: var ptr, signal_name: var ptr) raises IO, Alloc -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  var sig: int = parse_signal(signal_name)
+  var rc: int = runtime_kill(container_id, sig)
+  if rc != 0:
+    var msg: ptr = "kill failed"
+    emit_error_json(rc, msg)
+    return 1
+  return 0
+
+def cmd_state(container_id: var ptr) raises IO, Alloc -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  var rc: int = runtime_state(container_id)
+  if rc != 0:
+    var msg: ptr = "state query failed"
+    emit_error_json(rc, msg)
+    return 1
+  return 0
+
+def dispatch() raises IO, Alloc -> int
+  requires true
+  ensures result >= 0
+  decreases 0
+=
+  var n: int = li_rt_argc()
+  if n < 2:
+    return 1
+  var cmd: ptr = li_rt_argv_i(1)
+  var version_cmd: ptr = "version"
+  if container_str_cmp_i(cmd, version_cmd) == 0:
+    return cmd_version()
+  var create_cmd: ptr = "create"
+  if container_str_cmp_i(cmd, create_cmd) == 0:
+    if n < 6:
+      return 1
+    var bundle_flag: ptr = "--bundle"
+    var id_flag: ptr = "--id"
+    if container_str_cmp_i(li_rt_argv_i(2), bundle_flag) != 0:
+      return 1
+    if container_str_cmp_i(li_rt_argv_i(4), id_flag) != 0:
+      return 1
+    return cmd_create(li_rt_argv_i(3), li_rt_argv_i(5))
+  var start_cmd: ptr = "start"
+  if container_str_cmp_i(cmd, start_cmd) == 0:
+    if n < 4:
+      return 1
+    var id_flag2: ptr = "--id"
+    if container_str_cmp_i(li_rt_argv_i(2), id_flag2) != 0:
+      return 1
+    return cmd_start(li_rt_argv_i(3))
+  var delete_cmd: ptr = "delete"
+  if container_str_cmp_i(cmd, delete_cmd) == 0:
+    if n < 4:
+      return 1
+    var force: int = 0
+    if n >= 5:
+      var force_flag: ptr = "--force"
+      if container_str_cmp_i(li_rt_argv_i(4), force_flag) == 0:
+        force = 1
+    return cmd_delete(li_rt_argv_i(3), force)
+  var kill_cmd: ptr = "kill"
+  if container_str_cmp_i(cmd, kill_cmd) == 0:
+    if n < 4:
+      return 1
+    var sig: ptr = "SIGKILL"
+    if n >= 5:
+      sig = li_rt_argv_i(4)
+    return cmd_kill(li_rt_argv_i(3), sig)
+  var state_cmd: ptr = "state"
+  if container_str_cmp_i(cmd, state_cmd) == 0:
+    if n < 4:
+      return 1
+    return cmd_state(li_rt_argv_i(3))
+  return 1
+
+def main() raises IO, Alloc -> int
+  requires true
+  ensures result >= 0
+  decreases 0
+=
+  return dispatch()

@@ -1,0 +1,24 @@
+import container
+import container.seam
+
+def integration_enabled() -> int
+  requires true
+  ensures true
+  decreases 0
+=
+  var buf: ptr = container_buf_alloc_i(16)
+  var ok: int = container_env_is_i("LI_CONTAINER_INTEGRATION", "1")
+  container_buf_free_i(buf)
+  return ok
+
+def main() -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  if integration_enabled() != 1:
+    return 0
+  if container_is_linux_i() != 1:
+    return 0
+  # Full busybox OCI cycle runs via scripts/test-lirun-integration.sh (requires built lirun + CAP_SYS_ADMIN).
+  return 0
