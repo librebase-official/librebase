@@ -2,7 +2,7 @@
 
 General-purpose OCI-compatible container engine for Librebase. **Pure Li in librebase** — only `.li` packages; no Rust, no C, no other languages under `licontainer/`.
 
-Trusted OCI ops are **`extern proc` in Li** (`packages/li-container/src/seam.li`), with implementations merged into **`lic/std/runtime/seam.li`** (like `Net` / `li-net`). See [`PURE-LI-POLICY.md`](../licontainer/PURE-LI-POLICY.md) and [`rfc-container-trusted-surface.md`](rfc-container-trusted-surface.md).
+Trusted OCI ops are **`extern def` in Li** (`packages/li-container/src/seam.li`), with implementations merged into **`lic/std/runtime/seam.li`**. All Li code uses **`def` only** — no `proc`. See [`PURE-LI-POLICY.md`](../licontainer/PURE-LI-POLICY.md) and [`rfc-container-trusted-surface.md`](rfc-container-trusted-surface.md).
 
 ## Architecture
 
@@ -36,7 +36,7 @@ flowchart TB
 | `liimg` | `packages/li-container-img/` | OCI layout pull/store, optional squashfs export |
 | `licri` | `packages/li-container-cri/` | Kubernetes CRI v1 subset |
 | Core types | `packages/li-container/` | Shared library |
-| Trusted OCI seam | `packages/li-container/src/seam.li` | Li `extern proc`; impl in `lic` upstream only |
+| Trusted OCI seam | `packages/li-container/src/seam.li` | Li `extern def`; impl in `lic` upstream only |
 
 ## OCI compliance matrix (v1)
 

@@ -2,17 +2,17 @@ import container
 import container.runerr
 import runtime
 
-extern proc li_rt_argc() -> int
+extern def li_rt_argc() -> int
   requires true
   ensures true
   decreases 0
 
-extern proc li_rt_argv_i(index: int) -> ptr
+extern def li_rt_argv_i(index: int) -> ptr
   requires 0 <= index
   ensures true
   decreases 0
 
-extern proc container_str_cmp_i(a: var ptr, b: var ptr) -> int
+extern def container_str_cmp_i(a: var ptr, b: var ptr) -> int
   requires true
   ensures true
   decreases 0

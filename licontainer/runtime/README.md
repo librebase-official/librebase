@@ -2,7 +2,7 @@
 
 This directory documents the **upstream merge target** in `lic` — not local C sources.
 
-Container `extern proc` declarations live in:
+Container `extern def` declarations live in:
 
 `packages/li-container/src/seam.li`
 

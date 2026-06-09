@@ -8,7 +8,7 @@ Like `Net` for `li-net-httpd`, container isolation is a **trusted Li effect**. U
 
 ## Li declarations (librebase)
 
-`licontainer/packages/li-container/src/seam.li` — `extern proc container_* raises Container`
+`licontainer/packages/li-container/src/seam.li` — `extern def container_* raises Container`
 
 ## Implementation (lic repo only)
 
@@ -22,7 +22,7 @@ Like `Net` for `li-net-httpd`, container isolation is a **trusted Li effect**. U
 ## Forbidden
 
 - C/Rust/Python syscall code in `librebase-official/librebase`
-- Raw `extern proc` in application modules outside `seam.li`
+- Raw `extern def` in application modules outside `seam.li`
 
 ## Exit gate
 

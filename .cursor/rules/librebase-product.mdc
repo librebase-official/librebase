@@ -55,7 +55,7 @@ Phase 1 Studio (`data-studio-ui/`): explicit `Instance` entity in `instances-sto
 ## Conventions
 
 - PH-DB phased delivery; honest degraded modes (no fake green status).
-- **Pure Li engine policy:** licontainer in librebase is `.li` only — no Rust, no C, no Python in `licontainer/`. Trusted OCI impl lives in `lic` upstream (like `Net`).
+- **Pure Li engine policy:** licontainer in librebase is `.li` only — no Rust, no C, no Python in `licontainer/`. Use **`def` only** (no `proc`); trusted FFI is **`extern def`** in `seam.li`. Impl lives in `lic` upstream.
 - `registry-min.toml` excludes Studio from the lean bundle — Studio is opt-in/commercial-shaped.
 - License: GPL-3.0-or-later; commercial packaging may diverge for paid tiers.
 
