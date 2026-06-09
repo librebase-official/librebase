@@ -2,15 +2,20 @@
 # Build Li Container Engine workspace (Li-only).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-WS="$ROOT/packages/li.toml"
-LIC="${LIC:-${LIC_ROOT:-}/bin/lic}"
-if [[ ! -x "$LIC" ]]; then
-  if command -v lic >/dev/null 2>&1; then
-    LIC="$(command -v lic)"
-  else
-    echo "error: set LIC_ROOT or put lic on PATH" >&2
-    exit 1
+LIC="${LIC:-}"
+if [[ -z "$LIC" && -n "${LIC_ROOT:-}" ]]; then
+  if [[ -x "${LIC_ROOT}/bin/lic" ]]; then
+    LIC="${LIC_ROOT}/bin/lic"
+  elif [[ -f "${LIC_ROOT}/scripts/resolve-lic.sh" ]]; then
+    LIC="$("${LIC_ROOT}/scripts/resolve-lic.sh")"
   fi
+fi
+if [[ -z "$LIC" ]] && command -v lic >/dev/null 2>&1; then
+  LIC="$(command -v lic)"
+fi
+if [[ -z "$LIC" || ! -x "$LIC" ]]; then
+  echo "error: set LIC_ROOT or put lic on PATH (use lic/scripts/resolve-lic.sh)" >&2
+  exit 1
 fi
 members=(li-container li-container-run li-containerd li-container-cli li-container-img li-container-cri)
 for m in "${members[@]}"; do

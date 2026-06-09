@@ -1,6 +1,6 @@
 import seam
 
-def state_exists(container_id: var ptr) -> int
+def state_exists(container_id: var ptr) raises Alloc -> int
   requires true
   ensures true
   decreases 0
@@ -53,14 +53,14 @@ def state_delete(container_id: var ptr) raises IO -> int
 =
   return container_state_delete_i(container_id)
 
-def state_status(state_json: var ptr, out: var ptr, cap: int) -> int
+def state_status(state_json: var ptr, out: var ptr, cap: int) raises IO -> int
   requires 0 < cap
   ensures true
   decreases 0
 =
   return container_json_status_i(state_json, out, cap)
 
-def state_pid(state_json: var ptr, pid_out: var ptr, has_pid: var ptr) -> int
+def state_pid(state_json: var ptr, pid_out: var ptr, has_pid: var ptr) raises IO -> int
   requires true
   ensures true
   decreases 0

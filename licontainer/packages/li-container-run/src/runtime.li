@@ -1,7 +1,7 @@
 import container
 import container.bundle
 import container.state
-import container.error
+import container.runerr
 import container.seam
 
 def runtime_require_linux() -> int

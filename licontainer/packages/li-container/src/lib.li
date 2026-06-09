@@ -1,6 +1,6 @@
 import bundle
 import state
-import error
+import runerr
 import seam
 
 def container_version_major() -> int

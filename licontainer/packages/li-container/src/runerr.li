@@ -69,9 +69,9 @@ def emit_error_json(code_tag: int, message: var ptr) raises IO -> int
     code = "UNSUPPORTED"
   if code_tag == error_runtime():
     code = "RUNTIME_ERROR"
-  container_eprint_i("{\"ok\":false,\"code\":\"")
+  container_eprint_i("{ok:false,code:")
   container_eprint_i(code)
-  container_eprint_i("\",\"message\":\"")
+  container_eprint_i(",message:")
   container_eprint_i(message)
-  container_eprint_i("\"}\n")
+  container_eprint_i("}\n")
   return 1

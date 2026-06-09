@@ -1,5 +1,5 @@
 import container
-import container.error
+import container.runerr
 import runtime
 
 extern proc li_rt_argc() -> int

@@ -1,4 +1,5 @@
-# Re-export trusted OCI runtime seam (canonical: licontainer/runtime/seam-container.li).
+# Trusted OCI runtime seam — extend lic `std/runtime/seam.li` pattern.
+# Merged into lic upstream; vendored here for librebase development.
 
 extern proc container_runtime_tag_i() -> int
   requires true
@@ -35,7 +36,17 @@ extern proc container_remove_file_i(path: var ptr) raises IO -> int
   ensures true
   decreases 0
 
+extern proc container_remove_dir_i(path: var ptr) raises IO -> int
+  requires true
+  ensures true
+  decreases 0
+
 extern proc container_getenv_i(name: var ptr, buf: var ptr, cap: int) -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern proc container_env_is_i(name: var ptr, value: var ptr) -> int
   requires true
   ensures true
   decreases 0
@@ -46,6 +57,16 @@ extern proc container_json_field_str_i(json: var ptr, key: var ptr, out: var ptr
   decreases 0
 
 extern proc container_json_field_int_i(json: var ptr, key: var ptr, out: var ptr) -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern proc container_json_field_bool_i(json: var ptr, key: var ptr, out: var ptr) -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern proc container_state_dir_i(out: var ptr, cap: int) -> int
   requires true
   ensures true
   decreases 0
@@ -70,6 +91,11 @@ extern proc container_state_delete_i(id: var ptr) raises IO -> int
   ensures true
   decreases 0
 
+extern proc container_cgroup_root_i(out: var ptr, cap: int) -> int
+  requires true
+  ensures true
+  decreases 0
+
 extern proc container_cgroup_path_i(id: var ptr, out: var ptr, cap: int) -> int
   requires true
   ensures true
@@ -81,6 +107,11 @@ extern proc container_cgroup_create_i(id: var ptr) raises IO -> int
   decreases 0
 
 extern proc container_cgroup_remove_i(id: var ptr) raises IO -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern proc container_cgroup_join_i(id: var ptr) raises IO -> int
   requires true
   ensures true
   decreases 0
@@ -115,22 +146,17 @@ extern proc container_stdout_i(msg: var ptr) raises IO -> int
   ensures true
   decreases 0
 
-extern proc container_bundle_read_config_i(bundle_path: var ptr, buf: var ptr, cap: int) raises IO -> int
-  requires 0 < cap
-  ensures true
-  decreases 0
-
-extern proc container_bundle_rootfs_exists_i(bundle_path: var ptr, config_json: var ptr) -> int
-  requires true
-  ensures true
-  decreases 0
-
 extern proc container_unshare_i(flags: int) -> int
   requires true
   ensures true
   decreases 0
 
 extern proc container_fork_child_i() -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern proc container_pivot_root_i(rootfs_path: var ptr) -> int
   requires true
   ensures true
   decreases 0
@@ -185,12 +211,27 @@ extern proc container_str_cmp_i(a: var ptr, b: var ptr) -> int
   ensures true
   decreases 0
 
-extern proc container_cgroup_join_i(id: var ptr) raises IO -> int
+extern proc container_path_join_i(a: var ptr, b: var ptr, out: var ptr, cap: int) -> int
   requires true
   ensures true
   decreases 0
 
-extern proc container_env_is_i(name: var ptr, value: var ptr) -> int
+extern proc container_bundle_read_config_i(bundle_path: var ptr, buf: var ptr, cap: int) raises IO -> int
+  requires 0 < cap
+  ensures true
+  decreases 0
+
+extern proc container_bundle_rootfs_exists_i(bundle_path: var ptr, config_json: var ptr) -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern proc container_json_status_i(state_json: var ptr, out: var ptr, cap: int) -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern proc container_json_pid_i(state_json: var ptr, out: var ptr, has_pid: var ptr) -> int
   requires true
   ensures true
   decreases 0
