@@ -11,11 +11,11 @@ import {
   getInstanceAsync,
 } from "./instances-store";
 import {
-  liorgCreateProject,
-  liorgEnabled,
-  liorgGetProject,
-  liorgListProjects,
-} from "./liorg-client";
+  adminCreateProject,
+  adminApiEnabled,
+  adminGetProject,
+  adminListProjects,
+} from "./librebase-admin-client";
 import { requireEntitlement } from "./entitlements";
 import { resolveStudioOrgId, studioOrgId } from "./org-context";
 import { generateId, readJsonFile, writeJsonFile } from "./json-store";
@@ -129,21 +129,21 @@ export function _clearProjectsForTest(): void {
 
 export async function listProjectsAsync(orgId?: string): Promise<Project[]> {
   const resolvedOrg = orgId ?? (await resolveStudioOrgId());
-  if (!liorgEnabled()) {
+  if (!adminApiEnabled()) {
     return listProjects(resolvedOrg);
   }
-  return liorgListProjects(resolvedOrg);
+  return adminListProjects(resolvedOrg);
 }
 
 export async function getProjectAsync(
   id: string,
   orgId?: string,
 ): Promise<Project | undefined> {
-  if (!liorgEnabled()) {
+  if (!adminApiEnabled()) {
     return getProject(id);
   }
   const resolvedOrg = orgId ?? (await resolveStudioOrgId());
-  return liorgGetProject(resolvedOrg, id);
+  return adminGetProject(resolvedOrg, id);
 }
 
 export async function listProjectsByInstanceAsync(
@@ -158,7 +158,7 @@ export async function createProjectAsync(
   input: CreateProjectInput,
 ): Promise<CreateProjectResult> {
   const orgId = input.orgId ?? studioOrgId();
-  if (liorgEnabled()) {
+  if (adminApiEnabled()) {
     await requireEntitlement("project.create", orgId);
   }
 
@@ -196,8 +196,8 @@ export async function createProjectAsync(
     }
   }
 
-  if (liorgEnabled()) {
-    const project = await liorgCreateProject(orgId, {
+  if (adminApiEnabled()) {
+    const project = await adminCreateProject(orgId, {
       name: input.name,
       instanceId: instanceId!,
       deploymentMode,

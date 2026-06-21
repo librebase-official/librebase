@@ -1,6 +1,9 @@
 /**
- * liorg control-plane HTTP client (Librebase Studio operator auth + org metadata).
- * Set LIBREBASE_ORG_URL to enable; optional LIBREBASE_ORG_SESSION bearer token.
+ * Librebase Admin API client — Studio operator auth + org/project metadata.
+ * Product-branded management backend (not a linative lip package).
+ *
+ * Set LIBREBASE_ADMIN_URL to enable; optional LIBREBASE_ADMIN_SESSION bearer token.
+ * LIBREBASE_ORG_URL / LIBREBASE_ORG_SESSION are deprecated aliases.
  */
 
 import type {
@@ -12,7 +15,7 @@ import type {
   Project,
 } from "./types";
 
-export interface LiorgMe {
+export interface AdminMe {
   user: { id: string; email: string };
   activeOrgId: string;
   role: string;
@@ -20,28 +23,32 @@ export interface LiorgMe {
   memberships: { orgId: string; role: string }[];
 }
 
-export interface LiorgEntitlement {
+export interface AdminEntitlement {
   enabled: boolean;
   status: "allowed" | "denied" | "limited";
   code: number;
 }
 
-export function liorgBaseUrl(): string {
+function adminUrlEnv(): string | undefined {
+  return process.env.LIBREBASE_ADMIN_URL ?? process.env.LIBREBASE_ORG_URL;
+}
+
+function adminSessionEnv(): string | undefined {
   return (
-    process.env.LIBREBASE_ORG_URL?.replace(/\/$/, "") ??
-    "http://127.0.0.1:54330"
+    process.env.LIBREBASE_ADMIN_SESSION ?? process.env.LIBREBASE_ORG_SESSION
   );
 }
 
-export function liorgEnabled(): boolean {
-  return process.env.LIBREBASE_ORG_URL !== undefined;
+export function adminBaseUrl(): string {
+  return adminUrlEnv()?.replace(/\/$/, "") ?? "http://127.0.0.1:54330";
 }
 
-async function liorgFetch<T>(
-  path: string,
-  init?: RequestInit,
-): Promise<T> {
-  const token = process.env.LIBREBASE_ORG_SESSION;
+export function adminApiEnabled(): boolean {
+  return adminUrlEnv() !== undefined;
+}
+
+async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = adminSessionEnv();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(init?.headers as Record<string, string> | undefined),
@@ -49,9 +56,9 @@ async function liorgFetch<T>(
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
-  const res = await fetch(`${liorgBaseUrl()}${path}`, { ...init, headers });
+  const res = await fetch(`${adminBaseUrl()}${path}`, { ...init, headers });
   if (!res.ok) {
-    throw new Error(`liorg ${path}: ${res.status} ${await res.text()}`);
+    throw new Error(`librebase-admin ${path}: ${res.status} ${await res.text()}`);
   }
   if (res.status === 204) {
     return undefined as T;
@@ -68,42 +75,42 @@ function normalizeInstance(raw: Instance): Instance {
   };
 }
 
-export async function liorgSetup(input: {
+export async function adminSetup(input: {
   name: string;
   ownerEmail: string;
   password: string;
   slug?: string;
 }): Promise<{ orgId: string; token: string }> {
-  return liorgFetch("/org/v1/setup", {
+  return adminFetch("/org/v1/setup", {
     method: "POST",
     body: JSON.stringify(input),
   });
 }
 
-export async function liorgLogin(
+export async function adminLogin(
   email: string,
   password: string,
 ): Promise<{ token: string; orgId: string }> {
-  return liorgFetch("/org/v1/auth/login", {
+  return adminFetch("/org/v1/auth/login", {
     method: "POST",
     body: JSON.stringify({ email, password }),
   });
 }
 
-export async function liorgMe(): Promise<LiorgMe> {
-  return liorgFetch<LiorgMe>("/org/v1/me");
+export async function adminMe(): Promise<AdminMe> {
+  return adminFetch<AdminMe>("/org/v1/me");
 }
 
-export async function liorgListProjects(orgId: string): Promise<Project[]> {
-  return liorgFetch<Project[]>(`/org/v1/orgs/${orgId}/projects`);
+export async function adminListProjects(orgId: string): Promise<Project[]> {
+  return adminFetch<Project[]>(`/org/v1/orgs/${orgId}/projects`);
 }
 
-export async function liorgGetProject(
+export async function adminGetProject(
   orgId: string,
   projectId: string,
 ): Promise<Project | undefined> {
   try {
-    return await liorgFetch<Project>(
+    return await adminFetch<Project>(
       `/org/v1/orgs/${orgId}/projects/${projectId}`,
     );
   } catch {
@@ -111,32 +118,29 @@ export async function liorgGetProject(
   }
 }
 
-export async function liorgCreateProject(
+export async function adminCreateProject(
   orgId: string,
-  input: Pick<
-    Project,
-    "name" | "instanceId" | "deploymentMode" | "region"
-  >,
+  input: Pick<Project, "name" | "instanceId" | "deploymentMode" | "region">,
 ): Promise<Project> {
-  return liorgFetch<Project>(`/org/v1/orgs/${orgId}/projects`, {
+  return adminFetch<Project>(`/org/v1/orgs/${orgId}/projects`, {
     method: "POST",
     body: JSON.stringify(input),
   });
 }
 
-export async function liorgListInstances(orgId: string): Promise<Instance[]> {
-  const rows = await liorgFetch<Instance[]>(
+export async function adminListInstances(orgId: string): Promise<Instance[]> {
+  const rows = await adminFetch<Instance[]>(
     `/org/v1/orgs/${orgId}/instances`,
   );
   return rows.map(normalizeInstance);
 }
 
-export async function liorgGetInstance(
+export async function adminGetInstance(
   orgId: string,
   instanceId: string,
 ): Promise<Instance | undefined> {
   try {
-    const row = await liorgFetch<Instance>(
+    const row = await adminFetch<Instance>(
       `/org/v1/orgs/${orgId}/instances/${instanceId}`,
     );
     return normalizeInstance(row);
@@ -145,7 +149,7 @@ export async function liorgGetInstance(
   }
 }
 
-export async function liorgCreateInstance(
+export async function adminCreateInstance(
   orgId: string,
   input: CreateInstanceInput & {
     dataDir?: string;
@@ -154,7 +158,7 @@ export async function liorgCreateInstance(
     runtimeTarget?: string;
   },
 ): Promise<Instance> {
-  const row = await liorgFetch<Instance>(`/org/v1/orgs/${orgId}/instances`, {
+  const row = await adminFetch<Instance>(`/org/v1/orgs/${orgId}/instances`, {
     method: "POST",
     body: JSON.stringify({
       name: input.name,
@@ -168,7 +172,7 @@ export async function liorgCreateInstance(
   return normalizeInstance(row);
 }
 
-export async function liorgPatchInstance(
+export async function adminPatchInstance(
   orgId: string,
   instanceId: string,
   patch: Partial<
@@ -183,25 +187,25 @@ export async function liorgPatchInstance(
     >
   >,
 ): Promise<Instance> {
-  const row = await liorgFetch<Instance>(
+  const row = await adminFetch<Instance>(
     `/org/v1/orgs/${orgId}/instances/${instanceId}`,
     { method: "PATCH", body: JSON.stringify(patch) },
   );
   return normalizeInstance(row);
 }
 
-export async function liorgCheckEntitlement(
+export async function adminCheckEntitlement(
   orgId: string,
   featureKey: string,
-): Promise<LiorgEntitlement> {
-  return liorgFetch<LiorgEntitlement>(
+): Promise<AdminEntitlement> {
+  return adminFetch<AdminEntitlement>(
     `/org/v1/orgs/${orgId}/entitlements/${featureKey}`,
   );
 }
 
-export async function liorgHealth(): Promise<boolean> {
+export async function adminHealth(): Promise<boolean> {
   try {
-    const res = await fetch(`${liorgBaseUrl()}/health`);
+    const res = await fetch(`${adminBaseUrl()}/health`);
     return res.ok;
   } catch {
     return false;

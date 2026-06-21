@@ -1,12 +1,12 @@
 import fs from "node:fs";
 import { resolveRuntimeTarget } from "./runtime-env";
 import {
-  liorgCreateInstance,
-  liorgEnabled,
-  liorgGetInstance,
-  liorgListInstances,
-  liorgPatchInstance,
-} from "./liorg-client";
+  adminCreateInstance,
+  adminApiEnabled,
+  adminGetInstance,
+  adminListInstances,
+  adminPatchInstance,
+} from "./librebase-admin-client";
 import { resolveStudioOrgId, studioOrgId } from "./org-context";
 import type {
   CreateInstanceInput,
@@ -165,36 +165,36 @@ export function _clearInstancesForTest(): void {
 
 export async function listInstancesAsync(orgId?: string): Promise<Instance[]> {
   const resolvedOrg = orgId ?? (await resolveStudioOrgId());
-  if (!liorgEnabled()) {
+  if (!adminApiEnabled()) {
     return listInstances(resolvedOrg);
   }
-  return liorgListInstances(resolvedOrg);
+  return adminListInstances(resolvedOrg);
 }
 
 export async function getInstanceAsync(
   id: string,
   orgId?: string,
 ): Promise<Instance | undefined> {
-  if (!liorgEnabled()) {
+  if (!adminApiEnabled()) {
     return getInstance(id);
   }
   const resolvedOrg = orgId ?? (await resolveStudioOrgId());
-  return liorgGetInstance(resolvedOrg, id);
+  return adminGetInstance(resolvedOrg, id);
 }
 
 export async function createInstanceAsync(
   input: CreateInstanceInput,
 ): Promise<Instance> {
   const orgId = input.orgId ?? studioOrgId();
-  if (!liorgEnabled()) {
+  if (!adminApiEnabled()) {
     return createInstance(input);
   }
 
-  const existing = await liorgListInstances(orgId);
+  const existing = await adminListInstances(orgId);
   const ports = allocatePorts(existing);
   const runtimeTarget: RuntimeTarget = resolveRuntimeTarget(input.runtime);
   const deploymentMode: DeploymentMode = input.deploymentMode ?? "dedicated";
-  const created = await liorgCreateInstance(orgId, {
+  const created = await adminCreateInstance(orgId, {
     ...input,
     orgId,
     ports,
@@ -205,7 +205,7 @@ export async function createInstanceAsync(
   });
   const dataDir = instanceDataDir(created.id);
   fs.mkdirSync(dataDir, { recursive: true });
-  return liorgPatchInstance(orgId, created.id, { dataDir });
+  return adminPatchInstance(orgId, created.id, { dataDir });
 }
 
 export async function updateInstanceStatusAsync(
@@ -213,11 +213,11 @@ export async function updateInstanceStatusAsync(
   status: InstanceStatus,
   orgId?: string,
 ): Promise<Instance | undefined> {
-  if (!liorgEnabled()) {
+  if (!adminApiEnabled()) {
     return updateInstanceStatus(id, status);
   }
   const resolvedOrg = orgId ?? (await resolveStudioOrgId());
-  return liorgPatchInstance(resolvedOrg, id, { status });
+  return adminPatchInstance(resolvedOrg, id, { status });
 }
 
 export async function patchInstanceAsync(
@@ -237,9 +237,9 @@ export async function patchInstanceAsync(
   >,
   orgId?: string,
 ): Promise<Instance | undefined> {
-  if (!liorgEnabled()) {
+  if (!adminApiEnabled()) {
     return updateInstance(id, patch);
   }
   const resolvedOrg = orgId ?? (await resolveStudioOrgId());
-  return liorgPatchInstance(resolvedOrg, id, patch);
+  return adminPatchInstance(resolvedOrg, id, patch);
 }

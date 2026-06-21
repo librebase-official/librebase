@@ -1,15 +1,15 @@
 services:
-  liorg:
+  librebase-admin:
     build:
       context: ../../liorg
       dockerfile: Dockerfile
     ports:
       - "54330:54330"
     environment:
-      LIORG_SESSION_JWT_SECRET: ${LIORG_SESSION_JWT_SECRET:-dev-liorg-secret-change-me}
-      LIORG_DB_PATH: /data/org.db
+      LIORG_SESSION_JWT_SECRET: ${LIBREBASE_ADMIN_JWT_SECRET:-dev-librebase-admin-secret}
+      LIORG_DB_PATH: /data/admin.db
     volumes:
-      - liorg-data:/data
+      - librebase-admin-data:/data
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:54330/health"]
       interval: 30s
@@ -23,12 +23,12 @@ services:
     ports:
       - "54324:54324"
     environment:
-      LIBREBASE_ORG_URL: http://liorg:54330
-      LIBREBASE_ORG_SESSION: ${LIBREBASE_ORG_SESSION:-}
+      LIBREBASE_ADMIN_URL: http://librebase-admin:54330
+      LIBREBASE_ADMIN_SESSION: ${LIBREBASE_ADMIN_SESSION:-}
       LIBREBASE_ORG_ID: ${LIBREBASE_ORG_ID:-}
     depends_on:
-      liorg:
+      librebase-admin:
         condition: service_healthy
 
 volumes:
-  liorg-data:
+  librebase-admin-data:
