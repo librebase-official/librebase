@@ -103,7 +103,7 @@ function instanceNamespace(instance: Instance): string {
 
 /** Provision a dedicated (or shared-base) instance on Kubernetes. */
 export function provisionDedicatedInstance(instance: Instance): K8sProvisionResult {
-  // TODO: entitlement gate — require paid Studio/lidb plan before K8s provisioning.
+  // Entitlement gates are enforced at API launch/create entry points.
   const ns = instanceNamespace(instance);
   const yaml =
     instance.deploymentMode === "shared"
@@ -137,7 +137,7 @@ export function attachSharedProject(
   instance: Instance,
   project: Project,
 ): K8sProvisionResult {
-  // TODO: entitlement gate — shared multi-project K8s is a paid feature.
+  // Entitlement gates are enforced at API launch/create entry points.
   if (instance.deploymentMode !== "shared") {
     return {
       ok: false,

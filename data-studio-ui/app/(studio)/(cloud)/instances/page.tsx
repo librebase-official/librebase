@@ -1,22 +1,24 @@
 import Link from "next/link";
 import { LaunchButton } from "@/components/LaunchButton";
 import { getInstanceStatus } from "@/lib/k8s-provisioner";
-import { listInstances } from "@/lib/instances-store";
-import { listProjectsByInstance } from "@/lib/projects-store";
+import { listInstancesAsync } from "@/lib/instances-store";
+import { listProjectsByInstanceAsync } from "@/lib/projects-store";
+import { resolveStudioOrgId } from "@/lib/org-context";
 import { probeInstanceDb } from "@/lib/project-runtime";
 import { getLibrebaseRuntime, getK8sContainerRuntime, runtimeBackendLabel } from "@/lib/runtime-env";
 
 export const dynamic = "force-dynamic";
 
 export default async function InstancesPage() {
-  const instances = listInstances("default");
+  const orgId = await resolveStudioOrgId();
+  const instances = await listInstancesAsync(orgId);
   const defaultRuntime = getLibrebaseRuntime();
   const k8sRuntime = getK8sContainerRuntime();
 
   const rows = await Promise.all(
     instances.map(async (instance) => {
       const probe = await probeInstanceDb(instance);
-      const linked = listProjectsByInstance(instance.id);
+      const linked = await listProjectsByInstanceAsync(instance.id, orgId);
       const backend = runtimeBackendLabel(instance.runtimeTarget, k8sRuntime);
       const k8s =
         instance.runtimeTarget === "kubernetes"

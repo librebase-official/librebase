@@ -11,8 +11,9 @@ import {
   provisionLicontainerInstance,
 } from "./licontainer-provisioner";
 import { DEFAULT_DEV_RUNTIME_IMAGE, LIDB_RUNTIME_IMAGE } from "./k8s-manifests";
-import { getInstance, updateInstanceStatus } from "./instances-store";
-import { getProject } from "./projects-store";
+import { getInstance, getInstanceAsync, updateInstanceStatusAsync } from "./instances-store";
+import { getProject, getProjectAsync } from "./projects-store";
+import { requireEntitlement } from "./entitlements";
 import type { DbProbeResult, Instance, Project, RuntimeMode } from "./types";
 
 const REPO_ROOT = path.resolve(process.cwd(), "..");
@@ -118,11 +119,26 @@ export function getPostgresUrl(instance: Instance): string {
   return `postgresql://127.0.0.1:${instance.ports.postgres}/librebase`;
 }
 
-export function getProjectUrls(project: Project): {
+export function getProjectUrls(
+  project: Project,
+  instance?: Instance,
+): {
   apiUrl: string;
   postgresUrl: string;
 } | null {
-  const instance = getInstance(project.instanceId);
+  const resolved = instance ?? getInstance(project.instanceId);
+  if (!resolved) return null;
+  return {
+    apiUrl: getApiUrl(resolved),
+    postgresUrl: getPostgresUrl(resolved),
+  };
+}
+
+export async function getProjectUrlsAsync(project: Project): Promise<{
+  apiUrl: string;
+  postgresUrl: string;
+} | null> {
+  const instance = await getInstanceAsync(project.instanceId, project.orgId);
   if (!instance) return null;
   return {
     apiUrl: getApiUrl(instance),
@@ -188,7 +204,7 @@ export async function probeInstanceDb(instance: Instance): Promise<DbProbeResult
     status = "stopped";
   }
 
-  updateInstanceStatus(instance.id, status);
+  await updateInstanceStatusAsync(instance.id, status, instance.orgId);
 
   return {
     reachable: portsUp && status === "running",
@@ -200,7 +216,7 @@ export async function probeInstanceDb(instance: Instance): Promise<DbProbeResult
 }
 
 export async function probeProjectDb(projectId: string): Promise<DbProbeResult> {
-  const project = getProject(projectId);
+  const project = await getProjectAsync(projectId);
   if (!project) {
     return {
       reachable: false,
@@ -210,7 +226,7 @@ export async function probeProjectDb(projectId: string): Promise<DbProbeResult> 
     };
   }
 
-  const instance = getInstance(project.instanceId);
+  const instance = await getInstanceAsync(project.instanceId, project.orgId);
   if (!instance) {
     return {
       reachable: false,
@@ -228,8 +244,8 @@ export async function launchProjectDb(projectId: string): Promise<{
   probe: DbProbeResult;
   launchMessage: string;
 }> {
-  // TODO: entitlement check — block launch without active Studio/lidb plan or license.
-  const project = getProject(projectId);
+  await requireEntitlement("instance.launch");
+  const project = await getProjectAsync(projectId);
   if (!project) {
     return {
       ok: false,
@@ -243,7 +259,7 @@ export async function launchProjectDb(projectId: string): Promise<{
     };
   }
 
-  const instance = getInstance(project.instanceId);
+  const instance = await getInstanceAsync(project.instanceId, project.orgId);
   if (!instance) {
     return {
       ok: false,
@@ -257,9 +273,10 @@ export async function launchProjectDb(projectId: string): Promise<{
     };
   }
 
-  updateInstanceStatus(instance.id, "starting");
+  await updateInstanceStatusAsync(instance.id, "starting", instance.orgId);
 
   if (instance.runtimeTarget === "kubernetes") {
+    await requireEntitlement("k8s.provision", instance.orgId);
     const provision = provisionDedicatedInstance(instance);
     const probe = await probeInstanceDb(instance);
     return {
@@ -300,8 +317,8 @@ export async function launchInstanceDb(instanceId: string): Promise<{
   probe: DbProbeResult;
   launchMessage: string;
 }> {
-  // TODO: entitlement check — block instance launch without billing/auth gate.
-  const instance = getInstance(instanceId);
+  await requireEntitlement("instance.launch");
+  const instance = await getInstanceAsync(instanceId);
   if (!instance) {
     return {
       ok: false,
@@ -315,9 +332,10 @@ export async function launchInstanceDb(instanceId: string): Promise<{
     };
   }
 
-  updateInstanceStatus(instance.id, "starting");
+  await updateInstanceStatusAsync(instance.id, "starting", instance.orgId);
 
   if (instance.runtimeTarget === "kubernetes") {
+    await requireEntitlement("k8s.provision", instance.orgId);
     const provision = provisionDedicatedInstance(instance);
     const probe = await probeInstanceDb(instance);
     return {

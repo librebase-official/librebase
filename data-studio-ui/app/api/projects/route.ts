@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
-import { createProject, listProjects } from "@/lib/projects-store";
+import { requireEntitlement } from "@/lib/entitlements";
+import { createProjectAsync, listProjectsAsync } from "@/lib/projects-store";
+import { resolveStudioOrgId } from "@/lib/org-context";
 import { getLibrebaseRuntime } from "@/lib/runtime-env";
 import type { CreateProjectInput } from "@/lib/types";
 
 export async function GET() {
-  const projects = listProjects("default");
-  return NextResponse.json({ projects });
+  const orgId = await resolveStudioOrgId();
+  const projects = await listProjectsAsync(orgId);
+  return NextResponse.json({ projects, orgId });
 }
 
 export async function POST(request: Request) {
@@ -23,9 +26,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const result = createProject({
+    const orgId = body.orgId ?? (await resolveStudioOrgId());
+    await requireEntitlement("project.create", orgId);
+
+    const result = await createProjectAsync({
       name: body.name.trim(),
-      orgId: body.orgId ?? "default",
+      orgId,
       region: body.region ?? "local",
       runtimeChoice,
       instanceId: body.instanceId,
@@ -38,6 +44,7 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to create project";
-    return NextResponse.json({ error: message }, { status: 400 });
+    const status = message.includes("entitlement") ? 403 : 400;
+    return NextResponse.json({ error: message }, { status });
   }
 }
