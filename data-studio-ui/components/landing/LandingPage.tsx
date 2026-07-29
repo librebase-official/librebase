@@ -26,8 +26,8 @@ export function LandingPage() {
           <a className="lb-link-quiet" href="#matrix">
             Capability matrix
           </a>
-          <Link className="lb-btn lb-btn-primary" href="/projects">
-            Open Studio
+          <Link className="lb-btn lb-btn-primary" href="#waitlist">
+            Join waitlist
           </Link>
         </div>
       </header>
@@ -41,14 +41,14 @@ export function LandingPage() {
             real health signals.
           </p>
           <div className="lb-cta-row">
-            <Link className="lb-btn lb-btn-primary lb-btn-lg" href="/projects">
+            <a className="lb-btn lb-btn-primary lb-btn-lg" href="#waitlist">
+              Join waitlist
+            </a>
+            <Link className="lb-btn lb-btn-ghost lb-btn-lg" href="/projects">
               Open Studio
             </Link>
-            <a className="lb-btn lb-btn-ghost lb-btn-lg" href="#how">
-              See how it runs
-            </a>
           </div>
-          <p className="lb-reassure">Dev stub stays labeled. Production path needs lidb + lis.</p>
+          <p className="lb-reassure">Early access for builders. No spam.</p>
         </div>
         <div className="lb-hero-visual" aria-hidden="true">
           <ProductMesh />
@@ -60,6 +60,12 @@ export function LandingPage() {
           Built on linative <strong>lidb</strong> + <strong>lis</strong>. Wave A parity is measured by
           executable contracts, not emoji counts.
         </p>
+      </section>
+
+      <section className="lb-band" id="waitlist">
+        <h2>Join the waitlist</h2>
+        <p>Get notified when Librebase Cloud and dedicated instances open for early teams.</p>
+        <WaitlistForm />
       </section>
 
       <section className="lb-band lb-reveal" id="promise">
@@ -145,11 +151,16 @@ export function LandingPage() {
       </section>
 
       <section className="lb-final">
-        <h2>Start with a real console.</h2>
-        <p>Spin a project, watch health tell the truth, then wire lidb when you are ready.</p>
-        <Link className="lb-btn lb-btn-primary lb-btn-lg" href="/projects">
-          Open Studio
-        </Link>
+        <h2>Start with honest infrastructure.</h2>
+        <p>Join the waitlist for early access, or open Studio now on this host.</p>
+        <div className="lb-cta-row">
+          <a className="lb-btn lb-btn-primary lb-btn-lg" href="#waitlist">
+            Join waitlist
+          </a>
+          <Link className="lb-btn lb-btn-ghost lb-btn-lg" href="/projects">
+            Open Studio
+          </Link>
+        </div>
       </section>
 
       <footer className="lb-footer">
@@ -202,5 +213,66 @@ function ProductMesh() {
         <circle cx="760" cy="420" r="8" className="lb-pulse" />
       </svg>
     </div>
+  );
+}
+
+function WaitlistForm() {
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "ok" | "err">("idle");
+  const [message, setMessage] = useState("");
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("loading");
+    setMessage("");
+    try {
+      const res = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, source: "landing" }),
+      });
+      const data = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !data.ok) {
+        setStatus("err");
+        setMessage(
+          data.error === "invalid_email"
+            ? "Enter a valid email."
+            : "Could not join right now. Try again shortly.",
+        );
+        return;
+      }
+      setStatus("ok");
+      setMessage("You are on the list. We will email when early access opens.");
+      setEmail("");
+    } catch {
+      setStatus("err");
+      setMessage("Network error. Try again.");
+    }
+  }
+
+  return (
+    <form className="lb-waitlist" onSubmit={onSubmit}>
+      <label className="lb-waitlist-label" htmlFor="lb-waitlist-email">
+        Work email
+      </label>
+      <div className="lb-waitlist-row">
+        <input
+          id="lb-waitlist-email"
+          type="email"
+          required
+          autoComplete="email"
+          placeholder="you@company.com"
+          value={email}
+          onChange={(ev) => setEmail(ev.target.value)}
+          disabled={status === "loading"}
+        />
+        <button className="lb-btn lb-btn-primary" type="submit" disabled={status === "loading"}>
+          {status === "loading" ? "Joining…" : "Join waitlist"}
+        </button>
+      </div>
+      {message ? (
+        <p className={`lb-waitlist-msg${status === "err" ? " is-err" : ""}`}>{message}</p>
+      ) : null}
+    </form>
   );
 }

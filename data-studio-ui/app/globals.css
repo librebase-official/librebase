@@ -908,3 +908,14 @@ button {
     transition: none;
   }
 }
+
+/* Waitlist form */
+.lb-waitlist { max-width: 28rem; }
+.lb-waitlist-label { display:block; font-size:0.85rem; color:var(--lb-fog); margin-bottom:0.4rem; }
+.lb-waitlist-row { display:flex; flex-wrap:wrap; gap:0.6rem; }
+.lb-waitlist-row input {
+  flex:1 1 12rem; min-width:0; padding:0.7rem 0.9rem; border-radius:999px;
+  border:1px solid var(--lb-line); background:rgba(14,26,28,0.8); color:var(--lb-paper);
+}
+.lb-waitlist-msg { margin:0.75rem 0 0; color:var(--lb-signal); font-size:0.92rem; }
+.lb-waitlist-msg.is-err { color:var(--lb-warn); }
