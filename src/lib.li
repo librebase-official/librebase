@@ -1,0 +1,8 @@
+# Librebase product package — installable CLI surface (lip).
+
+def librebase_version() -> int
+  requires true
+  ensures result == 1
+  decreases 0
+=
+  return 1

@@ -65,6 +65,11 @@ Env: `LIBREBASE_ADMIN_URL`, `LIBREBASE_ADMIN_SESSION`, `LIBREBASE_ORG_ID`. Depre
 | Dev runtime (unblocks health) | `scripts/dev_runtime_stub.py`, `LIDB_RUNTIME_MODE=dev` via `lidb_engine.py` |
 | Architecture docs | `docs/architecture.md`, `docs/cli-db.md` |
 | Agent rules | `.cursor/rules/librebase-product.mdc` |
+| **Librebase Admin API** | `admin-api/` — operator metadata HTTP (product) |
+| **CLI** | `packages/cli` (`@librebase/cli`) + root `li.toml` (lip) |
+| **MCP** | `packages/mcp` — agent control for Admin + matrix |
+| Capability matrix | `docs/lidb-capability-matrix.md` |
+| Parity plan | `docs/parity-plan.md` |
 
 ## Conventions
 

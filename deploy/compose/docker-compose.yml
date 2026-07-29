@@ -1,13 +1,13 @@
 services:
   librebase-admin:
     build:
-      context: ../../liorg
+      context: ../../admin-api
       dockerfile: Dockerfile
     ports:
       - "54330:54330"
     environment:
-      LIORG_SESSION_JWT_SECRET: ${LIBREBASE_ADMIN_JWT_SECRET:-dev-librebase-admin-secret}
-      LIORG_DB_PATH: /data/admin.db
+      LIBREBASE_ADMIN_JWT_SECRET: ${LIBREBASE_ADMIN_JWT_SECRET:-dev-librebase-admin-secret}
+      LIBREBASE_ADMIN_DB_PATH: /data/admin.db
     volumes:
       - librebase-admin-data:/data
     healthcheck:

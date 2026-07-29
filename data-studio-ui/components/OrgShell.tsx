@@ -46,6 +46,16 @@ export function OrgShell({
             Instances
           </Link>
         </nav>
+
+        <nav className="nav-section">
+          <div className="nav-label">Admin</div>
+          <Link href="/admin" className={navClass(pathname, "/admin")}>
+            Admin
+          </Link>
+          <Link href="/setup" className={navClass(pathname, "/setup")}>
+            Setup
+          </Link>
+        </nav>
       </aside>
       <main className="main">{children}</main>
     </div>
