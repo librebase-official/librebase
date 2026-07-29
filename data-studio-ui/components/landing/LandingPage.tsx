@@ -213,6 +213,7 @@ export function LandingPage() {
           Libre<span>base</span>
         </span>
         <div className="lb-footer-links">
+          <Link href="/blog">Blog</Link>
           <Link href="/projects">Console</Link>
           <Link href="/setup">Setup</Link>
           <a href="https://github.com/librebase-official/librebase">GitHub</a>
