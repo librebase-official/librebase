@@ -31,3 +31,7 @@ dist/
 
 # Studio local persistence (user machine)
 # JSON stores live under ~/.local/share/librebase/studio — not in repo
+
+# Majico agent key
+.env.majico
+

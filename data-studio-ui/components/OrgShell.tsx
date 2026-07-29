@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation";
 
 function navClass(pathname: string, href: string): string {
   const active =
-    href === "/"
-      ? pathname === "/"
+    href === "/projects"
+      ? pathname === "/projects" || pathname.startsWith("/projects/")
       : pathname === href || pathname.startsWith(`${href}/`);
   return `nav-link${active ? " active" : ""}`;
 }
@@ -32,7 +32,7 @@ export function OrgShell({
 
         <nav className="nav-section">
           <div className="nav-label">Primary</div>
-          <Link href="/" className={navClass(pathname, "/")}>
+          <Link href="/projects" className={navClass(pathname, "/projects")}>
             Projects
           </Link>
           <Link href="/projects/new" className={navClass(pathname, "/projects/new")}>
