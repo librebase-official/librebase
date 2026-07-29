@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Orbitron, Space_Grotesk, IBM_Plex_Mono } from "next/font/google";
+import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 /** Display: hero + wordmark only — do not use for every heading. */
@@ -23,8 +24,21 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Librebase Studio",
-  description: "Org, project, and database console for Librebase",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "Librebase",
+    template: "%s | Librebase",
+  },
+  description:
+    "PostgreSQL platform for apps and AI tools. Low memory, honest health status, and a console that shows real state.",
+  openGraph: {
+    siteName: "Librebase",
+    type: "website",
+    locale: "en_US",
+  },
+  alternates: {
+    canonical: "/",
+  },
 };
 
 export default function RootLayout({

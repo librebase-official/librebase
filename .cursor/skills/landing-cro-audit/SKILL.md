@@ -1,9 +1,6 @@
 ---
 name: landing-cro-audit
 description: CRO audit for marketing landings - conversion goal, CTA consistency, friction, proof placement, form UX, section order vs landing-page-oneshot. Use when auditing, reviewing, or fixing conversion on a waitlist/signup/demo landing.
-phase: verify
-priority: 23
-is_system: true
 ---
 
 # Landing CRO audit
