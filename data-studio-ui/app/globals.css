@@ -307,7 +307,8 @@ button {
   overflow-x: clip;
 }
 
-.lb-landing a {
+/* Exclude .lb-btn — inherit would wash primary (ink) into paper-on-teal. */
+.lb-landing a:not(.lb-btn) {
   color: inherit;
   text-decoration: none;
 }
@@ -373,25 +374,39 @@ button {
     transform 200ms var(--lb-ease);
 }
 
-.lb-btn-primary {
+.lb-btn-primary,
+.lb-landing a.lb-btn-primary,
+.lb-landing a.lb-btn-primary:hover,
+.lb-blog a.lb-btn-primary,
+.lb-blog a.lb-btn-primary:hover {
   background: var(--lb-signal);
   border-color: var(--lb-signal-dim);
   color: var(--lb-ink);
 }
 
-.lb-btn-primary:hover {
+.lb-btn-primary:hover,
+.lb-landing a.lb-btn-primary:hover,
+.lb-blog a.lb-btn-primary:hover {
   background: var(--lb-signal-dim);
+  color: var(--lb-ink);
 }
 
-.lb-btn-ghost {
+.lb-btn-ghost,
+.lb-landing a.lb-btn-ghost,
+.lb-landing a.lb-btn-ghost:hover,
+.lb-blog a.lb-btn-ghost,
+.lb-blog a.lb-btn-ghost:hover {
   background: transparent;
   border-color: var(--lb-line);
   color: var(--lb-paper);
 }
 
-.lb-btn-ghost:hover {
+.lb-btn-ghost:hover,
+.lb-landing a.lb-btn-ghost:hover,
+.lb-blog a.lb-btn-ghost:hover {
   border-color: rgba(231, 242, 236, 0.28);
   background: rgba(231, 242, 236, 0.04);
+  color: var(--lb-paper);
 }
 
 .lb-btn-lg {
