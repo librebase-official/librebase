@@ -7,7 +7,7 @@
 | T3 | Update `docs/parity-plan.md` | T2 | SDD linked | done |
 | T4 | `tests/parity/` Wave A contracts | — | AC-2.1 | done |
 | T5 | `scripts/parity_runner.py` | T4 | AC-2.2, AC-2.3 | done |
-| T6 | `.github/workflows/parity.yml` | T5 | AC-3.1–3.3 | done |
+| T6 | `.github/workflows/parity.yml` | T5 | AC-3.1–3.3 | local file present; GitHub push needs `workflow` OAuth scope — run harness via `python scripts/parity_runner.py` until then |
 | T7 | **lis:** `profiles/librebase.toml` | — | AC-4.1 | done |
 | T8 | **lis:** `routes/rest/` `/rest/v1` | T7 | Route exists | done |
 | T9 | Librebase `lidb_engine` librebase profile | T7 | AC-4.1–4.3 | done |
