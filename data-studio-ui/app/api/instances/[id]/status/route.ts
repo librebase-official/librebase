@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getInstanceStatus } from "@/lib/k8s-provisioner";
-import { getInstance } from "@/lib/instances-store";
+import { getInstanceAsync } from "@/lib/instances-store";
 import { probeInstanceDb } from "@/lib/project-runtime";
 
 interface RouteParams {
@@ -9,7 +9,7 @@ interface RouteParams {
 
 export async function GET(_request: Request, { params }: RouteParams) {
   const { id } = await params;
-  const instance = getInstance(id);
+  const instance = await getInstanceAsync(id);
   if (!instance) {
     return NextResponse.json({ error: "Instance not found" }, { status: 404 });
   }

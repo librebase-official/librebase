@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getProject } from "@/lib/projects-store";
+import { getProjectAsync } from "@/lib/projects-store";
 
 interface PageProps {
   params: Promise<{ projectId: string }>;
@@ -8,7 +8,7 @@ interface PageProps {
 
 export default async function ProjectDatabasePage({ params }: PageProps) {
   const { projectId } = await params;
-  const project = getProject(projectId);
+  const project = await getProjectAsync(projectId);
   if (!project) notFound();
 
   return (

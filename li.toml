@@ -1,0 +1,21 @@
+[package]
+name = "librebase"
+version = "0.1.0"
+edition = "2026"
+license = "GPL-3.0-or-later"
+description = "Librebase product CLI — Studio + Admin orchestrator over lis/lidb"
+
+[dependencies]
+
+[package.metadata.li]
+github_repo = "librebase"
+gitlab_repo = "librebase"
+import_name = "librebase"
+min_lic = "0.1.0"
+maintainer = "librebase-official"
+pkg_id = "PKG-librebase"
+
+[package.repository]
+url = "https://gitlab.lilangverse.xyz/librebase-official/librebase"
+documentation = "https://github.com/librebase-official/librebase/blob/main/docs/parity-plan.md"
+changelog = "https://github.com/librebase-official/librebase/blob/main/CHANGELOG.md"

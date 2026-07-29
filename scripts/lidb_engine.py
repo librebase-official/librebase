@@ -169,10 +169,14 @@ def _lis_db_start(data_dir: str, api_port: int, postgres_port: int) -> tuple[boo
     env["LIDB_ROOT"] = str(root)
     env["LIBREBASE_API_PORT"] = str(api_port)
     env["LIBREBASE_PG_PORT"] = str(postgres_port)
+    env["LI_API_PORT"] = str(api_port)
+    env["LI_DB_PORT"] = str(postgres_port)
+    # Prefer librebase profile when present; allow override via LI_PROFILE.
+    env.setdefault("LI_PROFILE", "librebase")
 
     try:
         result = subprocess.run(
-            ["lis", "db", "start"],
+            ["lis", "db", "start", "--profile", env["LI_PROFILE"]],
             env=env,
             capture_output=True,
             text=True,
@@ -186,9 +190,27 @@ def _lis_db_start(data_dir: str, api_port: int, postgres_port: int) -> tuple[boo
 
     if result.returncode != 0:
         err = (result.stderr or result.stdout or "lis db start failed").strip()
+        # Fallback if librebase profile missing on older lis
+        if env["LI_PROFILE"] == "librebase" and "librebase" in err.lower():
+            env["LI_PROFILE"] = "registry-min"
+            try:
+                result = subprocess.run(
+                    ["lis", "db", "start", "--profile", "registry-min"],
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                    check=False,
+                )
+            except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
+                return False, str(exc)
+            if result.returncode != 0:
+                err = (result.stderr or result.stdout or "lis db start failed").strip()
+                return False, err
+            return True, "lis db start completed (profile=registry-min fallback)"
         return False, err
 
-    return True, "lis db start completed"
+    return True, f"lis db start completed (profile={env['LI_PROFILE']})"
 
 
 def cmd_status(data_dir: str, api_port: int, postgres_port: int) -> dict[str, Any]:

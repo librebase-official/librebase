@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { LaunchButton } from "@/components/LaunchButton";
-import { getInstance } from "@/lib/instances-store";
-import { getProject } from "@/lib/projects-store";
-import { getProjectUrls, probeProjectDb } from "@/lib/project-runtime";
+import { getInstanceAsync } from "@/lib/instances-store";
+import { getProjectAsync } from "@/lib/projects-store";
+import { getProjectUrlsAsync, probeProjectDb } from "@/lib/project-runtime";
 
 export const dynamic = "force-dynamic";
 
@@ -13,12 +13,12 @@ interface PageProps {
 
 export default async function ProjectHomePage({ params }: PageProps) {
   const { projectId } = await params;
-  const project = getProject(projectId);
+  const project = await getProjectAsync(projectId);
   if (!project) notFound();
 
-  const instance = getInstance(project.instanceId);
+  const instance = await getInstanceAsync(project.instanceId, project.orgId);
   const probe = await probeProjectDb(projectId);
-  const urls = getProjectUrls(project);
+  const urls = await getProjectUrlsAsync(project);
 
   return (
     <>

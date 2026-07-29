@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getInstance } from "@/lib/instances-store";
-import { getProject } from "@/lib/projects-store";
+import { getInstanceAsync } from "@/lib/instances-store";
+import { getProjectAsync } from "@/lib/projects-store";
 
 interface PageProps {
   params: Promise<{ projectId: string }>;
@@ -9,9 +9,9 @@ interface PageProps {
 
 export default async function ProjectSettingsPage({ params }: PageProps) {
   const { projectId } = await params;
-  const project = getProject(projectId);
+  const project = await getProjectAsync(projectId);
   if (!project) notFound();
-  const instance = getInstance(project.instanceId);
+  const instance = await getInstanceAsync(project.instanceId, project.orgId);
 
   return (
     <>

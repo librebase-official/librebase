@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server";
+import { requireEntitlement } from "@/lib/entitlements";
 import { provisionDedicatedInstance } from "@/lib/k8s-provisioner";
-import { createInstance, listInstances } from "@/lib/instances-store";
+import { createInstanceAsync, listInstancesAsync } from "@/lib/instances-store";
+import { resolveStudioOrgId } from "@/lib/org-context";
 import { getLibrebaseRuntime } from "@/lib/runtime-env";
 import type { CreateInstanceInput } from "@/lib/types";
 
 export async function GET() {
-  const instances = listInstances("default");
+  const orgId = await resolveStudioOrgId();
+  const instances = await listInstancesAsync(orgId);
   return NextResponse.json({
     instances,
+    orgId,
     defaultRuntime: getLibrebaseRuntime(),
   });
 }
@@ -18,9 +22,13 @@ export async function POST(request: Request) {
     if (!body.name?.trim()) {
       return NextResponse.json({ error: "name is required" }, { status: 400 });
     }
-    const instance = createInstance({
+
+    const orgId = body.orgId ?? (await resolveStudioOrgId());
+    await requireEntitlement("instance.launch", orgId);
+
+    const instance = await createInstanceAsync({
       name: body.name.trim(),
-      orgId: body.orgId ?? "default",
+      orgId,
       deploymentMode: body.deploymentMode,
       runtime: body.runtime,
     });
@@ -29,12 +37,14 @@ export async function POST(request: Request) {
       | { ok: boolean; degraded: boolean; message: string; namespace?: string }
       | undefined;
     if (instance.runtimeTarget === "kubernetes") {
+      await requireEntitlement("k8s.provision", orgId);
       provision = provisionDedicatedInstance(instance);
     }
 
     return NextResponse.json({ instance, provision }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to create instance";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status = message.includes("entitlement") ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

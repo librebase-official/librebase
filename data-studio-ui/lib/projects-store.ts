@@ -5,9 +5,19 @@ import {
 } from "./k8s-provisioner";
 import {
   createInstance,
+  createInstanceAsync,
   defaultInstanceName,
   getInstance,
+  getInstanceAsync,
 } from "./instances-store";
+import {
+  adminCreateProject,
+  adminApiEnabled,
+  adminGetProject,
+  adminListProjects,
+} from "./librebase-admin-client";
+import { requireEntitlement } from "./entitlements";
+import { resolveStudioOrgId, studioOrgId } from "./org-context";
 import { generateId, readJsonFile, writeJsonFile } from "./json-store";
 
 const PROJECTS_FILE = "projects.json";
@@ -115,4 +125,94 @@ export function _setProjectsForTest(projects: Project[]): void {
 /** Test helper — clear projects file. */
 export function _clearProjectsForTest(): void {
   saveProjects([]);
+}
+
+export async function listProjectsAsync(orgId?: string): Promise<Project[]> {
+  const resolvedOrg = orgId ?? (await resolveStudioOrgId());
+  if (!adminApiEnabled()) {
+    return listProjects(resolvedOrg);
+  }
+  return adminListProjects(resolvedOrg);
+}
+
+export async function getProjectAsync(
+  id: string,
+  orgId?: string,
+): Promise<Project | undefined> {
+  if (!adminApiEnabled()) {
+    return getProject(id);
+  }
+  const resolvedOrg = orgId ?? (await resolveStudioOrgId());
+  return adminGetProject(resolvedOrg, id);
+}
+
+export async function listProjectsByInstanceAsync(
+  instanceId: string,
+  orgId?: string,
+): Promise<Project[]> {
+  const projects = await listProjectsAsync(orgId);
+  return projects.filter((p) => p.instanceId === instanceId);
+}
+
+export async function createProjectAsync(
+  input: CreateProjectInput,
+): Promise<CreateProjectResult> {
+  const orgId = input.orgId ?? studioOrgId();
+  if (adminApiEnabled()) {
+    await requireEntitlement("project.create", orgId);
+  }
+
+  const region = input.region ?? "local";
+  const runtimeChoice = input.runtimeChoice ?? "new";
+  let instanceCreated = false;
+  let instanceId = input.instanceId;
+  let deploymentMode: DeploymentMode;
+
+  if (runtimeChoice === "new") {
+    deploymentMode = "dedicated";
+    const instance = await createInstanceAsync({
+      name: defaultInstanceName(input.name),
+      orgId,
+      deploymentMode: "dedicated",
+      runtime: input.runtime,
+    });
+    instanceId = instance.id;
+    instanceCreated = true;
+
+    if (instance.runtimeTarget === "kubernetes") {
+      provisionDedicatedInstance(instance);
+    }
+  } else {
+    deploymentMode = "shared";
+    if (!instanceId) {
+      throw new Error("instanceId is required when adding to an existing instance");
+    }
+    const existing = await getInstanceAsync(instanceId, orgId);
+    if (!existing) {
+      throw new Error(`Instance not found: ${instanceId}`);
+    }
+    if (existing.orgId !== orgId) {
+      throw new Error("Instance belongs to a different organization");
+    }
+  }
+
+  if (adminApiEnabled()) {
+    const project = await adminCreateProject(orgId, {
+      name: input.name,
+      instanceId: instanceId!,
+      deploymentMode,
+      region,
+    });
+
+    if (deploymentMode === "shared") {
+      const linked = await getInstanceAsync(instanceId!, orgId);
+      if (linked?.runtimeTarget === "kubernetes") {
+        attachSharedProject(linked, project);
+      }
+    }
+
+    return { project, instanceCreated };
+  }
+
+  return createProject(input);
 }

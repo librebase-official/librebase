@@ -1,9 +1,11 @@
 import { OrgShell } from "@/components/OrgShell";
+import { resolveStudioOrgId } from "@/lib/org-context";
 
-export default function StudioCloudLayout({
+export default async function StudioCloudLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <OrgShell>{children}</OrgShell>;
+  const orgId = await resolveStudioOrgId();
+  return <OrgShell orgId={orgId}>{children}</OrgShell>;
 }

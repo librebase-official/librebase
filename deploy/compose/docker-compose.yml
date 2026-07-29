@@ -1,0 +1,34 @@
+services:
+  librebase-admin:
+    build:
+      context: ../../admin-api
+      dockerfile: Dockerfile
+    ports:
+      - "54330:54330"
+    environment:
+      LIBREBASE_ADMIN_JWT_SECRET: ${LIBREBASE_ADMIN_JWT_SECRET:-dev-librebase-admin-secret}
+      LIBREBASE_ADMIN_DB_PATH: /data/admin.db
+    volumes:
+      - librebase-admin-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:54330/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  studio:
+    build:
+      context: ../../data-studio-ui
+      dockerfile: Dockerfile
+    ports:
+      - "54324:54324"
+    environment:
+      LIBREBASE_ADMIN_URL: http://librebase-admin:54330
+      LIBREBASE_ADMIN_SESSION: ${LIBREBASE_ADMIN_SESSION:-}
+      LIBREBASE_ORG_ID: ${LIBREBASE_ORG_ID:-}
+    depends_on:
+      librebase-admin:
+        condition: service_healthy
+
+volumes:
+  librebase-admin-data:

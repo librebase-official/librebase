@@ -1,5 +1,13 @@
 import fs from "node:fs";
 import { resolveRuntimeTarget } from "./runtime-env";
+import {
+  adminCreateInstance,
+  adminApiEnabled,
+  adminGetInstance,
+  adminListInstances,
+  adminPatchInstance,
+} from "./librebase-admin-client";
+import { resolveStudioOrgId, studioOrgId } from "./org-context";
 import type {
   CreateInstanceInput,
   DeploymentMode,
@@ -153,4 +161,85 @@ export function _setInstancesForTest(instances: Instance[]): void {
 /** Test helper — clear instances file. */
 export function _clearInstancesForTest(): void {
   saveInstances([]);
+}
+
+export async function listInstancesAsync(orgId?: string): Promise<Instance[]> {
+  const resolvedOrg = orgId ?? (await resolveStudioOrgId());
+  if (!adminApiEnabled()) {
+    return listInstances(resolvedOrg);
+  }
+  return adminListInstances(resolvedOrg);
+}
+
+export async function getInstanceAsync(
+  id: string,
+  orgId?: string,
+): Promise<Instance | undefined> {
+  if (!adminApiEnabled()) {
+    return getInstance(id);
+  }
+  const resolvedOrg = orgId ?? (await resolveStudioOrgId());
+  return adminGetInstance(resolvedOrg, id);
+}
+
+export async function createInstanceAsync(
+  input: CreateInstanceInput,
+): Promise<Instance> {
+  const orgId = input.orgId ?? studioOrgId();
+  if (!adminApiEnabled()) {
+    return createInstance(input);
+  }
+
+  const existing = await adminListInstances(orgId);
+  const ports = allocatePorts(existing);
+  const runtimeTarget: RuntimeTarget = resolveRuntimeTarget(input.runtime);
+  const deploymentMode: DeploymentMode = input.deploymentMode ?? "dedicated";
+  const created = await adminCreateInstance(orgId, {
+    ...input,
+    orgId,
+    ports,
+    status: "stopped",
+    runtimeTarget,
+    deploymentMode,
+    dataDir: "",
+  });
+  const dataDir = instanceDataDir(created.id);
+  fs.mkdirSync(dataDir, { recursive: true });
+  return adminPatchInstance(orgId, created.id, { dataDir });
+}
+
+export async function updateInstanceStatusAsync(
+  id: string,
+  status: InstanceStatus,
+  orgId?: string,
+): Promise<Instance | undefined> {
+  if (!adminApiEnabled()) {
+    return updateInstanceStatus(id, status);
+  }
+  const resolvedOrg = orgId ?? (await resolveStudioOrgId());
+  return adminPatchInstance(resolvedOrg, id, { status });
+}
+
+export async function patchInstanceAsync(
+  id: string,
+  patch: Partial<
+    Pick<
+      Instance,
+      | "name"
+      | "status"
+      | "dataDir"
+      | "ports"
+      | "k8sNamespace"
+      | "k8sDegraded"
+      | "k8sMessage"
+      | "runtimeTarget"
+    >
+  >,
+  orgId?: string,
+): Promise<Instance | undefined> {
+  if (!adminApiEnabled()) {
+    return updateInstance(id, patch);
+  }
+  const resolvedOrg = orgId ?? (await resolveStudioOrgId());
+  return adminPatchInstance(resolvedOrg, id, patch);
 }

@@ -23,6 +23,9 @@ licontainer/target/
 __pycache__/
 *.pyc
 
+# Parity harness output
+tests/parity/last-report.json
+
 # Build output
 dist/
 

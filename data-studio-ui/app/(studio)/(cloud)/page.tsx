@@ -1,13 +1,15 @@
 import Link from "next/link";
-import { listInstances } from "@/lib/instances-store";
-import { listProjects } from "@/lib/projects-store";
+import { listInstancesAsync } from "@/lib/instances-store";
+import { listProjectsAsync } from "@/lib/projects-store";
+import { resolveStudioOrgId } from "@/lib/org-context";
 import { probeInstanceDb } from "@/lib/project-runtime";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProjectsHomePage() {
-  const projects = listProjects("default");
-  const instances = listInstances("default");
+  const orgId = await resolveStudioOrgId();
+  const projects = await listProjectsAsync(orgId);
+  const instances = await listInstancesAsync(orgId);
   const instanceMap = new Map(instances.map((i) => [i.id, i]));
 
   const rows = await Promise.all(

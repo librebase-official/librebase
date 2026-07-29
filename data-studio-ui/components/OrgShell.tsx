@@ -3,8 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const ORG_ID = "default";
-
 function navClass(pathname: string, href: string): string {
   const active =
     href === "/"
@@ -13,7 +11,13 @@ function navClass(pathname: string, href: string): string {
   return `nav-link${active ? " active" : ""}`;
 }
 
-export function OrgShell({ children }: { children: React.ReactNode }) {
+export function OrgShell({
+  orgId,
+  children,
+}: {
+  orgId: string;
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
 
   return (
@@ -23,7 +27,7 @@ export function OrgShell({ children }: { children: React.ReactNode }) {
           Libre<span>base</span>
         </div>
         <div className="muted" style={{ fontSize: "0.8rem" }}>
-          Org: {ORG_ID}
+          Org: {orgId}
         </div>
 
         <nav className="nav-section">
@@ -40,6 +44,16 @@ export function OrgShell({ children }: { children: React.ReactNode }) {
           <div className="nav-label">Cloud</div>
           <Link href="/instances" className={navClass(pathname, "/instances")}>
             Instances
+          </Link>
+        </nav>
+
+        <nav className="nav-section">
+          <div className="nav-label">Admin</div>
+          <Link href="/admin" className={navClass(pathname, "/admin")}>
+            Admin
+          </Link>
+          <Link href="/setup" className={navClass(pathname, "/setup")}>
+            Setup
           </Link>
         </nav>
       </aside>

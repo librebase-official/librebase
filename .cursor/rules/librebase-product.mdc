@@ -34,7 +34,21 @@ Librebase supports **two deployment patterns** (both required):
 
 UI: primary nav stays **Org → Projects** (Supabase parity). **Instances** is a secondary/cloud view for launch, health, and shared-runtime assignment. Project create flow offers **New instance** (default) vs **Add to existing instance**.
 
-Phase 1 Studio (`data-studio-ui/`): explicit `Instance` entity in `instances-store.ts`, projects with `instanceId` + `deploymentMode`, `launchProjectDb`, `(cloud)` routes. `orgId` stubbed `"default"`.
+Phase 1 Studio (`data-studio-ui/`): explicit `Instance` entity in `instances-store.ts`, projects with `instanceId` + `deploymentMode`, `launchProjectDb`, `(cloud)` routes. `orgId` stubbed `"default"` when Admin API is off.
+
+## Librebase Admin (product — not a linative lip package)
+
+**Librebase Admin** = Studio operator UI + small management API (orgs, members, projects/instances metadata, entitlements). It is **Librebase-branded product code** in this repo — **not** `liorg` or any general-purpose lip package.
+
+| Layer | Name | Where |
+|-------|------|--------|
+| Admin UI | Librebase Studio (`data-studio-ui/`) | Frontend |
+| Admin API client | `lib/librebase-admin-client.ts` | Calls management backend when `LIBREBASE_ADMIN_URL` is set |
+| Admin backend | `admin-api/` (target) — transitional build from legacy sibling repo | Small backend; merges into librebase |
+
+**Do not** name product surfaces `liorg`. **lidb** / **lis** remain general-purpose linative packages; Librebase consumes them.
+
+Env: `LIBREBASE_ADMIN_URL`, `LIBREBASE_ADMIN_SESSION`, `LIBREBASE_ORG_ID`. Deprecated aliases: `LIBREBASE_ORG_URL`, `LIBREBASE_ORG_SESSION`.
 
 ## Key locations (this repo)
 
@@ -51,6 +65,11 @@ Phase 1 Studio (`data-studio-ui/`): explicit `Instance` entity in `instances-sto
 | Dev runtime (unblocks health) | `scripts/dev_runtime_stub.py`, `LIDB_RUNTIME_MODE=dev` via `lidb_engine.py` |
 | Architecture docs | `docs/architecture.md`, `docs/cli-db.md` |
 | Agent rules | `.cursor/rules/librebase-product.mdc` |
+| **Librebase Admin API** | `admin-api/` — operator metadata HTTP (product) |
+| **CLI** | `packages/cli` (`@librebase/cli`) + root `li.toml` (lip) |
+| **MCP** | `packages/mcp` — agent control for Admin + matrix |
+| Capability matrix | `docs/lidb-capability-matrix.md` |
+| Parity plan | `docs/parity-plan.md` |
 
 ## Conventions
 
