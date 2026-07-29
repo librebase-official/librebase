@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { LandingPage } from "@/components/landing/LandingPage";
 
 export const metadata: Metadata = {
-  title: "Librebase — Postgres platform. Honest status.",
+  title: "Librebase. A PostgreSQL platform that stays small and honest.",
   description:
-    "Open data platform powered by lidb. Supabase-shaped Auth, REST, Realtime, and Studio with honest health.",
+    "PostgreSQL for apps and AI tools. Low memory, strong sign-in defaults, web interfaces, live updates, and a console that shows real status.",
 };
 
 export default function MarketingHomePage() {

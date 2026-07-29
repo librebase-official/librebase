@@ -9,11 +9,12 @@
 ## 1. Identity
 
 - **Name:** Librebase
-- **One-liner:** High-performance Postgres, written in Li.
-- **Support line:** Low memory. Strong security defaults. Auth, REST, and Realtime for teams and agents.
-- **Audience:** Developers, platform teams, and agent builders who need a Postgres-compatible backend with a small footprint and honest health status.
-- **Primary CTA:** Join waitlist  
-- **Secondary CTA:** Open Studio
+- **One-liner:** A PostgreSQL platform that stays small and honest.
+- **Support line:** Low memory, strong sign-in defaults, usual database connection plus web interfaces and live updates for teams and AI tools.
+- **Audience:** Developers, platform teams, and people building with AI assistants who need a PostgreSQL-compatible backend with a small footprint and honest health status.
+- **Primary CTA:** Join the waitlist for early access
+- **Secondary CTA:** Open the console
+- **Copy rule:** Prefer plain words over jargon and abbreviations on marketing pages (say PostgreSQL, sign-in, web interfaces, per-row access rules; explain Li once).
 
 ### Niche keywords
 
@@ -34,10 +35,10 @@ postgres compatible database, agentic database, low memory database, supabase al
 
 | Surface | Copy |
 |--------|------|
-| Hero | High-performance Postgres, written in Li. |
-| Problem | Agents need a database that keeps up. |
-| Proof | Native Li runtime — small footprint, real health. |
-| Final CTA | Get on the list |
+| Hero | A PostgreSQL platform that stays small and honest. |
+| Problem | Apps and AI tools need a database that keeps up. |
+| Proof | Written in Li; little memory; console shows real health. |
+| Final CTA | Join the waitlist for early access |
 
 ---
 
@@ -51,10 +52,10 @@ postgres compatible database, agentic database, low memory database, supabase al
 
 ## 5. Product truth
 
-- Core path first: SQL, REST, Auth, RLS.
-- Capability matrix stays incomplete until contracts pass.
-- Self-host + Cloud waitlist.
-- MCP for agents; Studio for humans.
+- Core path first: queries, web interfaces, sign-in, per-row access rules.
+- Status list stays incomplete until tests pass.
+- Self-host + cloud waitlist.
+- Assistant tools for AI; web console for people.
 
 ---
 
@@ -62,10 +63,11 @@ postgres compatible database, agentic database, low memory database, supabase al
 
 | Do | Don’t |
 |----|--------|
-| Speak to builders and agents | Address “everyone” |
-| Name Li, Postgres, Auth/REST | Invent logos, quotes, or user counts |
-| Link capability matrix for status | Claim full Supabase parity |
-| Keep CTAs: waitlist + Studio | Vague “Learn more” as primary |
+| Speak to builders and people using AI tools | Address “everyone” |
+| Name Li once, then say PostgreSQL and plain outcomes | Invent logos, quotes, or user counts |
+| Link the status list for honest progress | Claim full Supabase parity |
+| Keep CTAs: waitlist + console | Vague “Learn more” as primary |
+| Prefer plain words on marketing pages | Unexplained abbreviations (Auth, REST, RLS, MCP, FAQ) |
 
 ---
 

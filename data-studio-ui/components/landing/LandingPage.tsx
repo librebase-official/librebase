@@ -27,7 +27,7 @@ export function LandingPage() {
         </Link>
         <div className="lb-nav-actions">
           <a className="lb-link-quiet" href="#faq">
-            FAQ
+            Questions
           </a>
           <a className="lb-btn lb-btn-primary" href="#waitlist">
             {PRIMARY_CTA}
@@ -38,17 +38,18 @@ export function LandingPage() {
       <section className="lb-hero" aria-label="Hero">
         <div className="lb-hero-copy">
           <p className="lb-brand-signal">Librebase</p>
-          <h1 className="lb-hero-title">High-performance Postgres, written in Li.</h1>
+          <h1 className="lb-hero-title">A PostgreSQL platform that stays small and honest.</h1>
           <p className="lb-hero-sub">
-            Low memory. Strong security defaults. Auth, REST, and Realtime for teams and agents
-            building on a Postgres-compatible stack.
+            Use little memory. Keep strong sign-in defaults. Connect your apps with the usual
+            database connection, web interfaces, and live updates. Built for teams and for AI tools
+            that talk to your data.
           </p>
           <div className="lb-cta-row">
             <a className="lb-btn lb-btn-primary lb-btn-lg" href="#waitlist">
               {PRIMARY_CTA}
             </a>
             <Link className="lb-btn lb-btn-ghost lb-btn-lg" href="/projects">
-              Open Studio
+              Open the console
             </Link>
           </div>
         </div>
@@ -59,15 +60,17 @@ export function LandingPage() {
 
       <section className="lb-proof" aria-label="Proof">
         <p>
-          Native Li runtime: small footprint, no GC pauses, Studio that reports real health.
+          The engine is written in Li, a programming language that compiles to machine code. It uses
+          little memory and does not pause for garbage collection. The console shows real health, not
+          a fake green light.
         </p>
       </section>
 
       <section className="lb-band lb-reveal" id="promise">
-        <h2>Agents need a database that keeps up.</h2>
+        <h2>Apps and AI tools need a database that keeps up.</h2>
         <p>
-          Short-lived sessions, machine-speed API calls, and Auth on every request. Librebase is a
-          Postgres-compatible platform built for that workload.
+          Short sessions, many requests per second, and sign-in checked on every call. Librebase is
+          a PostgreSQL-compatible platform built for that pace.
         </p>
       </section>
 
@@ -76,15 +79,19 @@ export function LandingPage() {
         <ol className="lb-steps">
           <li>
             <strong>Create a project</strong>
-            <span>Dedicated instance or shared runtime.</span>
+            <span>Your own server, or share one machine with several projects.</span>
           </li>
           <li>
             <strong>Connect</strong>
-            <span>Postgres protocol, REST, and Auth from the first boot.</span>
+            <span>
+              Use the normal PostgreSQL connection, web interfaces, and sign-in from the first start.
+            </span>
           </li>
           <li>
-            <strong>Operate</strong>
-            <span>RLS, Studio SQL, MCP tools for agents.</span>
+            <strong>Run day to day</strong>
+            <span>
+              Limit who can see each row, write queries in the console, and give AI tools safe access.
+            </span>
           </li>
         </ol>
       </section>
@@ -93,20 +100,23 @@ export function LandingPage() {
         <h2>What you get</h2>
         <ul className="lb-benefits">
           <li>
-            <strong>Small footprint</strong>
-            <span>Lean native binary for dense hosts and edge-adjacent boxes.</span>
+            <strong>Small memory use</strong>
+            <span>A lean native program, so you can run more projects on the same machine.</span>
           </li>
           <li>
-            <strong>Security defaults</strong>
-            <span>Auth and row-level security in the path from day one.</span>
+            <strong>Security from day one</strong>
+            <span>Sign-in and per-row access rules are in place when you start.</span>
           </li>
           <li>
-            <strong>Agent APIs</strong>
-            <span>MCP plus REST so agents can query and manage without a human in the loop.</span>
+            <strong>Tools for AI assistants</strong>
+            <span>
+              Standard assistant tools and web interfaces so agents can query and manage without a
+              person clicking every step.
+            </span>
           </li>
           <li>
-            <strong>Studio</strong>
-            <span>Projects, SQL, and status in one console.</span>
+            <strong>One web console</strong>
+            <span>Projects, queries, and status in a single place.</span>
           </li>
         </ul>
         <div className="lb-cta-row lb-mid-cta">
@@ -117,71 +127,83 @@ export function LandingPage() {
       </section>
 
       <section className="lb-band" id="matrix">
-        <h2>Ship when tests pass</h2>
+        <h2>We only call a feature done when tests pass</h2>
         <p>
-          Capability rows stay incomplete until contracts are green. Read the matrix for honest
-          status.
+          Incomplete work stays marked incomplete. Open the status list to see what works today.
         </p>
         <a
           className="lb-btn lb-btn-ghost"
           href="https://github.com/librebase-official/librebase/blob/main/docs/lidb-capability-matrix.md"
         >
-          Capability matrix
+          What works today
         </a>
       </section>
 
       <section className="lb-band lb-faq" id="faq">
-        <h2>FAQ</h2>
+        <h2>Common questions</h2>
         <details>
-          <summary>Is this a full Supabase replacement?</summary>
+          <summary>Is this a full replacement for Supabase?</summary>
           <p>
-            Not yet. Core path first: SQL, REST, Auth, RLS. Storage and Edge follow when those
-            contracts pass.
+            Not yet. We ship the core path first: queries, web interfaces, sign-in, and per-row
+            access rules. File storage and edge functions follow when those pieces pass their tests.
           </p>
         </details>
         <details>
           <summary>What is Li?</summary>
           <p>
-            A systems language that compiles to native code. Librebase&rsquo;s engine and supervisor
-            path are Li-first for speed and a small memory profile.
+            A programming language for systems work that compiles to machine code. Librebase&rsquo;s
+            database engine and process supervisor are written in Li so they stay fast and use little
+            memory.
           </p>
         </details>
         <details>
-          <summary>Can I self-host?</summary>
-          <p>Yes. Local binary or Docker. The waitlist is for hosted Cloud instances.</p>
+          <summary>Can I run it on my own machines?</summary>
+          <p>
+            Yes. Download a local program or run it in Docker. The waitlist is for hosted cloud
+            instances we will operate for you.
+          </p>
         </details>
         <details>
-          <summary>How do agents use it?</summary>
-          <p>MCP tools for projects, health, and SQL-shaped workflows. REST for app clients.</p>
+          <summary>How do AI tools use Librebase?</summary>
+          <p>
+            Through assistant tool protocols for projects, health checks, and query workflows, and
+            through web interfaces for app clients.
+          </p>
         </details>
         <details>
-          <summary>Dedicated vs shared?</summary>
-          <p>Dedicated: one instance per project. Shared: many projects on one runtime.</p>
+          <summary>What is the difference between dedicated and shared?</summary>
+          <p>
+            Dedicated means one server for one project. Shared means several projects on the same
+            server, which costs less for experiments and staging.
+          </p>
         </details>
         <details>
           <summary>What does early access include?</summary>
           <p>
-            Priority notice when Cloud and dedicated instances open, plus Studio access on this host
-            today.
+            First notice when cloud and dedicated servers open, plus access to the console on this
+            site today.
           </p>
         </details>
       </section>
 
       <section className="lb-band" id="waitlist">
         <h2>{PRIMARY_CTA}</h2>
-        <p>Get notified when Cloud and dedicated instances open. Studio is open on this host today.</p>
+        <p>
+          We will email you when hosted cloud and private servers open. You can try the console on
+          this site today.
+        </p>
         <WaitlistForm />
       </section>
 
       <section className="lb-final">
         <h2>{PRIMARY_CTA}</h2>
-        <p>High-performance Postgres for teams and agents. Claim a spot now.</p>
+        <p>A fast PostgreSQL platform for teams and AI tools. Claim a spot now.</p>
         <div className="lb-cta-row">
           <a className="lb-btn lb-btn-primary lb-btn-lg" href="#waitlist">
             {PRIMARY_CTA}
           </a>
           <Link className="lb-btn lb-btn-ghost lb-btn-lg" href="/projects">
-            Open Studio
+            Open the console
           </Link>
         </div>
       </section>
@@ -191,7 +213,7 @@ export function LandingPage() {
           Libre<span>base</span>
         </span>
         <div className="lb-footer-links">
-          <Link href="/projects">Studio</Link>
+          <Link href="/projects">Console</Link>
           <Link href="/setup">Setup</Link>
           <a href="https://github.com/librebase-official/librebase">GitHub</a>
         </div>
