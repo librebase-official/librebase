@@ -43,8 +43,8 @@ postgres compatible database, agentic database, low memory database, supabase al
 
 ## 4. Visual (interim)
 
-- Landing already uses Syne / Figtree / IBM Plex Mono + teal honest-status tokens in Studio.
-- Majico palette/logo not finalized (`hasBrandData` false until niche workers complete + palette/logo select).
+- Landing typography: **Orbitron** (hero + wordmark only) + **Space Grotesk** (body / section titles) + IBM Plex Mono. Do not use the display face on every heading.
+- Majico curated pair id: `orbitron-space`. Palette/logo not finalized (`hasBrandData` false until niche workers complete + palette/logo select).
 - Do not replace live landing fonts with `system-ui` from scaffold export until palette is chosen.
 
 ---

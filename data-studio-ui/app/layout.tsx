@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
-import { Figtree, Syne, IBM_Plex_Mono } from "next/font/google";
+import { Orbitron, Space_Grotesk, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 
-const syne = Syne({
+/** Display: hero + wordmark only — do not use for every heading. */
+const orbitron = Orbitron({
   subsets: ["latin"],
   variable: "--font-display",
   display: "swap",
 });
 
-const figtree = Figtree({
+const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
   variable: "--font-body",
   display: "swap",
@@ -32,7 +33,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${syne.variable} ${figtree.variable} ${plexMono.variable}`}>
+    <html
+      lang="en"
+      className={`${orbitron.variable} ${spaceGrotesk.variable} ${plexMono.variable}`}
+    >
       <body>{children}</body>
     </html>
   );

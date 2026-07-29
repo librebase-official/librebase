@@ -20,7 +20,7 @@
   --lb-line: rgba(231, 242, 236, 0.12);
   --lb-ease: cubic-bezier(0.22, 1, 0.36, 1);
 
-  font-family: var(--font-body), "Figtree", sans-serif;
+  font-family: var(--font-body), "Space Grotesk", system-ui, sans-serif;
 }
 
 * {
@@ -71,10 +71,10 @@ button {
 }
 
 .brand {
-  font-family: var(--font-display), "Syne", sans-serif;
+  font-family: var(--font-display), "Orbitron", sans-serif;
   font-weight: 700;
-  font-size: 1.1rem;
-  letter-spacing: 0.02em;
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
 }
 
 .brand span {
@@ -303,7 +303,7 @@ button {
   min-height: 100vh;
   background: var(--lb-ink);
   color: var(--lb-paper);
-  font-family: var(--font-body), "Figtree", sans-serif;
+  font-family: var(--font-body), "Space Grotesk", system-ui, sans-serif;
   overflow-x: clip;
 }
 
@@ -328,10 +328,10 @@ button {
 }
 
 .lb-wordmark {
-  font-family: var(--font-display), "Syne", sans-serif;
+  font-family: var(--font-display), "Orbitron", sans-serif;
   font-weight: 700;
-  font-size: 1.15rem;
-  letter-spacing: -0.02em;
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
   color: var(--lb-paper);
 }
 
@@ -436,26 +436,23 @@ button {
 }
 
 .lb-brand-signal {
-  margin: 0 0 0.85rem;
-  font-family: var(--font-display), "Syne", sans-serif;
-  font-size: clamp(2.4rem, 5.5vw, 4.25rem);
-  font-weight: 700;
-  letter-spacing: -0.04em;
-  line-height: 0.95;
-  color: var(--lb-paper);
-}
-
-.lb-brand-signal::first-letter {
+  margin: 0 0 0.75rem;
+  font-family: var(--font-body), "Space Grotesk", sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  line-height: 1.2;
   color: var(--lb-signal);
 }
 
 .lb-hero-title {
   margin: 0 0 1rem;
-  font-family: var(--font-display), "Syne", sans-serif;
-  font-size: clamp(1.55rem, 3.2vw, 2.35rem);
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  line-height: 1.15;
+  font-family: var(--font-display), "Orbitron", sans-serif;
+  font-size: clamp(1.85rem, 4.2vw, 3.1rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.12;
   color: var(--lb-paper);
 }
 
@@ -576,7 +573,7 @@ button {
 
 .lb-band h2 {
   margin: 0 0 0.85rem;
-  font-family: var(--font-display), "Syne", sans-serif;
+  font-family: var(--font-body), "Space Grotesk", sans-serif;
   font-size: clamp(1.45rem, 2.8vw, 2rem);
   font-weight: 650;
   letter-spacing: -0.03em;
@@ -634,8 +631,9 @@ button {
 }
 
 .lb-steps strong {
-  font-family: var(--font-display), "Syne", sans-serif;
+  font-family: var(--font-body), "Space Grotesk", sans-serif;
   font-size: 1.05rem;
+  font-weight: 650;
   color: var(--lb-paper);
 }
 
@@ -661,8 +659,9 @@ button {
 }
 
 .lb-benefits strong {
-  font-family: var(--font-display), "Syne", sans-serif;
+  font-family: var(--font-body), "Space Grotesk", sans-serif;
   font-size: 1.08rem;
+  font-weight: 650;
   color: var(--lb-paper);
 }
 
@@ -722,8 +721,9 @@ button {
 
 .lb-final h2 {
   margin: 0 0 0.65rem;
-  font-family: var(--font-display), "Syne", sans-serif;
+  font-family: var(--font-body), "Space Grotesk", sans-serif;
   font-size: clamp(1.55rem, 3vw, 2.1rem);
+  font-weight: 650;
   letter-spacing: -0.03em;
 }
 
