@@ -23,32 +23,31 @@ export function LandingPage() {
           Libre<span>base</span>
         </Link>
         <div className="lb-nav-actions">
-          <a className="lb-link-quiet" href="#matrix">
-            Capability matrix
+          <a className="lb-link-quiet" href="#faq">
+            FAQ
           </a>
-          <Link className="lb-btn lb-btn-primary" href="#waitlist">
-            Join waitlist
-          </Link>
+          <a className="lb-btn lb-btn-primary" href="#waitlist">
+            Join the waitlist
+          </a>
         </div>
       </header>
 
       <section className="lb-hero" aria-label="Hero">
         <div className="lb-hero-copy">
           <p className="lb-brand-signal">Librebase</p>
-          <h1 className="lb-hero-title">Postgres platform. Honest status.</h1>
+          <h1 className="lb-hero-title">High-performance Postgres, written in Li.</h1>
           <p className="lb-hero-sub">
-            Supabase-shaped open data on lidb: Auth, REST, Realtime, and Studio for teams who need
-            real health signals.
+            Low memory. Strong security defaults. Auth, REST, and Realtime for teams and agents
+            building on a Postgres-compatible stack.
           </p>
           <div className="lb-cta-row">
             <a className="lb-btn lb-btn-primary lb-btn-lg" href="#waitlist">
-              Join waitlist
+              Join the waitlist for early access
             </a>
             <Link className="lb-btn lb-btn-ghost lb-btn-lg" href="/projects">
               Open Studio
             </Link>
           </div>
-          <p className="lb-reassure">Early access for builders. No spam.</p>
         </div>
         <div className="lb-hero-visual" aria-hidden="true">
           <ProductMesh />
@@ -57,22 +56,17 @@ export function LandingPage() {
 
       <section className="lb-proof" aria-label="Proof">
         <p>
-          Built on linative <strong>lidb</strong> + <strong>lis</strong>. Wave A parity is measured by
-          executable contracts, not emoji counts.
+          Native Li runtime — small footprint, no GC pauses, Studio that reports real health instead
+          of fake greens.
         </p>
       </section>
 
-      <section className="lb-band" id="waitlist">
-        <h2>Join the waitlist</h2>
-        <p>Get notified when Librebase Cloud and dedicated instances open for early teams.</p>
-        <WaitlistForm />
-      </section>
-
       <section className="lb-band lb-reveal" id="promise">
-        <h2>Stop guessing if the stack is up.</h2>
+        <h2>Agents need a database that keeps up.</h2>
         <p>
-          Librebase keeps degraded modes honest. Ports can listen while the engine is a stub. Studio
-          says so. Agents can verify with the parity harness.
+          Short-lived sessions, machine-speed API calls, and Auth on every request. Librebase is a
+          Postgres-compatible platform aimed at that workload — not a port of yesterday&rsquo;s
+          monolith.
         </p>
       </section>
 
@@ -80,16 +74,16 @@ export function LandingPage() {
         <h2>How it works</h2>
         <ol className="lb-steps">
           <li>
-            <strong>Org and instance</strong>
-            <span>Create a project on a dedicated or shared runtime.</span>
+            <strong>Create a project</strong>
+            <span>Dedicated instance or shared runtime.</span>
           </li>
           <li>
-            <strong>lis profile librebase</strong>
-            <span>Start Auth, registry, and /rest/v1 against lidb.</span>
+            <strong>Connect</strong>
+            <span>Postgres protocol, REST, and Auth from the first boot.</span>
           </li>
           <li>
-            <strong>Prove with Wave A</strong>
-            <span>Run SQL, REST, Auth, and RLS contracts before you claim parity.</span>
+            <strong>Operate</strong>
+            <span>RLS, Studio SQL, MCP tools for agents.</span>
           </li>
         </ol>
       </section>
@@ -98,64 +92,80 @@ export function LandingPage() {
         <h2>What you get</h2>
         <ul className="lb-benefits">
           <li>
-            <strong>Studio console</strong>
-            <span>Projects, instances, SQL, and admin setup in one place.</span>
+            <strong>Small footprint</strong>
+            <span>Lean native binary — fit for dense hosts and edge-adjacent boxes.</span>
           </li>
           <li>
-            <strong>HTTP contracts</strong>
-            <span>/rest/v1 and /v1/auth shaped for Supabase-style clients.</span>
+            <strong>Security defaults</strong>
+            <span>Auth and row-level security in the path, not bolted on later.</span>
           </li>
           <li>
-            <strong>Agent control</strong>
-            <span>MCP tools for health, projects, and parity_run.</span>
+            <strong>Agent APIs</strong>
+            <span>MCP plus REST so agents can query and manage without a human in the loop.</span>
           </li>
           <li>
-            <strong>Honest matrix</strong>
-            <span>Capability rows flip to usable only when tests pass.</span>
+            <strong>Studio</strong>
+            <span>Projects, SQL, and status in one console.</span>
           </li>
         </ul>
       </section>
 
+      <section className="lb-band" id="waitlist">
+        <h2>Join the waitlist for early access</h2>
+        <p>Get notified when Cloud and dedicated instances open.</p>
+        <WaitlistForm />
+      </section>
+
       <section className="lb-band" id="matrix">
-        <h2>Capability matrix</h2>
+        <h2>Ship when tests pass</h2>
         <p>
-          Track lidb, lis, Storage, Edge, and SDK status in-repo. Core vertical first: SQL, REST,
-          Auth, RLS.
+          Capability rows stay incomplete until contracts are green. Read the matrix if you want the
+          honest status.
         </p>
-        <a className="lb-btn lb-btn-ghost" href="https://github.com/librebase-official/librebase/blob/main/docs/lidb-capability-matrix.md">
-          View matrix on GitHub
+        <a
+          className="lb-btn lb-btn-ghost"
+          href="https://github.com/librebase-official/librebase/blob/main/docs/lidb-capability-matrix.md"
+        >
+          Capability matrix
         </a>
       </section>
 
       <section className="lb-band lb-faq" id="faq">
         <h2>FAQ</h2>
         <details>
-          <summary>Is this full Supabase parity today?</summary>
-          <p>No. Wave A harness defines the contracts. Matrix rows stay in progress until tests are green.</p>
-        </details>
-        <details>
-          <summary>Do I need lidb installed?</summary>
+          <summary>Is this a full Supabase replacement?</summary>
           <p>
-            Local Studio can use LIDB_RUNTIME_MODE=dev for a labeled stub. Production local path uses
-            LIDB_ROOT and lis on PATH.
+            Not yet. Core path first: SQL, REST, Auth, RLS. Storage and Edge follow when those
+            contracts pass.
           </p>
         </details>
         <details>
-          <summary>Dedicated vs shared instances?</summary>
-          <p>Both. Dedicated is one instance per project. Shared puts many projects on one runtime.</p>
+          <summary>What is Li?</summary>
+          <p>
+            A systems language that compiles to native code. Librebase&rsquo;s engine and supervisor
+            path are Li-first for speed and a small memory profile.
+          </p>
         </details>
         <details>
-          <summary>What is the primary CTA?</summary>
-          <p>Open Studio. That lands you in the org project console.</p>
+          <summary>Can I self-host?</summary>
+          <p>Yes — local binary or Docker. Cloud waitlist is for hosted instances.</p>
+        </details>
+        <details>
+          <summary>How do agents use it?</summary>
+          <p>MCP tools for projects, health, and SQL-shaped workflows; REST for app clients.</p>
+        </details>
+        <details>
+          <summary>Dedicated vs shared?</summary>
+          <p>Dedicated: one instance per project. Shared: many projects on one runtime.</p>
         </details>
       </section>
 
       <section className="lb-final">
-        <h2>Start with honest infrastructure.</h2>
-        <p>Join the waitlist for early access, or open Studio now on this host.</p>
+        <h2>Join the waitlist for early access</h2>
+        <p>Studio is open on this host today.</p>
         <div className="lb-cta-row">
           <a className="lb-btn lb-btn-primary lb-btn-lg" href="#waitlist">
-            Join waitlist
+            Join the waitlist for early access
           </a>
           <Link className="lb-btn lb-btn-ghost lb-btn-lg" href="/projects">
             Open Studio
@@ -170,7 +180,6 @@ export function LandingPage() {
         <div className="lb-footer-links">
           <Link href="/projects">Studio</Link>
           <Link href="/setup">Setup</Link>
-          <Link href="/admin">Admin</Link>
           <a href="https://github.com/librebase-official/librebase">GitHub</a>
         </div>
       </footer>
@@ -242,7 +251,7 @@ function WaitlistForm() {
         return;
       }
       setStatus("ok");
-      setMessage("You are on the list. We will email when early access opens.");
+      setMessage("You are on the list.");
       setEmail("");
     } catch {
       setStatus("err");
@@ -267,7 +276,7 @@ function WaitlistForm() {
           disabled={status === "loading"}
         />
         <button className="lb-btn lb-btn-primary" type="submit" disabled={status === "loading"}>
-          {status === "loading" ? "Joining…" : "Join waitlist"}
+          {status === "loading" ? "Joining…" : "Join the waitlist for early access"}
         </button>
       </div>
       {message ? (
