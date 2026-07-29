@@ -27,7 +27,7 @@ export function LandingPage() {
             FAQ
           </a>
           <a className="lb-btn lb-btn-primary" href="#waitlist">
-            Join waitlist
+            Join the waitlist
           </a>
         </div>
       </header>
@@ -42,13 +42,12 @@ export function LandingPage() {
           </p>
           <div className="lb-cta-row">
             <a className="lb-btn lb-btn-primary lb-btn-lg" href="#waitlist">
-              Join waitlist
+              Join the waitlist for early access
             </a>
             <Link className="lb-btn lb-btn-ghost lb-btn-lg" href="/projects">
               Open Studio
             </Link>
           </div>
-          <p className="lb-reassure">Early access. No spam.</p>
         </div>
         <div className="lb-hero-visual" aria-hidden="true">
           <ProductMesh />
@@ -112,8 +111,8 @@ export function LandingPage() {
       </section>
 
       <section className="lb-band" id="waitlist">
-        <h2>Join the waitlist</h2>
-        <p>Email when Cloud and dedicated instances open.</p>
+        <h2>Join the waitlist for early access</h2>
+        <p>Get notified when Cloud and dedicated instances open.</p>
         <WaitlistForm />
       </section>
 
@@ -162,11 +161,11 @@ export function LandingPage() {
       </section>
 
       <section className="lb-final">
-        <h2>Get on the list</h2>
-        <p>Early access for builders. Studio is open on this host today.</p>
+        <h2>Join the waitlist for early access</h2>
+        <p>Studio is open on this host today.</p>
         <div className="lb-cta-row">
           <a className="lb-btn lb-btn-primary lb-btn-lg" href="#waitlist">
-            Join waitlist
+            Join the waitlist for early access
           </a>
           <Link className="lb-btn lb-btn-ghost lb-btn-lg" href="/projects">
             Open Studio
@@ -277,7 +276,7 @@ function WaitlistForm() {
           disabled={status === "loading"}
         />
         <button className="lb-btn lb-btn-primary" type="submit" disabled={status === "loading"}>
-          {status === "loading" ? "Joining…" : "Join waitlist"}
+          {status === "loading" ? "Joining…" : "Join the waitlist for early access"}
         </button>
       </div>
       {message ? (
