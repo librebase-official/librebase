@@ -1,0 +1,19 @@
+-- Librebase landing waitlist (Majico Supabase / shared VPS)
+create table if not exists public.librebase_waitlist (
+  id uuid primary key default gen_random_uuid(),
+  email text not null unique,
+  source text not null default 'landing',
+  created_at timestamptz not null default now()
+);
+
+create index if not exists librebase_waitlist_created_at_idx
+  on public.librebase_waitlist (created_at desc);
+
+alter table public.librebase_waitlist enable row level security;
+
+grant usage on schema public to anon, authenticated, service_role;
+grant select, insert on public.librebase_waitlist to anon, authenticated, service_role;
+
+notify pgrst, 'reload schema';
+
+-- Service role bypasses RLS; no anon policies (inserts go through Next API).

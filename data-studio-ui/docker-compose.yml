@@ -1,0 +1,13 @@
+services:
+  web:
+    build: .
+    container_name: librebase_web_1
+    restart: unless-stopped
+    ports:
+      - "3005:3005"
+    environment:
+      - NODE_ENV=production
+      - PORT=3005
+      - LIBREBASE_SUPABASE_URL=${LIBREBASE_SUPABASE_URL}
+      - LIBREBASE_SUPABASE_SERVICE_ROLE_KEY=${LIBREBASE_SUPABASE_SERVICE_ROLE_KEY}
+    mem_limit: 384m
