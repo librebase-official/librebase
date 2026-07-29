@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+/** Primary conversion goal: waitlist email for early access. */
+const PRIMARY_CTA = "Join the waitlist for early access";
+
 export function LandingPage() {
   const [ready, setReady] = useState(false);
 
@@ -27,7 +30,7 @@ export function LandingPage() {
             FAQ
           </a>
           <a className="lb-btn lb-btn-primary" href="#waitlist">
-            Join the waitlist
+            {PRIMARY_CTA}
           </a>
         </div>
       </header>
@@ -42,7 +45,7 @@ export function LandingPage() {
           </p>
           <div className="lb-cta-row">
             <a className="lb-btn lb-btn-primary lb-btn-lg" href="#waitlist">
-              Join the waitlist for early access
+              {PRIMARY_CTA}
             </a>
             <Link className="lb-btn lb-btn-ghost lb-btn-lg" href="/projects">
               Open Studio
@@ -56,8 +59,7 @@ export function LandingPage() {
 
       <section className="lb-proof" aria-label="Proof">
         <p>
-          Native Li runtime — small footprint, no GC pauses, Studio that reports real health instead
-          of fake greens.
+          Native Li runtime: small footprint, no GC pauses, Studio that reports real health.
         </p>
       </section>
 
@@ -65,8 +67,7 @@ export function LandingPage() {
         <h2>Agents need a database that keeps up.</h2>
         <p>
           Short-lived sessions, machine-speed API calls, and Auth on every request. Librebase is a
-          Postgres-compatible platform aimed at that workload — not a port of yesterday&rsquo;s
-          monolith.
+          Postgres-compatible platform built for that workload.
         </p>
       </section>
 
@@ -93,11 +94,11 @@ export function LandingPage() {
         <ul className="lb-benefits">
           <li>
             <strong>Small footprint</strong>
-            <span>Lean native binary — fit for dense hosts and edge-adjacent boxes.</span>
+            <span>Lean native binary for dense hosts and edge-adjacent boxes.</span>
           </li>
           <li>
             <strong>Security defaults</strong>
-            <span>Auth and row-level security in the path, not bolted on later.</span>
+            <span>Auth and row-level security in the path from day one.</span>
           </li>
           <li>
             <strong>Agent APIs</strong>
@@ -108,19 +109,18 @@ export function LandingPage() {
             <span>Projects, SQL, and status in one console.</span>
           </li>
         </ul>
-      </section>
-
-      <section className="lb-band" id="waitlist">
-        <h2>Join the waitlist for early access</h2>
-        <p>Get notified when Cloud and dedicated instances open.</p>
-        <WaitlistForm />
+        <div className="lb-cta-row lb-mid-cta">
+          <a className="lb-btn lb-btn-primary" href="#waitlist">
+            {PRIMARY_CTA}
+          </a>
+        </div>
       </section>
 
       <section className="lb-band" id="matrix">
         <h2>Ship when tests pass</h2>
         <p>
-          Capability rows stay incomplete until contracts are green. Read the matrix if you want the
-          honest status.
+          Capability rows stay incomplete until contracts are green. Read the matrix for honest
+          status.
         </p>
         <a
           className="lb-btn lb-btn-ghost"
@@ -148,24 +148,37 @@ export function LandingPage() {
         </details>
         <details>
           <summary>Can I self-host?</summary>
-          <p>Yes — local binary or Docker. Cloud waitlist is for hosted instances.</p>
+          <p>Yes. Local binary or Docker. The waitlist is for hosted Cloud instances.</p>
         </details>
         <details>
           <summary>How do agents use it?</summary>
-          <p>MCP tools for projects, health, and SQL-shaped workflows; REST for app clients.</p>
+          <p>MCP tools for projects, health, and SQL-shaped workflows. REST for app clients.</p>
         </details>
         <details>
           <summary>Dedicated vs shared?</summary>
           <p>Dedicated: one instance per project. Shared: many projects on one runtime.</p>
         </details>
+        <details>
+          <summary>What does early access include?</summary>
+          <p>
+            Priority notice when Cloud and dedicated instances open, plus Studio access on this host
+            today.
+          </p>
+        </details>
+      </section>
+
+      <section className="lb-band" id="waitlist">
+        <h2>{PRIMARY_CTA}</h2>
+        <p>Get notified when Cloud and dedicated instances open. Studio is open on this host today.</p>
+        <WaitlistForm />
       </section>
 
       <section className="lb-final">
-        <h2>Join the waitlist for early access</h2>
-        <p>Studio is open on this host today.</p>
+        <h2>{PRIMARY_CTA}</h2>
+        <p>High-performance Postgres for teams and agents. Claim a spot now.</p>
         <div className="lb-cta-row">
           <a className="lb-btn lb-btn-primary lb-btn-lg" href="#waitlist">
-            Join the waitlist for early access
+            {PRIMARY_CTA}
           </a>
           <Link className="lb-btn lb-btn-ghost lb-btn-lg" href="/projects">
             Open Studio
@@ -251,7 +264,7 @@ function WaitlistForm() {
         return;
       }
       setStatus("ok");
-      setMessage("You are on the list.");
+      setMessage("You are on the list for early access.");
       setEmail("");
     } catch {
       setStatus("err");
@@ -276,7 +289,7 @@ function WaitlistForm() {
           disabled={status === "loading"}
         />
         <button className="lb-btn lb-btn-primary" type="submit" disabled={status === "loading"}>
-          {status === "loading" ? "Joining…" : "Join the waitlist for early access"}
+          {status === "loading" ? "Joining…" : PRIMARY_CTA}
         </button>
       </div>
       {message ? (
