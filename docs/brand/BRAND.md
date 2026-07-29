@@ -10,11 +10,12 @@
 
 - **Name:** Librebase
 - **One-liner:** A PostgreSQL platform that stays small and honest.
-- **Support line:** Low memory, strong sign-in defaults, usual database connection plus web interfaces and live updates for teams and AI tools.
+- **Support line:** Aiming for about 64 MB of RAM with speed in the same class as managed Postgres stacks, strong sign-in defaults, usual database connection plus web interfaces and live updates for teams and AI tools.
 - **Audience:** Developers, platform teams, and people building with AI assistants who need a PostgreSQL-compatible backend with a small footprint and honest health status.
 - **Primary CTA:** Join the waitlist for early access
 - **Secondary CTA:** Open the console
 - **Copy rule:** Prefer plain words over jargon and abbreviations on marketing pages (say PostgreSQL, sign-in, web interfaces, per-row access rules; explain Li once).
+- **Metrics rule:** Frame **64 MB** and **Supabase-class speed** as **aims / targets** until CI benches publish green rows ([lidb footprint](https://github.com/li-langverse/lidb/blob/main/docs/footprint.md)). Never state them as measured facts without evidence.
 
 ### Niche keywords
 
@@ -37,7 +38,7 @@ postgres compatible database, agentic database, low memory database, supabase al
 |--------|------|
 | Hero | A PostgreSQL platform that stays small and honest. |
 | Problem | Apps and AI tools need a database that keeps up. |
-| Proof | Written in Li; little memory; console shows real health. |
+| Proof | Written in Li; aiming for ~64 MB RAM and Supabase-class speed on the core path (bench-gated); console shows real health. |
 | Final CTA | Join the waitlist for early access |
 
 ---
@@ -68,6 +69,7 @@ postgres compatible database, agentic database, low memory database, supabase al
 | Link the status list for honest progress | Claim full Supabase parity |
 | Keep CTAs: waitlist + console | Vague “Learn more” as primary |
 | Prefer plain words on marketing pages | Unexplained abbreviations (Auth, REST, RLS, MCP, FAQ) |
+| Say “aiming for ~64 MB” / “target speed class” | Claim measured 64 MB or “as fast as Supabase” without published benches |
 
 ---
 

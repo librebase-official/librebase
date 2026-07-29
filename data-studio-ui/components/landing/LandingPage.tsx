@@ -40,9 +40,10 @@ export function LandingPage() {
           <p className="lb-brand-signal">Librebase</p>
           <h1 className="lb-hero-title">A PostgreSQL platform that stays small and honest.</h1>
           <p className="lb-hero-sub">
-            Use little memory. Keep strong sign-in defaults. Connect your apps with the usual
-            database connection, web interfaces, and live updates. Built for teams and for AI tools
-            that talk to your data.
+            Aiming for about 64&nbsp;MB of memory with speed in the same class as the big managed
+            Postgres stacks. Strong sign-in defaults. Connect your apps with the usual database
+            connection, web interfaces, and live updates. Built for teams and for AI tools that talk
+            to your data. We only publish numbers when benches prove them.
           </p>
           <div className="lb-cta-row">
             <a className="lb-btn lb-btn-primary lb-btn-lg" href="#waitlist">
@@ -60,9 +61,10 @@ export function LandingPage() {
 
       <section className="lb-proof" aria-label="Proof">
         <p>
-          The engine is written in Li, a programming language that compiles to machine code. It uses
-          little memory and does not pause for garbage collection. The console shows real health, not
-          a fake green light.
+          The engine is written in Li, a programming language that compiles to machine code. The
+          product aim is a lean instance around 64&nbsp;MB of RAM and core-path speed in the same
+          class as managed Postgres platforms — gated by published benches, not slogans. The console
+          shows real health, not a fake green light.
         </p>
       </section>
 
@@ -101,7 +103,17 @@ export function LandingPage() {
         <ul className="lb-benefits">
           <li>
             <strong>Small memory use</strong>
-            <span>A lean native program, so you can run more projects on the same machine.</span>
+            <span>
+              Target: fit a lean instance in about 64&nbsp;MB of RAM so you can run more projects on
+              the same machine — with benches before we call it done.
+            </span>
+          </li>
+          <li>
+            <strong>Speed that keeps up</strong>
+            <span>
+              Aim for Supabase-class latency and throughput on everyday queries and web API calls,
+              measured against Postgres on the same hardware.
+            </span>
           </li>
           <li>
             <strong>Security from day one</strong>
@@ -141,6 +153,14 @@ export function LandingPage() {
 
       <section className="lb-band lb-faq" id="faq">
         <h2>Common questions</h2>
+        <details>
+          <summary>How small is the memory aim?</summary>
+          <p>
+            Product target for a lean dedicated instance is about 64&nbsp;MB of RAM steady state,
+            with core-path speed in the same class as managed Postgres / Supabase stacks. That is an
+            engineering aim with bench gates — not a claim until the published harness is green.
+          </p>
+        </details>
         <details>
           <summary>Is this a full replacement for Supabase?</summary>
           <p>

@@ -36,6 +36,16 @@ UI: primary nav stays **Org → Projects** (Supabase parity). **Instances** is a
 
 Phase 1 Studio (`data-studio-ui/`): explicit `Instance` entity in `instances-store.ts`, projects with `instanceId` + `deploymentMode`, `launchProjectDb`, `(cloud)` routes. `orgId` stubbed `"default"` when Admin API is off.
 
+## Footprint & performance north star
+
+| Aim | Detail |
+|-----|--------|
+| **RAM** | Lean dedicated instance ≤ **64 MB** RSS steady state (`librebase-lean` in lidb `docs/footprint.md`) |
+| **Speed** | **Supabase-class** core-path latency/throughput vs Postgres 16 / Supabase local on same hardware |
+| **Honesty** | Marketing says **aim/target** until CI benches publish green rows — never invent measured MB or “as fast as Supabase” without evidence |
+
+Current engineering gate for registry-min remains **≤256 MB** until PH-DB-7 adds the lean profile gate. Shrink path: cut unused modules, tight pools, Li-native heap.
+
 ## Librebase Admin (product — not a linative lip package)
 
 **Librebase Admin** = Studio operator UI + small management API (orgs, members, projects/instances metadata, entitlements). It is **Librebase-branded product code** in this repo — **not** `liorg` or any general-purpose lip package.
