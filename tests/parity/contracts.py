@@ -56,7 +56,7 @@ def _http(
 
 def p_auth_01() -> Result:
     """Signup + login → JWT; Bearer whoami/session accepted."""
-    email = os.environ.get("PARITY_EMAIL", "parity-user@localhost")
+    email = os.environ.get("PARITY_EMAIL", "parity-user@example.com")
     password = os.environ.get("PARITY_PASSWORD", "parity-secret-change-me")
     status, body = _http("POST", "/v1/auth/signup", body={"email": email, "password": password})
     if status not in (200, 201, 409):
@@ -76,10 +76,21 @@ def p_auth_01() -> Result:
 def p_rest_01() -> Result:
     """CRUD on /rest/v1/{table} with basic filter."""
     table = os.environ.get("PARITY_REST_TABLE", "parity_items")
+    email = os.environ.get("PARITY_EMAIL", "parity-rest@example.com")
+    password = os.environ.get("PARITY_PASSWORD", "parity-secret-change-me")
+    _http("POST", "/v1/auth/signup", body={"email": email, "password": password})
+    status_l, login = _http("POST", "/v1/auth/login", body={"email": email, "password": password})
+    token = None
+    if isinstance(login, dict):
+        token = login.get("access_token") or login.get("token")
+    if status_l != 200 or not token:
+        return Result("P-REST-01", "fail", "need auth for RLS-backed rest", {"login": login})
+    hdrs = {"Authorization": f"Bearer {token}"}
     status, body = _http(
         "POST",
         f"/rest/v1/{table}",
-        body={"name": "wave-a", "owner_id": "00000000-0000-0000-0000-000000000001"},
+        body={"name": "wave-a"},
+        headers=hdrs,
     )
     if status in (0,):
         return Result("P-REST-01", "fail", "API unreachable", {"body": body})
@@ -87,9 +98,11 @@ def p_rest_01() -> Result:
         return Result("P-REST-01", "fail", f"/rest/v1 not implemented (status={status})", {"body": body})
     if status not in (200, 201):
         return Result("P-REST-01", "fail", f"POST status={status}", {"body": body})
-    status_g, body_g = _http("GET", f"/rest/v1/{table}?name=eq.wave-a")
+    status_g, body_g = _http("GET", f"/rest/v1/{table}?name=eq.wave-a", headers=hdrs)
     if status_g != 200:
         return Result("P-REST-01", "fail", f"GET status={status_g}", {"body": body_g})
+    if isinstance(body_g, list) and len(body_g) < 1:
+        return Result("P-REST-01", "fail", "GET returned no rows after POST", {"body": body_g})
     return Result("P-REST-01", "pass", "POST+GET OK", {"get": body_g})
 
 
@@ -113,8 +126,8 @@ def p_sql_01() -> Result:
 
 def p_rls_01() -> Result:
     """Cross-user row denied without matching JWT claim."""
-    email_a = "parity-a@localhost"
-    email_b = "parity-b@localhost"
+    email_a = "parity-a@example.com"
+    email_b = "parity-b@example.com"
     password = "parity-secret-change-me"
     for email in (email_a, email_b):
         _http("POST", "/v1/auth/signup", body={"email": email, "password": password})
