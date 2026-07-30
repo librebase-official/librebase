@@ -2,14 +2,14 @@
 
 ## Summary
 
-Added Spec-Driven Development package for Wave A native testing and SQL/COPY import/export, updated analyze/matrix honesty notes, and soft `P-IO-01` parity contract.
+Added Spec-Driven Development package for Wave A native testing and SQL/COPY import/export; soft `P-IO-01`; live Wave A required contracts green (2026-07-30 evidence).
 
 ## Agent continuation
 
-1. **Read:** `docs/sdd/specs/wave-a-native-io/{requirements,spec,tasks}.md`.
-2. **Run:** `python scripts/parity_runner.py` (expect skip without Li); with Li: set `LIDB_ROOT`/`LIS_ROOT` and start librebase profile.
-3. **Then:** bump lidb/lis pins after sibling PRs merge; flip matrix ✅ only when Wave A live-green (T6).
-4. **Blocked on:** live stack green (T6); Studio IO UI out of scope.
+1. **Read:** `docs/sdd/specs/wave-a-native-io/tasks.md` (all MVP done).
+2. **Run:** start lis registry (`LI_PROFILE=librebase`, `LIDB_ROOT`, embed); `LIBREBASE_PARITY_API=http://127.0.0.1:<port> PARITY_FORCE=1 python scripts/parity_runner.py`.
+3. **Then:** reopen/merge librebase PR; open GitLab MRs for lidb/lis; hard-gate P-IO-01 if desired.
+4. **Blocked on:** CREATE TABLE DDL; engine RLS; human merge of sibling MRs.
 
 ## Changed
 

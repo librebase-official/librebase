@@ -1,6 +1,6 @@
-# Li dependency pins (Librebase ↔ lidb / lis)
+# Li dependency pins (Librebase — lidb / lis)
 
-**Last audit:** 2026-07-29  
+**Last audit:** 2026-07-30  
 **Rule:** Edit Li packages in sibling checkouts; bump pins here; flip matrix ✅ only after Wave A harness green. Do not vendor forks into librebase.
 
 ## Sibling paths (dev / harness)
@@ -17,8 +17,8 @@
 
 | Dep | Absolute path | Git (branch @ SHA) | Notes |
 |-----|---------------|--------------------|-------|
-| lidb | `C:\Users\Julian\Documents\Programming\li\lidb` | `feat/wp-j-embed-session-reuse` @ `39853cc` | Prefer merge toward `main` for CI |
-| lis | `C:\Users\Julian\Documents\Programming\li\lis` | `main` @ `82da467` | Add `profiles/librebase.toml` + `routes/rest/` |
+| lidb | `C:\Users\Julian\Documents\Programming\li\lidb` | `feat/wave-a-parity-export` @ `fb03d42` | `parity_items` bootstrap + export/import |
+| lis | `C:\Users\Julian\Documents\Programming\li\lis` | `feat/librebase-parity-wave-a` @ `7e0e4bb` | librebase profile + lidb REST |
 | li-oauth | `C:\Users\Julian\Documents\Programming\li-oauth` | `main` @ `92501c6` | Wave B / OAuth |
 | li-edge | `C:\Users\Julian\Documents\Programming\li-edge` | `main` @ `2dc7578` | Wave B |
 | li-httpd | `C:\Users\Julian\Documents\Programming\li\li-httpd` | `main` @ `3b7472e` | Gateway compose later |
@@ -28,28 +28,24 @@
 Wave A (`scripts/parity_runner.py`) needs:
 
 1. `LIDB_ROOT` pointing at a lidb tree that can embed / migrate
-2. `lis` on `PATH` (or `LIS_ROOT/bin` prepended)
-3. Profile **`librebase`** when present (`LI_PROFILE=librebase`); else document fallback `registry-min`
+2. `lis` on `PATH` (or `LIS_ROOT`) + registry server (or `python routes/registry/server.py`)
+3. `LI_PROFILE=librebase`, `LI_JWT_SECRET`, `LIBREBASE_PARITY_API` (default `http://127.0.0.1:54321`; use alternate port if OS-blocked)
 
 Without Li: runner exits **0** with `status: skipped`, `reason: no_lidb` — not a production pass.
 
-## Known blockers (Wave A)
+**Evidence (2026-07-30):** live run on `:15421` — P-SQL-01, P-REST-01, P-AUTH-01, P-RLS-01 **pass**; P-IO-01/P-RT-01 soft skip. Report: `tests/parity/last-report.json`.
+
+## Known blockers (post–Wave A)
 
 | Contract | Blocker | Home |
 |----------|---------|------|
-| P-SQL-01 | CREATE TABLE not in native catalog exec; use migration ensure | lidb |
-| P-REST-01 | No `/rest/v1/{table}` (registry `/v1/packages*` only) | lis `routes/rest/` |
-| P-AUTH-01 | MVP exists at `/v1/auth/*` | lis (harden claims) |
-| P-RLS-01 | Policies in SQL; engine eval not wired | lidb + lis JWT GUCs |
-| P-RT-01 | Soft; realtime ~35% | lis `routes/realtime` |
+| CREATE TABLE DDL | Not in native catalog exec; bootstrap ensure only | lidb |
+| P-RLS engine | Policies enforced in lis Python for Wave A | lidb engine eval |
+| P-IO-01 hard | Soft until `PARITY_REQUIRE_IO=1` | librebase + lidb |
+| P-RT-01 | Soft; realtime partial | lis |
 
 ## Process
 
 1. Implement in Li repo → commit/PR there  
 2. Update SHA in this file  
-3. `python scripts/parity_runner.py`  
-4. Update `docs/lidb-capability-matrix.md` ✅ only on green named IDs  
-
-## License note
-
-Librebase first-party target: **MIT** (constitution). lidb/lis/li-* remain **GPL-3.0-or-later** until separately relicensed.
+3. `python scripts/parity_runner.py` (with stack up) → matrix ✅ only on pass  
