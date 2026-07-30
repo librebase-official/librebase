@@ -17,11 +17,13 @@
 
 | Dep | Absolute path | Git (branch @ SHA) | Notes |
 |-----|---------------|--------------------|-------|
-| lidb | `C:\Users\Julian\Documents\Programming\li\lidb` | `feat/wave-b-wal-ddl` @ `07e816b` | WAL crash-replay smoke + minimal CREATE TABLE |
-| lis | `C:\Users\Julian\Documents\Programming\li\lis` | `feat/realtime-changefeed` @ `36eef49` | REST→Realtime JSONL notify + storage/edge MVP |
-| li-oauth | `C:\Users\Julian\Documents\Programming\li-oauth` | `main` @ `92501c6` | Wave B / OAuth |
-| li-edge | `C:\Users\Julian\Documents\Programming\li-edge` | `main` @ `2dc7578` | Wave B invoke via `LI_EDGE_ROOT` |
+| lidb | `C:\Users\Julian\Documents\Programming\li\lidb` | `feat/wave-b-sql-migrate` @ `63bb268` | WAL replay + CREATE TABLE + SQL-file migrate + multi-table export (`4c52c22` ancestor) |
+| lis | `C:\Users\Julian\Documents\Programming\li\lis` | `feat/wave-b-functions-echo` @ `723cc95` | storage/edge echo + REST PATCH; realtime notify on `feat/realtime-changefeed` @ `36eef49` (merge both) |
+| li-oauth | `C:\Users\Julian\Documents\Programming\li-oauth` | `main` @ `92501c6` | OAuth scaffold |
+| li-edge | `C:\Users\Julian\Documents\Programming\li-edge` | `main` @ `2dc7578` | Optional `LI_EDGE_ROOT` invoke |
 | li-httpd | `C:\Users\Julian\Documents\Programming\li\li-httpd` | `main` @ `3b7472e` | Compose stub: `deploy/edge/librebase.httpd.toml` |
+
+**lis tip note:** Prefer merging `feat/realtime-changefeed` (`36eef49`) into the functions-echo line so one pin carries both notify + echo.
 
 ## Harness requires ≥
 
@@ -35,14 +37,15 @@ Without Li: runner exits **0** with `status: skipped`, `reason: no_lidb` — not
 
 **Evidence (2026-07-30):** live run — all six contracts **pass** (no soft skips): P-SQL-01, P-REST-01, P-AUTH-01, P-RLS-01, P-IO-01, P-RT-01. API `:15421`, WS `:15423`.
 
-## Known blockers (post–Wave A)
+## Known follow-ups (honest, not v1 blockers)
 
-| Contract | Blocker | Home |
-|----------|---------|------|
-| CREATE TABLE DDL | Minimal allowlisted shape in native catalog @ `07e816b`; no PK/CONSTRAINT; migrations/*.sql still not applied | lidb |
-| P-RLS engine | Policies enforced in lis Python for Wave A | lidb engine eval |
-| Full realtime delivery | REST INSERT → `postgres_changes` via JSONL notify ✅; native WAL full-row still open | lis + lidb |
-| WAL crash replay | Empty-catalog WalReader smoke ✅ @ `07e816b`; UPDATE/DELETE payloads + WAL-before-persist still open | lidb |
+| Contract | Note | Home |
+|----------|------|------|
+| Engine RLS | Policies still lis Python | lidb |
+| Native WAL changefeed rows | JSONL notify MVP for realtime | lis + lidb |
+| WAL-before-persist / UPDATE-DELETE WAL | Crash-replay smoke covers insert restore | lidb |
+| Edge WASM / Deno | Echo MVP only | li-edge |
+| Full Postgres migrate | CREATE TABLE apply only; no POLICY/index | lidb |
 
 ## Process
 

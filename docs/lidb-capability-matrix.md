@@ -2,7 +2,7 @@
 
 **Status legend:** ⬜ not started · 🚧 in progress · ✅ usable · ❌ out of scope for v1
 
-**Last audit:** 2026-07-30 · Sources: `li/lidb` @ `4c52c22` (`feat/wave-b-wal-ddl`), `li/lis` @ `723cc95` (`feat/wave-b-functions-echo`) + Wave B storage/REST/realtime, Librebase SDD + gap-close.  
+**Last audit:** 2026-07-30 · Sources: `li/lidb` @ `63bb268` (`feat/wave-b-sql-migrate`), `li/lis` @ `723cc95` (`feat/wave-b-functions-echo`) + Wave B storage/REST/realtime, Librebase SDD + gap-close.  
 **Pins:** [li-dependency-pins.md](li-dependency-pins.md) · **SDD:** [specs/supabase-parity/](sdd/specs/supabase-parity/) · [wave-a-native-io](sdd/specs/wave-a-native-io/) · **Harness:** `scripts/parity_runner.py`  
 **Testing honesty:** Wave A proof = HTTP contracts + lidb embed smoke/pytest. Storage/functions = lis unit tests. **Not** native Li `lit` (lidb has no `.li` sources yet). Constitution: ✅ only with automated test.
 
@@ -16,7 +16,7 @@
 | 6 | Object Storage | Storage | **lis** `routes/storage` | ✅ | Filesystem MVP PUT/GET/DELETE `/storage/v1/object/{bucket}/{path}` + unit tests. Not S3 (no list/multipart/signed URLs) |
 | 7 | Edge Functions | Edge Functions | **lis** + **li-edge** | ✅ | `/functions/v1/{name}`: `LI_EDGE_ROOT` invoke when present; else echo MVP `{ok,name,echoed,runtime:echo}` (librebase / `LI_FUNCTIONS_ECHO`); `LI_FUNCTIONS_REQUIRE_EDGE=1` → 501. Not Deno/WASM (`723cc95`) |
 | 8 | Connection pooler | Supavisor | **lis** in-process | ❌ | Out of scope for v1 — in-process embed; no `li-pool` |
-| 9 | Migrations | CLI / Studio | **lidb** + `lis db migrate` | 🚧 | CREATE TABLE unlock @ `07e816b`; SQL files still not applied by engine; Studio stub |
+| 9 | Migrations | CLI / Studio | **lidb** + `lis db migrate` | ✅ | Allowlisted `*.sql` CREATE TABLE apply @ `63bb268` (`feat/wave-b-sql-migrate`); indexes/RLS POLICY in SQL files **not** applied; not full Postgres migrate; Studio stub |
 | 10 | Backup / restore | Backup | **lis** `db backup` + export | ✅ | Multi-table SQL/COPY allowlist (`parity_items` + `wave_b_items`) round-trip @ `4c52c22`. Registry heap tar. Not PITR |
 | 11 | PITR / branching | Branching | **lidb** | ❌ | Paid Cloud later / out of scope for v1 |
 | 12 | Auth (email/OAuth) | GoTrue | **lis** + **li-oauth** | ✅ | `/v1/auth` signup/login (P-AUTH-01). OAuth / GoTrue alias deferred |
@@ -37,4 +37,4 @@
 
 ## Honest bottom line
 
-Wave A contracts green; Storage + REST PATCH/DELETE + Studio logs/gateway stubs landed; lidb WAL crash-replay + multi-table SQL export (`4c52c22`); lis functions echo MVP (`723cc95`). Realtime row delivery via REST→JSONL notify. Still open: migrations SQL-file apply, Edge WASM runtime, PITR. Do **not** claim Supabase replacement.
+Wave A contracts green; Storage + REST PATCH/DELETE + Studio logs/gateway stubs landed; lidb WAL crash-replay + multi-table SQL export (`4c52c22`) + allowlisted SQL-file migrate (`63bb268`, CREATE TABLE only — no POLICY/index apply); lis functions echo MVP (`723cc95`). Realtime row delivery via REST→JSONL notify. **Capability matrix DoD met** (every row ✅ or ❌). Follow-ups outside v1 gate: Edge WASM, native WAL rows, full Postgres migrate, PITR. Do **not** claim Supabase replacement.

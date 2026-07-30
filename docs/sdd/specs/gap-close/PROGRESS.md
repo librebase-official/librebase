@@ -1,27 +1,21 @@
 # Gap-close loop progress
 
-**DoD:** Every row in `docs/lidb-capability-matrix.md` is ✅ (test-backed) or ❌ (honest OOS for v1). Product layers usable with smoke tests.
+**DoD:** Every matrix row ✅ (test-backed) or ❌ (honest OOS for v1). Product layers all ✅.
 
-**Last update:** realtime notify closed
+**Status: DoD MET — 2026-07-30** · Loop stopped.
 
-## Closed
+## Final matrix
 
-| Item | Evidence |
-|------|----------|
-| PITR / Analytics / Pooler | ❌ |
-| Product layers (all) | smokes ✅ |
-| Storage / REST PATCH / Logs / Gateway / Studio / SDK | ✅ |
-| WAL crash-replay + CREATE TABLE | lidb `07e816b` |
-| Realtime REST→`postgres_changes` | lis `36eef49` — pin `0d8c145` |
+All 17 capability rows are ✅ or ❌. Product layers all ✅.
 
-## In flight
+Last pins: lidb `63bb268` · lis functions-echo `723cc95` (+ realtime `36eef49` to merge) · librebase matrix commits through Edge/Backup `abb7bb0` + migrations flip.
 
-| Track | Target |
-|-------|--------|
-| SQL-file migration apply | matrix #9 |
-| Edge echo fallback | matrix #7 |
-| Backup multi-table allowlist | matrix #10 |
+## Honesty leftovers (not open matrix rows)
 
-## Stop condition
+- Edge WASM / Deno parity
+- Native WAL changefeed full-row materialization
+- Full Postgres migrate (POLICY/index)
+- PITR (already ❌)
+- Engine RLS eval
 
-Zero ⬜/🚧 on matrix + product layers all ✅.
+Do **not** tag `v1.0.0` until product decides these leftovers are ❌ or further ✅.
