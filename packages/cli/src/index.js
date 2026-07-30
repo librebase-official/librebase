@@ -63,7 +63,8 @@ function startAdmin() {
     console.error("admin_server.py not found at", script);
     process.exit(1);
   }
-  const child = spawn("python3", [script], {
+  const python = process.env.PYTHON ?? (process.platform === "win32" ? "python" : "python3");
+  const child = spawn(python, [script], {
     stdio: "inherit",
     env: {
       ...process.env,

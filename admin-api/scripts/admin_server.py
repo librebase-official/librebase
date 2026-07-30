@@ -100,8 +100,38 @@ class LiorgDb:
         self.migrate()
 
     def migrate(self) -> None:
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS schema_migrations ("
+            "version TEXT PRIMARY KEY, applied_at TEXT NOT NULL)"
+        )
         for migration in sorted(MIGRATIONS.glob("*.sql")):
-            self.conn.executescript(migration.read_text(encoding="utf-8"))
+            version = migration.name
+            done = self.conn.execute(
+                "SELECT 1 FROM schema_migrations WHERE version = ?", (version,)
+            ).fetchone()
+            if done:
+                continue
+            sql = migration.read_text(encoding="utf-8")
+            cleaned_lines: list[str] = []
+            for line in sql.splitlines():
+                stripped = line.strip()
+                if stripped.startswith("--"):
+                    continue
+                cleaned_lines.append(line)
+            for stmt in "\n".join(cleaned_lines).split(";"):
+                stmt = stmt.strip()
+                if not stmt:
+                    continue
+                try:
+                    self.conn.execute(stmt)
+                except sqlite3.OperationalError as exc:
+                    msg = str(exc).lower()
+                    if "duplicate column" not in msg and "already exists" not in msg:
+                        raise
+            self.conn.execute(
+                "INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)",
+                (version, utc_now()),
+            )
         self.conn.commit()
 
     def close(self) -> None:
@@ -211,6 +241,27 @@ class LiorgHandler(BaseHTTPRequestHandler):
         token = auth[7:].strip()
         return verify_jwt(token, self.jwt_secret)
 
+    def require_org_member(self, org_id: str) -> dict[str, Any] | None:
+        """Return JWT claims if caller is a member of org_id; else send 401/403 and None."""
+        claims = self.bearer_claims()
+        if not claims:
+            self.send_json(401, {"error": "unauthorized"})
+            return None
+        user_id = claims.get("sub")
+        if not user_id:
+            self.send_json(401, {"error": "unauthorized"})
+            return None
+        if claims.get("org_id") == org_id:
+            return claims
+        row = self.db.fetchone(
+            "SELECT 1 FROM members WHERE org_id = ? AND user_id = ?",
+            (org_id, user_id),
+        )
+        if not row:
+            self.send_json(403, {"error": "forbidden"})
+            return None
+        return claims
+
     def org_edition(self, org_id: str) -> str:
         row = self.db.fetchone("SELECT edition FROM organizations WHERE id = ?", (org_id,))
         return row["edition"] if row else "self-host"
@@ -296,6 +347,8 @@ class LiorgHandler(BaseHTTPRequestHandler):
         projects_match = re.fullmatch(r"/org/v1/orgs/([^/]+)/projects", path)
         if projects_match:
             org_id = projects_match.group(1)
+            if not self.require_org_member(org_id):
+                return
             rows = self.db.fetchall(
                 "SELECT * FROM projects WHERE org_id = ? ORDER BY created_at",
                 (org_id,),
@@ -306,6 +359,8 @@ class LiorgHandler(BaseHTTPRequestHandler):
         project_one = re.fullmatch(r"/org/v1/orgs/([^/]+)/projects/([^/]+)", path)
         if project_one:
             org_id, project_id = project_one.groups()
+            if not self.require_org_member(org_id):
+                return
             row = self.db.fetchone(
                 "SELECT * FROM projects WHERE org_id = ? AND id = ?",
                 (org_id, project_id),
@@ -319,6 +374,8 @@ class LiorgHandler(BaseHTTPRequestHandler):
         instances_match = re.fullmatch(r"/org/v1/orgs/([^/]+)/instances", path)
         if instances_match:
             org_id = instances_match.group(1)
+            if not self.require_org_member(org_id):
+                return
             rows = self.db.fetchall(
                 "SELECT * FROM instances WHERE org_id = ? ORDER BY created_at",
                 (org_id,),
@@ -329,6 +386,8 @@ class LiorgHandler(BaseHTTPRequestHandler):
         instance_one = re.fullmatch(r"/org/v1/orgs/([^/]+)/instances/([^/]+)", path)
         if instance_one:
             org_id, inst_id = instance_one.groups()
+            if not self.require_org_member(org_id):
+                return
             row = self.db.fetchone(
                 "SELECT * FROM instances WHERE org_id = ? AND id = ?",
                 (org_id, inst_id),
@@ -342,6 +401,8 @@ class LiorgHandler(BaseHTTPRequestHandler):
         ent_match = re.fullmatch(r"/org/v1/orgs/([^/]+)/entitlements/([^/]+)", path)
         if ent_match:
             org_id, feature_key = ent_match.groups()
+            if not self.require_org_member(org_id):
+                return
             self.send_json(200, self.check_entitlement(org_id, feature_key))
             return
 
@@ -450,6 +511,8 @@ class LiorgHandler(BaseHTTPRequestHandler):
         org_projects = re.fullmatch(r"/org/v1/orgs/([^/]+)/projects", path)
         if org_projects:
             org_id = org_projects.group(1)
+            if not self.require_org_member(org_id):
+                return
             gate = self.check_entitlement(org_id, "project.create")
             if gate["code"] == 0:
                 self.send_json(403, {"error": "entitlement denied", "entitlement": gate})
@@ -478,6 +541,8 @@ class LiorgHandler(BaseHTTPRequestHandler):
         org_instances = re.fullmatch(r"/org/v1/orgs/([^/]+)/instances", path)
         if org_instances:
             org_id = org_instances.group(1)
+            if not self.require_org_member(org_id):
+                return
             gate = self.check_entitlement(org_id, "instance.launch")
             if gate["code"] == 0:
                 self.send_json(403, {"error": "entitlement denied", "entitlement": gate})
@@ -570,6 +635,8 @@ class LiorgHandler(BaseHTTPRequestHandler):
             if not row:
                 self.send_json(404, {"error": "member not found"})
                 return
+            if not self.require_org_member(row["org_id"]):
+                return
             self.db.execute(
                 "UPDATE members SET role = ? WHERE org_id = ? AND user_id = ?",
                 (role, row["org_id"], row["user_id"]),
@@ -580,6 +647,8 @@ class LiorgHandler(BaseHTTPRequestHandler):
         inst_match = re.fullmatch(r"/org/v1/orgs/([^/]+)/instances/([^/]+)", path)
         if inst_match:
             org_id, inst_id = inst_match.groups()
+            if not self.require_org_member(org_id):
+                return
             fields: list[str] = []
             values: list[Any] = []
             mapping = {

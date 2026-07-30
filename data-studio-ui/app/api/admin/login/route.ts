@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import {
-  adminSetup,
+  adminLogin,
   adminApiEnabled,
   SESSION_COOKIE,
 } from "@/lib/librebase-admin-client";
@@ -17,26 +17,19 @@ export async function POST(request: Request) {
   }
   try {
     const body = (await request.json()) as {
-      name?: string;
-      ownerEmail?: string;
+      email?: string;
       password?: string;
-      slug?: string;
     };
-    if (!body.name?.trim() || !body.ownerEmail?.trim() || !body.password) {
+    if (!body.email?.trim() || !body.password) {
       return NextResponse.json(
-        { error: "name, ownerEmail, password required" },
+        { error: "email and password required" },
         { status: 400 },
       );
     }
-    const result = await adminSetup({
-      name: body.name.trim(),
-      ownerEmail: body.ownerEmail.trim(),
-      password: body.password,
-      slug: body.slug,
-    });
+    const result = await adminLogin(body.email.trim(), body.password);
     process.env.LIBREBASE_ADMIN_SESSION = result.token;
     process.env.LIBREBASE_ORG_ID = result.orgId;
-    const res = NextResponse.json(result, { status: 201 });
+    const res = NextResponse.json(result, { status: 200 });
     res.cookies.set(SESSION_COOKIE, result.token, {
       httpOnly: true,
       sameSite: "lax",
@@ -45,9 +38,8 @@ export async function POST(request: Request) {
     });
     return res;
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Setup failed";
-    const status =
-      message.includes("409") || message.includes("already") ? 409 : 500;
+    const message = error instanceof Error ? error.message : "Login failed";
+    const status = message.includes("401") ? 401 : 500;
     return NextResponse.json({ error: message }, { status });
   }
 }

@@ -11,12 +11,10 @@ export async function resolveStudioOrgId(): Promise<string> {
   if (process.env.LIBREBASE_ORG_ID) {
     return process.env.LIBREBASE_ORG_ID;
   }
-  if (
-    process.env.LIBREBASE_ADMIN_SESSION ??
-    process.env.LIBREBASE_ORG_SESSION
-  ) {
+  try {
     const me = await adminMe();
     return me.activeOrgId;
+  } catch {
+    return "default";
   }
-  return "default";
 }

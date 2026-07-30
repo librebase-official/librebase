@@ -23,15 +23,15 @@
 | 13 | Logs | Logflare | **li-log** | 🚧 | On lip; not wired into Studio |
 | 14 | Analytics | Analytics | future | ❌ | Out of scope for v1 — no Logflare/analytics plane planned before Studio + core data APIs |
 | 15 | API gateway | Kong | **li-httpd** + **lis** | 🚧 | Buildable; not Librebase-composed |
-| 16 | Studio console | Dashboard | **Librebase Studio** | 🚧 | Projects/instances; Admin API optional |
+| 16 | Studio console | Dashboard | **Librebase Studio** | 🚧 | Projects/instances; `/login` cookie session + `/admin` members; Admin API optional |
 | 17 | Client SDK | `@supabase/supabase-js` | **`@librebase/librebase`** (`packages/sdk`) | ✅ | Minimal createClient + `.from().select/insert`, `.auth.signUp/signIn`, `.storage` stubs → `/rest/v1`, `/v1/auth`, `/storage/v1`. Smoke: `packages/sdk` `npm test` |
 
 ## Product layers (not matrix rows)
 
 | Layer | Name | Status | Notes |
 |-------|------|--------|-------|
-| Operator admin UI | **Librebase Admin** (Studio) | 🚧 | |
-| Operator admin API | `admin-api/` in librebase | 🚧 | |
+| Operator admin UI | **Librebase Admin** (Studio) | 🚧 | `/setup`, `/login` (httpOnly cookie), `/admin` members list |
+| Operator admin API | `admin-api/` in librebase | ✅ | Bearer on org routes; idempotent migrations; `admin-api/scripts/smoke_admin.py` |
 | Installable CLI | `librebase` lip + `@librebase/cli` npm | ✅ | `--help` + commands; smoke `packages/cli` `npm test` |
 | Agent control | Librebase MCP | ✅ | `parity_run` + `matrix_status`; smoke `packages/mcp` `npm test` |
 

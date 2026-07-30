@@ -39,6 +39,20 @@ function adminSessionEnv(): string | undefined {
   );
 }
 
+const SESSION_COOKIE = "librebase_admin_session";
+
+async function resolveAdminSession(): Promise<string | undefined> {
+  const fromEnv = adminSessionEnv();
+  if (fromEnv) return fromEnv;
+  try {
+    const { cookies } = await import("next/headers");
+    const jar = await cookies();
+    return jar.get(SESSION_COOKIE)?.value;
+  } catch {
+    return undefined;
+  }
+}
+
 export function adminBaseUrl(): string {
   return adminUrlEnv()?.replace(/\/$/, "") ?? "http://127.0.0.1:54330";
 }
@@ -48,7 +62,7 @@ export function adminApiEnabled(): boolean {
 }
 
 async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = adminSessionEnv();
+  const token = await resolveAdminSession();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(init?.headers as Record<string, string> | undefined),
@@ -203,6 +217,17 @@ export async function adminCheckEntitlement(
   );
 }
 
+export interface AdminMember {
+  userId: string;
+  email: string;
+  role: string;
+  createdAt: string;
+}
+
+export async function adminListMembers(orgId: string): Promise<AdminMember[]> {
+  return adminFetch<AdminMember[]>(`/org/v1/orgs/${orgId}/members`);
+}
+
 export async function adminHealth(): Promise<boolean> {
   try {
     const res = await fetch(`${adminBaseUrl()}/health`);
@@ -211,3 +236,5 @@ export async function adminHealth(): Promise<boolean> {
     return false;
   }
 }
+
+export { SESSION_COOKIE };

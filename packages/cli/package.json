@@ -6,11 +6,11 @@
   "bin": {
     "librebase": "./src/index.js"
   },
-  "files": ["src"],
   "scripts": {
-    "test": "node test/smoke.mjs",
-    "smoke": "node test/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "test": "node scripts/smoke.mjs"
   },
+  "files": ["src", "scripts", "README.md"],
   "engines": {
     "node": ">=20"
   },
