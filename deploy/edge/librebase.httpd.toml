@@ -1,0 +1,31 @@
+# Librebase edge front — li-httpd proxy stub (Kong-shaped compose later).
+# Point li-httpd at this file after building the binary; backends are local librebase profile ports.
+#
+# Upstream: lis LI_PROFILE=librebase
+#   api      :54321  (REST / auth / storage / functions)
+#   realtime :54323  (WS)
+#
+# Honest: config only — not a full Kong feature matrix. TLS/ACME left to operators.
+
+listen = "0.0.0.0:8443"
+
+[[routes]]
+prefix = "/rest/v1"
+upstream = "http://127.0.0.1:54321"
+
+[[routes]]
+prefix = "/v1/auth"
+upstream = "http://127.0.0.1:54321"
+
+[[routes]]
+prefix = "/storage/v1"
+upstream = "http://127.0.0.1:54321"
+
+[[routes]]
+prefix = "/functions/v1"
+upstream = "http://127.0.0.1:54321"
+
+[[routes]]
+prefix = "/realtime/v1"
+upstream = "http://127.0.0.1:54323"
+websocket = true

@@ -17,11 +17,11 @@
 
 | Dep | Absolute path | Git (branch @ SHA) | Notes |
 |-----|---------------|--------------------|-------|
-| lidb | `C:\Users\Julian\Documents\Programming\li\lidb` | `feat/wave-a-parity-export` @ `fb03d42` | `parity_items` bootstrap + export/import |
-| lis | `C:\Users\Julian\Documents\Programming\li\lis` | `feat/librebase-parity-wave-a` @ `7e0e4bb` | librebase profile + lidb REST |
+| lidb | `C:\Users\Julian\Documents\Programming\li\lidb` | `feat/wave-a-patch-delete` @ `9c928eb` | parity_items UPDATE/DELETE + export/import |
+| lis | `C:\Users\Julian\Documents\Programming\li\lis` | `feat/wave-b-storage-edge` @ `54a18af` | storage/functions MVP + REST PATCH/DELETE |
 | li-oauth | `C:\Users\Julian\Documents\Programming\li-oauth` | `main` @ `92501c6` | Wave B / OAuth |
-| li-edge | `C:\Users\Julian\Documents\Programming\li-edge` | `main` @ `2dc7578` | Wave B |
-| li-httpd | `C:\Users\Julian\Documents\Programming\li\li-httpd` | `main` @ `3b7472e` | Gateway compose later |
+| li-edge | `C:\Users\Julian\Documents\Programming\li-edge` | `main` @ `2dc7578` | Wave B invoke via `LI_EDGE_ROOT` |
+| li-httpd | `C:\Users\Julian\Documents\Programming\li\li-httpd` | `main` @ `3b7472e` | Compose stub: `deploy/edge/librebase.httpd.toml` |
 
 ## Harness requires ≥
 
@@ -42,6 +42,7 @@ Without Li: runner exits **0** with `status: skipped`, `reason: no_lidb` — not
 | CREATE TABLE DDL | Not in native catalog exec; bootstrap ensure only | lidb |
 | P-RLS engine | Policies enforced in lis Python for Wave A | lidb engine eval |
 | Full realtime delivery | Join OK; row fanout / native changefeed incomplete | lis + lidb |
+| WAL crash replay | Append on insert; no WalReader/replay smoke yet | lidb |
 
 ## Process
 

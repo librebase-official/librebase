@@ -4,34 +4,28 @@
 
 **Loop started:** 2026-07-30
 
-## Closed this session
+## Closed
 
 | Item | Evidence |
 |------|----------|
-| PITR / Analytics | Matrix ❌ |
-| `@librebase/librebase` SDK | `packages/sdk` + smoke ✅ |
-| CLI / MCP product layers | smokes ✅ |
-| Admin API | Bearer org routes + idempotent migrations + `smoke_admin.py` ✅ |
-| Studio login/session/members | `/login`, cookie, `/admin` members 🚧 (UI still partial for matrix #16) |
+| PITR / Analytics / Pooler | Matrix ❌ |
+| SDK / CLI / MCP / Admin API | smokes ✅ |
+| Storage filesystem MVP | lis `feat/wave-b-storage-edge` + unit tests ✅ |
+| REST PATCH/DELETE | lidb `9c928eb` + lis wire ✅ |
+| li-httpd compose stub | `deploy/edge/librebase.httpd.toml` 🚧 |
 
-## In flight (workers)
+## Still open (⬜/🚧)
 
-| Track | Target |
-|-------|--------|
-| lidb UPDATE/DELETE | Unblock REST PATCH/DELETE |
-| lis Storage + Edge MVP | Matrix #6, #7 |
-
-## Still open
-
-| # | Cap | Status |
-|---|-----|--------|
-| 4 | WAL | 🚧 |
-| 8 | Pooler | ⬜ |
-| 9 | Migrations | 🚧 |
-| 10 | Backup | 🚧 |
-| 13 | Logs | 🚧 |
-| 15 | Gateway | 🚧 |
-| 16 | Studio | 🚧 |
+| # | Cap | Status | Next |
+|---|-----|--------|------|
+| 4 | WAL | 🚧 | WalReader + crash replay |
+| 7 | Edge | 🚧 | Real invoke / WASM |
+| 9 | Migrations | 🚧 | CREATE TABLE then SQL apply |
+| 10 | Backup | 🚧 | Multi-table beyond allowlist |
+| 13 | Logs | 🚧 | Studio wire |
+| 15 | Gateway | 🚧 | Run httpd against stub |
+| 16 | Studio | 🚧 | Full operator UX |
+| 1 note | CREATE TABLE | — | unlocks #9 |
 
 ## Stop condition
 
