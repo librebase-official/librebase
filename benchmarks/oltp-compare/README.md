@@ -18,18 +18,13 @@ For each measured pair, reports mean / P50 / P95 (ms) and `ratio_vs_postgres_p95
 - lidb index is an in-memory equality map when present — **not** Postgres B-tree parity.
 - SQL-file migrate may still skip indexes until allowlisted CREATE INDEX apply lands.
 
-## Run
+## Latest local sample (aims only)
 
-```powershell
-$env:LIDB_ROOT = "C:\Users\Julian\Documents\Programming\li\lidb"
-# optional:
-# $env:POSTGRES_URL = "postgresql://postgres:postgres@127.0.0.1:5432/postgres"
-# $env:BENCH_ROWS = "5000"
-python benchmarks/oltp-compare/run_compare.py --json-out benchmarks/oltp-compare/results/latest.json
-```
+`feat/wave-b-create-index` @ `e9f8570`, in-process EmbeddedSession, **10 000** rows, warmup 30 / measure 200 (no Postgres URL):
 
-CI-ish small run:
+| Engine | Scenario | P95 |
+|--------|----------|-----|
+| lidb | no index | **0.33 ms** |
+| lidb | with index (hash/map) | **0.05 ms** (~**6.7×** vs scan) |
 
-```powershell
-python benchmarks/oltp-compare/run_compare.py --rows 500 --warmup 5 --measure 50
-```
+Set `POSTGRES_URL` for side-by-side Postgres btree ratios. Do not market these numbers as CI-gated Supabase parity.

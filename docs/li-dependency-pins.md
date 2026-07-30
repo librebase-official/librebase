@@ -17,7 +17,7 @@
 
 | Dep | Absolute path | Git (branch @ SHA) | Notes |
 |-----|---------------|--------------------|-------|
-| lidb | `C:\Users\Julian\Documents\Programming\li\lidb` | `feat/wave-b-sql-migrate` @ `63bb268` | WAL replay + CREATE TABLE + SQL-file migrate + multi-table export (`4c52c22` ancestor) |
+| lidb | `C:\Users\Julian\Documents\Programming\li\lidb` | `feat/wave-b-create-index` @ `e9f8570` | WAL + CREATE TABLE + SQL migrate + multi-table export + single-col CREATE INDEX (hash/map) |
 | lis | `C:\Users\Julian\Documents\Programming\li\lis` | `feat/wave-b-functions-echo` @ `723cc95` | storage/edge echo + REST PATCH; realtime notify on `feat/realtime-changefeed` @ `36eef49` (merge both) |
 | li-oauth | `C:\Users\Julian\Documents\Programming\li-oauth` | `main` @ `92501c6` | OAuth scaffold |
 | li-edge | `C:\Users\Julian\Documents\Programming\li-edge` | `main` @ `2dc7578` | Optional `LI_EDGE_ROOT` invoke |
@@ -45,7 +45,7 @@ Without Li: runner exits **0** with `status: skipped`, `reason: no_lidb` — not
 | Native WAL changefeed rows | JSONL notify MVP for realtime | lis + lidb |
 | WAL-before-persist / UPDATE-DELETE WAL | Crash-replay smoke covers insert restore | lidb |
 | Edge WASM / Deno | Echo MVP only | li-edge |
-| Full Postgres migrate | CREATE TABLE apply only; no POLICY/index | lidb |
+| Full Postgres migrate | CREATE TABLE + allowlisted single-col CREATE INDEX apply; no POLICY / UNIQUE / multi-col | lidb |
 
 ## Process
 
