@@ -28,3 +28,12 @@ For each measured pair, reports mean / P50 / P95 (ms) and `ratio_vs_postgres_p95
 | lidb | with index (hash/map) | **0.05 ms** (~**6.7×** vs scan) |
 
 Set `POSTGRES_URL` for side-by-side Postgres btree ratios. Do not market these numbers as CI-gated Supabase parity.
+
+## Run
+
+```powershell
+$env:LIDB_ROOT = "C:\Users\Julian\Documents\Programming\li\lidb"
+$env:LIDB_EMBED = "$env:LIDB_ROOT\build\smoke\Release\lidb_embed.exe"
+# optional: $env:POSTGRES_URL = "postgresql://postgres:postgres@127.0.0.1:5432/postgres"
+python benchmarks/oltp-compare/run_compare.py --rows 10000 --warmup 30 --measure 200
+```
