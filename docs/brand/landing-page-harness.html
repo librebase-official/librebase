@@ -1,0 +1,310 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Librebase</title>
+  <style>:root {
+  --brand-accent: #FF7800;
+  --brand-bg-deep: #0A0A0A;
+  --brand-bg-elevated: #1C1C1C;
+  --brand-text: #F7F7F7;
+  --brand-text-muted: #A1A1AA;
+  --brand-font-heading: system-ui, sans-serif;
+  --brand-font-body: system-ui, sans-serif;
+  --reel-font-heading: system-ui, sans-serif;
+  --reel-font-body: system-ui, sans-serif;
+  --brand-gradient: radial-gradient(circle at 18% 12%, color-mix(in srgb, #FF7800 28%, transparent), transparent 58%), #0A0A0A;
+  --crossfade: 680ms;
+  --radius: 14px;
+  --shadow: 0 18px 50px rgba(0,0,0,0.35);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: var(--brand-font-body);
+  background: var(--brand-bg-deep);
+  color: var(--brand-text);
+  line-height: 1.55;
+}
+.bg-glow {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 20% 10%, color-mix(in srgb, var(--brand-accent) 18%, transparent), transparent 55%);
+}
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 1.25rem; }
+.site-header {
+  position: sticky;
+  top: 0;
+  backdrop-filter: blur(10px);
+  background: color-mix(in srgb, var(--brand-bg-deep) 82%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--brand-accent) 18%, transparent);
+  z-index: 10;
+}
+.site-header .wrap { display: flex; align-items: center; justify-content: space-between; padding-block: 1rem; }
+.logo { display: flex; align-items: center; gap: 0.65rem; }
+.logo img, .logo svg { height: 32px; width: auto; }
+nav a { color: var(--brand-text-muted); text-decoration: none; margin-left: 1rem; font-size: 0.95rem; }
+nav a:hover { color: var(--brand-text); }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.75rem 1.25rem;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+.btn-primary {
+  background: var(--brand-accent);
+  color: var(--brand-bg-deep);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--brand-accent) 35%, transparent);
+}
+.btn-primary:hover { transform: translateY(-2px); }
+.btn-ghost {
+  border-color: color-mix(in srgb, var(--brand-accent) 45%, transparent);
+  color: var(--brand-text);
+  background: transparent;
+}
+.hero { padding: 4.5rem 0 3rem; }
+.hero-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 2rem; align-items: center; }
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.78rem;
+  color: var(--brand-accent);
+  font-weight: 700;
+}
+h1 {
+  font-family: var(--brand-font-heading);
+  font-size: clamp(2.2rem, 4vw, 3.4rem);
+  line-height: 1.05;
+  margin: 0.75rem 0;
+}
+.gradient-text {
+  background: linear-gradient(90deg, var(--brand-accent), color-mix(in srgb, var(--brand-accent) 40%, var(--brand-text)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.lede { color: var(--brand-text-muted); font-size: 1.08rem; max-width: 46ch; }
+.hero-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.5rem; }
+.stat-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 0.75rem; margin-top: 1.75rem; }
+.stat-grid div {
+  background: var(--brand-bg-elevated);
+  border: 1px solid color-mix(in srgb, var(--brand-accent) 16%, transparent);
+  border-radius: var(--radius);
+  padding: 0.85rem 1rem;
+}
+.stat-grid strong { display: block; font-size: 1.25rem; }
+.hero-theater {
+  background: var(--brand-bg-elevated);
+  border-radius: calc(var(--radius) + 4px);
+  border: 1px solid color-mix(in srgb, var(--brand-accent) 20%, transparent);
+  padding: 1rem;
+  box-shadow: var(--shadow);
+  min-height: 260px;
+}
+.hero-carousel { position: relative; min-height: 240px; border-radius: var(--radius); overflow: hidden; }
+.hero-carousel .carousel-card {
+  position: absolute; inset: 0; background-size: cover; background-position: center;
+  opacity: 0; transition: opacity 680ms ease;
+  display: flex; align-items: flex-end; padding: 1rem;
+}
+.hero-carousel .carousel-card.is-active { opacity: 1; z-index: 1; }
+.hero-carousel.reduced-motion .carousel-card { transition: none; }
+.carousel-label {
+  background: color-mix(in srgb, var(--brand-bg-deep) 70%, transparent);
+  color: var(--brand-accent); font-weight: 700; padding: 0.35rem 0.65rem; border-radius: 999px;
+}
+.proof-row { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin-top: 1.5rem; }
+.proof-avatars { display: flex; gap: 0.35rem; }
+.proof-avatars span {
+  width: 36px; height: 36px; border-radius: 50%; background: var(--brand-accent);
+  display: inline-block; opacity: 0.85;
+}
+.testimonial-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 1rem; }
+.testimonial-card {
+  background: var(--brand-bg-elevated);
+  border-radius: var(--radius);
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, var(--brand-accent) 12%, transparent);
+}
+.testimonial-card blockquote { margin: 0 0 0.75rem; font-style: italic; color: var(--brand-text-muted); }
+.demo-caption {
+  margin-top: 0.75rem; color: var(--brand-text-muted); font-size: 0.92rem; text-align: center;
+}
+.method-card {
+  border-radius: var(--radius);
+  padding: 1rem;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--brand-accent) 12%, var(--brand-bg-elevated)), var(--brand-bg-elevated));
+  min-height: 220px;
+}
+.method-card span { color: var(--brand-accent); font-weight: 700; }
+section { padding: 3.5rem 0; }
+section h2 {
+  font-family: var(--brand-font-heading);
+  font-size: clamp(1.6rem, 2.5vw, 2.2rem);
+  margin: 0 0 0.75rem;
+}
+.section-lede { color: var(--brand-text-muted); max-width: 62ch; margin-bottom: 1.5rem; }
+.feature-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 1rem; }
+.feature-card {
+  background: var(--brand-bg-elevated);
+  border-radius: var(--radius);
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, var(--brand-accent) 12%, transparent);
+}
+.feature-card h3 { margin: 0 0 0.35rem; font-size: 1.05rem; }
+.feature-card p { margin: 0; color: var(--brand-text-muted); font-size: 0.95rem; }
+.panel-muted {
+  background: color-mix(in srgb, var(--brand-bg-elevated) 88%, var(--brand-bg-deep));
+  border-block: 1px solid color-mix(in srgb, var(--brand-accent) 10%, transparent);
+}
+.demo-video {
+  width: 100%;
+  border-radius: var(--radius);
+  background: var(--brand-bg-deep);
+  border: 1px solid color-mix(in srgb, var(--brand-accent) 16%, transparent);
+}
+.faq details {
+  background: var(--brand-bg-elevated);
+  border-radius: var(--radius);
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.65rem;
+  border: 1px solid color-mix(in srgb, var(--brand-accent) 10%, transparent);
+}
+.faq summary { cursor: pointer; font-weight: 600; }
+.faq p { color: var(--brand-text-muted); margin: 0.65rem 0 0; }
+.research pre {
+  white-space: pre-wrap;
+  background: var(--brand-bg-elevated);
+  border-radius: var(--radius);
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, var(--brand-accent) 10%, transparent);
+  color: var(--brand-text-muted);
+  font-size: 0.92rem;
+}
+.final-cta { text-align: center; padding: 3rem 0 4rem; }
+.final-cta .hero-actions { justify-content: center; }
+.site-footer {
+  border-top: 1px solid color-mix(in srgb, var(--brand-accent) 12%, transparent);
+  padding: 2rem 0 3rem;
+  color: var(--brand-text-muted);
+  font-size: 0.92rem;
+}
+@media (max-width: 900px) {
+  .hero-grid, .feature-grid, .testimonial-grid { grid-template-columns: 1fr; }
+  .stat-grid { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-primary:hover { transform: none; }
+}
+</style>
+</head>
+<body>
+  <div class="bg-glow" aria-hidden="true"></div>
+  <header class="site-header">
+    <div class="wrap">
+      <div class="logo"><span class="gradient-text">Librebase</span></div>
+      <nav aria-label="Primary">
+        <a href="#flow">Flow</a>
+        <a href="#demo">Demo</a>
+        <a href="#faq">FAQ</a>
+        <a class="btn btn-primary" href="#start">Open Studio</a>
+      </nav>
+    </div>
+  </header>
+  <main>
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div>
+          <p class="eyebrow">SaaS branding platform</p>
+          <h1><span class="gradient-text">Librebase</span> for teams who need clarity and momentum</h1>
+          <p class="lede"># Research digest (landing-page)
+Web: 130 result(s) across 8 queries.
+- Saas Branding Projects - Behance
+- Brand Positioning for SaaS Companies + Real Life Examples
+- Competitive SaaS Branding Analysi</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="#start">Open Studio</a>
+            <a class="btn btn-ghost" href="#demo">Watch the demo</a>
+          </div>
+          <div class="stat-grid">
+            <div><strong>One flow</strong><span>brief → research → ship</span></div>
+            <div><strong>Repo-ready</strong><span>tokens + guidelines ZIP</span></div>
+            <div><strong>Self-serve</strong><span>no agency retainer</span></div>
+          </div>
+          <div class="proof-row" aria-label="Social proof">
+            <div class="proof-avatars" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+            <span>Trusted by indie founders shipping micro-SaaS</span>
+          </div>
+        </div>
+        <div class="hero-theater" aria-label="Product flow preview">
+          <div class="method-card"><span>01 · Brief</span><h3>Clarity before creative</h3></div>
+        </div>
+      </div>
+    </section>
+    <section id="flow">
+      <div class="wrap">
+        <h2>Product flow for builders</h2>
+        <p class="section-lede">Six steps indie founders use to brand a micro-SaaS without hiring an agency.</p>
+        <div class="feature-grid">
+          <article class="feature-card"><h3>Guided brief</h3><p>Turn a loose idea into a focused brand profile for Librebase.</p></article>
+          <article class="feature-card"><h3>Research layer</h3><p>Web, Reddit, and GitHub signals inform positioning before you ship creative.</p></article>
+          <article class="feature-card"><h3>Logo + tokens</h3><p>Generate lockups and palette tokens that match your niche — not generic AI slop.</p></article>
+          <article class="feature-card"><h3>Guidelines export</h3><p>brand.md, design.md, and PDF guidelines ready for agents and teammates.</p></article>
+          <article class="feature-card"><h3>Studio canvas</h3><p>One self-serve flow from brief to guidelines without agency retainers.</p></article>
+          <article class="feature-card"><h3>Export to repo</h3><p>ZIP deliverables with logos, creative, and office files for your codebase.</p></article>
+        </div>
+      </div>
+    </section>
+    <section class="panel-muted" id="testimonials">
+      <div class="wrap">
+        <h2>What builders say</h2>
+        <div class="testimonial-grid">
+          <article class="testimonial-card"><blockquote>"Librebase replaced our agency deck with a repo-ready brand ZIP in one evening."</blockquote><strong>Indie founder</strong><br/><span>teams who need clarity and momentum</span></article>
+          <article class="testimonial-card"><blockquote>"Research-backed positioning before creative — finally a flow that respects builders."</blockquote><strong>Micro-SaaS dev</strong><br/><span>Studio user</span></article>
+          <article class="testimonial-card"><blockquote>"Guidelines PDF, tokens, and landing HTML landed where our code lives."</blockquote><strong>Solo founder</strong><br/><span>Export to repo</span></article>
+        </div>
+      </div>
+    </section>
+    <section class="panel-muted" id="demo">
+      <div class="wrap">
+        <h2>Product demo</h2>
+        <p class="section-lede">Hybrid cinematic reel with a real Studio canvas beat — token-driven, not a template deck.</p>
+        <div class="method-card"><span>Demo reel</span><h3>Export includes MP4 + poster</h3><p class="lede">Run the harness deliverable bundle to attach video assets here.</p></div>
+      </div>
+    </section>
+    <section class="panel-muted" id="research"><div class="wrap"><h2>Research insights</h2><p class="section-lede">Evidence from web, Reddit, and GitHub scans informs positioning below.</p><div class="research"><pre># Research digest (landing-page)
+Web: 130 result(s) across 8 queries.
+- Saas Branding Projects - Behance
+- Brand Positioning for SaaS Companies + Real Life Examples
+- Competitive SaaS Branding Analysis » Webapper
+Fetched 3 page(s) for deeper context.
+GitHub: top repo OpenCSGs/csghub (4179 stars).</pre></div></div></section>
+    <section id="faq" class="panel-muted">
+      <div class="wrap faq">
+        <h2>FAQ</h2>
+        <details><summary>Is Majico an agency?</summary><p>No. Majico is a self-serve SaaS branding platform. You run the flow, export to your repo, and ship without a retainer.</p></details>
+        <details><summary>What do I export?</summary><p>brand.md, design.md, guidelines PDF, logo SVGs, landing HTML, demo reel MP4, and office deliverables in one ZIP.</p></details>
+        <details><summary>Who is this for?</summary><p>Indie founders, micro-SaaS developers, and small teams who want repo-ready branding — not slide decks.</p></details>
+      </div>
+    </section>
+    <section id="start" class="final-cta">
+      <div class="wrap">
+        <h2>Brand your SaaS in one flow</h2>
+        <p class="section-lede">Open Studio, complete the guided rail, and export everything to your codebase.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="https://majico.xyz">Open Studio</a>
+          <a class="btn btn-ghost" href="https://majico.xyz/docs">Read the docs</a>
+        </div>
+      </div>
+    </section>
+  </main>
+  <footer class="site-footer"><div class="wrap">Generated by Majico Studio · Librebase</div></footer>
+</body>
+</html>

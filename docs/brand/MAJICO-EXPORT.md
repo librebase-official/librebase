@@ -1,14 +1,15 @@
-﻿# Majico export note
+# Majico export note
 
-Downloaded via MCP `download_export_zip` (librebase-brand-export.zip, ~22KB).
-Scaffold includes BRAND.md, DESIGN.md stubs, guidelines, PDFs, system-ui tokens.
+Downloaded 2026-07-30 via MCP `download_export_zip` + `list_project_assets`.
 
-**Live site** keeps Studio teal / Syne / Figtree until palette + logo are selected in Majico.
+| Artifact | Path |
+|----------|------|
+| Export ZIP contents | `docs/brand/majico-export/` |
+| ICP / GTM digest | `docs/brand/ICP-GTM.md` |
+| Niche research raw | `docs/brand/niche-research.json` |
+| Studio canvas snapshot | `docs/brand/studio-canvas.json` (empty) |
+| Landing harness HTML | `docs/brand/landing-page-harness.html` |
 
-Re-run after workers complete:
-1. list_palette_options → select_palette
-2. list_logo_candidates → select_logo  
-3. download_export_zip → extract into docs/brand/majico-export/
-4. suggest_blog_opportunities for Majico-native blog pipeline
+**Live site** still uses Studio teal / Syne / Figtree until logo + palette are selected and applied.
 
-Jobs pending (2026-07-29): niche_research, logo_batch, landing-page harness, guideline-html.
+Pending / failed jobs: logo-generation (no pipeline adapter), guideline-html (no adapter). Niche research + guidelines completed.

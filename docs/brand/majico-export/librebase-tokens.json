@@ -1,0 +1,24 @@
+{
+  "light": {
+    "bg": "#ffffff",
+    "text": "#0a0a0a",
+    "accent": "#495d36",
+    "border": "#e4e4e7",
+    "bgMuted": "#f4f4f5",
+    "accentOn": "#fafafa",
+    "textMuted": "#52525b",
+    "accentMuted": "#2e3a21"
+  },
+  "dark": {
+    "bg": "#0a0a0a",
+    "text": "#fafafa",
+    "accent": "#495d36",
+    "border": "#27272a",
+    "bgMuted": "#18181b",
+    "accentOn": "#fafafa",
+    "textMuted": "#a1a1aa",
+    "accentMuted": "#2e3a21"
+  },
+  "headingFont": "IBM Plex Sans",
+  "bodyFont": "IBM Plex Serif"
+}

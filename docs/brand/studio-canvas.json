@@ -1,0 +1,8 @@
+﻿{
+    "fetchedAt":  "2026-07-30T08:32:33.0409329+02:00",
+    "studioAgentHistory":  [
+
+                           ],
+    "note":  "get_studio_canvas returned null on 2026-07-30; ICP/GTM lives in niche-research.json",
+    "studioCanvas":  null
+}
