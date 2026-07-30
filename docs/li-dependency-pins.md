@@ -18,7 +18,7 @@
 | Dep | Absolute path | Git (branch @ SHA) | Notes |
 |-----|---------------|--------------------|-------|
 | lidb | `C:\Users\Julian\Documents\Programming\li\lidb` | `feat/wave-b-wal-ddl` @ `07e816b` | WAL crash-replay smoke + minimal CREATE TABLE |
-| lis | `C:\Users\Julian\Documents\Programming\li\lis` | `feat/wave-b-storage-edge` @ `54a18af` | storage/functions MVP + REST PATCH/DELETE |
+| lis | `C:\Users\Julian\Documents\Programming\li\lis` | `feat/realtime-changefeed` @ `36eef49` | REST→Realtime JSONL notify + storage/edge MVP |
 | li-oauth | `C:\Users\Julian\Documents\Programming\li-oauth` | `main` @ `92501c6` | Wave B / OAuth |
 | li-edge | `C:\Users\Julian\Documents\Programming\li-edge` | `main` @ `2dc7578` | Wave B invoke via `LI_EDGE_ROOT` |
 | li-httpd | `C:\Users\Julian\Documents\Programming\li\li-httpd` | `main` @ `3b7472e` | Compose stub: `deploy/edge/librebase.httpd.toml` |
@@ -41,7 +41,7 @@ Without Li: runner exits **0** with `status: skipped`, `reason: no_lidb` — not
 |----------|---------|------|
 | CREATE TABLE DDL | Minimal allowlisted shape in native catalog @ `07e816b`; no PK/CONSTRAINT; migrations/*.sql still not applied | lidb |
 | P-RLS engine | Policies enforced in lis Python for Wave A | lidb engine eval |
-| Full realtime delivery | Join OK; row fanout / native changefeed incomplete | lis + lidb |
+| Full realtime delivery | REST INSERT → `postgres_changes` via JSONL notify ✅; native WAL full-row still open | lis + lidb |
 | WAL crash replay | Empty-catalog WalReader smoke ✅ @ `07e816b`; UPDATE/DELETE payloads + WAL-before-persist still open | lidb |
 
 ## Process

@@ -12,7 +12,7 @@
 | 2 | REST `/rest/v1` | PostgREST | **lis** `routes/rest` | ✅ | GET/POST/PATCH/DELETE `parity_items` (lidb UPDATE/DELETE @ `9c928eb` + lis wire). Memory PATCH smoke green |
 | 3 | RLS + JWT | Postgres RLS + GoTrue | **lidb** + **lis** auth | ✅ | JWT + lis Python RLS. Engine policy eval not wired |
 | 4 | WAL / durability | Postgres WAL | **lidb** | ✅ | WalReader + empty-`catalog.heap` crash-replay smoke (`test_wal_crash_replay_restores_insert`). UPDATE/DELETE WAL still stub; append follows catalog persist |
-| 5 | Realtime fanout | Realtime | **lis** `routes/realtime` | ✅ | Phoenix `phx_join` (P-RT-01). Changefeed row delivery still partial |
+| 5 | Realtime fanout | Realtime | **lis** `routes/realtime` | ✅ | Phoenix `phx_join` (P-RT-01) + REST INSERT `parity_items` → `postgres_changes` (JSONL notify MVP; not native WAL rows yet) |
 | 6 | Object Storage | Storage | **lis** `routes/storage` | ✅ | Filesystem MVP PUT/GET/DELETE `/storage/v1/object/{bucket}/{path}` + unit tests. Not S3 (no list/multipart/signed URLs) |
 | 7 | Edge Functions | Edge Functions | **lis** + **li-edge** | 🚧 | `/functions/v1/{name}` wired; invoke via `LI_EDGE_ROOT` else honest 501. Not Deno/WASM |
 | 8 | Connection pooler | Supavisor | **lis** in-process | ❌ | Out of scope for v1 — in-process embed; no `li-pool` |
@@ -37,4 +37,4 @@
 
 ## Honest bottom line
 
-Wave A contracts green; Storage + REST PATCH/DELETE + Studio logs/gateway stubs landed; lidb WAL crash-replay smoke + minimal CREATE TABLE @ `07e816b`. Still open: migrations SQL-file apply, Edge WASM runtime, realtime row delivery, backup multi-table. Do **not** claim Supabase replacement.
+Wave A contracts green; Storage + REST PATCH/DELETE + Studio logs/gateway stubs landed; lidb WAL crash-replay smoke + minimal CREATE TABLE @ `07e816b`. Realtime row delivery proven via REST→JSONL notify (native WAL rows follow-up). Still open: migrations SQL-file apply, Edge WASM runtime, backup multi-table. Do **not** claim Supabase replacement.
