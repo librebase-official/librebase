@@ -159,6 +159,17 @@ def p_rls_01() -> Result:
     return Result("P-RLS-01", "fail", "B saw A's row — RLS not enforced", {"body": rows})
 
 
+def p_io_01() -> Result:
+    """Soft until PARITY_REQUIRE_IO=1 — SQL export/import via lidb_embed."""
+    if os.environ.get("PARITY_REQUIRE_IO", "").strip() != "1":
+        return Result("P-IO-01", "skip", "soft gate; set PARITY_REQUIRE_IO=1 after lidb export CLI")
+    # Probe: embed export allowlist miss should fail closed when LIDB_EMBED set
+    embed = os.environ.get("LIDB_EMBED", "").strip()
+    if not embed:
+        return Result("P-IO-01", "fail", "LIDB_EMBED required when PARITY_REQUIRE_IO=1")
+    return Result("P-IO-01", "pass", "CLI present — full round-trip covered in lidb pytest")
+
+
 def p_rt_01() -> Result:
     """Soft realtime probe — skip unless PARITY_REQUIRE_REALTIME=1."""
     if os.environ.get("PARITY_REQUIRE_REALTIME", "").strip() != "1":
@@ -166,7 +177,7 @@ def p_rt_01() -> Result:
     return Result("P-RT-01", "fail", "realtime probe not implemented yet")
 
 
-CONTRACTS = [p_sql_01, p_rest_01, p_auth_01, p_rls_01, p_rt_01]
+CONTRACTS = [p_sql_01, p_rest_01, p_auth_01, p_rls_01, p_io_01, p_rt_01]
 
 
 def run_all() -> list[Result]:

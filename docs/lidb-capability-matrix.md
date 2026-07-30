@@ -2,8 +2,9 @@
 
 **Status legend:** ⬜ not started · 🚧 in progress · ✅ usable · ❌ out of scope for v1
 
-**Last audit:** 2026-07-29 · Sources: `li/lidb` @ `39853cc`, `li/lis` @ `82da467`, Librebase SDD `docs/sdd/specs/supabase-parity/`, PH-DB status.  
-**Pins:** [li-dependency-pins.md](li-dependency-pins.md) · **SDD:** [specs/supabase-parity/](sdd/specs/supabase-parity/) · **Harness:** `scripts/parity_runner.py`
+**Last audit:** 2026-07-30 · Sources: `li/lidb`, `li/lis`, Librebase SDD `docs/sdd/specs/supabase-parity/` + [`wave-a-native-io/`](sdd/specs/wave-a-native-io/), PH-DB status.  
+**Pins:** [li-dependency-pins.md](li-dependency-pins.md) · **SDD:** [specs/supabase-parity/](sdd/specs/supabase-parity/) · [wave-a-native-io](sdd/specs/wave-a-native-io/) · **Harness:** `scripts/parity_runner.py`  
+**Testing honesty:** Wave A proof = HTTP contracts + lidb embed smoke/pytest. **Not** native Li `lit` (lidb has no `.li` sources yet).
 
 | # | Capability | Supabase reference | Linative home | Status | Notes |
 |---|------------|-------------------|---------------|--------|-------|
@@ -15,8 +16,8 @@
 | 6 | Object Storage | Storage | **lidb** blob + **lis** | ⬜ | Wave B |
 | 7 | Edge Functions | Edge Functions | **li-edge** | 🚧 | Scaffold v0.1.0; Wave B |
 | 8 | Connection pooler | Supavisor | **lis** in-process | ⬜ | |
-| 9 | Migrations | CLI / Studio | **lidb** + `lis db migrate` | 🚧 | Registry migrations; Studio migrate stub |
-| 10 | Backup / restore | Backup | **lis** `db backup` | 🚧 | Not Studio PITR |
+| 9 | Migrations | CLI / Studio | **lidb** + `lis db migrate` | 🚧 | Bootstrap native migrate; SQL files not applied by engine; Studio migrate stub |
+| 10 | Backup / restore | Backup | **lis** `db backup` | 🚧 | Registry heap tar only; app SQL/COPY export via wave-a-native-io (planned) |
 | 11 | PITR / branching | Branching | **lidb** | ⬜ | Paid Cloud later |
 | 12 | Auth (email/OAuth) | GoTrue | **lis** + **li-oauth** | 🚧 | Email/password MVP; OAuth package scaffold |
 | 13 | Logs | Logflare | **li-log** | 🚧 | On lip; not wired into Studio |
