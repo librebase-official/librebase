@@ -11,6 +11,7 @@ import os
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 
@@ -159,22 +160,170 @@ def p_rls_01() -> Result:
     return Result("P-RLS-01", "fail", "B saw A's row — RLS not enforced", {"body": rows})
 
 
+def _find_embed() -> Path | None:
+    raw = os.environ.get("LIDB_EMBED", "").strip()
+    if raw and Path(raw).is_file():
+        return Path(raw)
+    root = os.environ.get("LIDB_ROOT", "").strip()
+    if not root:
+        return None
+    for cand in (
+        Path(root) / "build" / "lidb_embed.exe",
+        Path(root) / "build" / "lidb_embed",
+        Path(root) / "build" / "smoke" / "lidb_embed.exe",
+        Path(root) / "build" / "smoke" / "lidb_embed",
+    ):
+        if cand.is_file():
+            return cand
+    return None
+
+
 def p_io_01() -> Result:
-    """Soft until PARITY_REQUIRE_IO=1 — SQL export/import via lidb_embed."""
-    if os.environ.get("PARITY_REQUIRE_IO", "").strip() != "1":
-        return Result("P-IO-01", "skip", "soft gate; set PARITY_REQUIRE_IO=1 after lidb export CLI")
-    # Probe: embed export allowlist miss should fail closed when LIDB_EMBED set
-    embed = os.environ.get("LIDB_EMBED", "").strip()
-    if not embed:
-        return Result("P-IO-01", "fail", "LIDB_EMBED required when PARITY_REQUIRE_IO=1")
-    return Result("P-IO-01", "pass", "CLI present — full round-trip covered in lidb pytest")
+    """Export → import SQL round-trip via lidb_embed (required)."""
+    import shutil
+    import subprocess
+    import tempfile
+
+    embed = _find_embed()
+    if embed is None:
+        return Result("P-IO-01", "fail", "LIDB_EMBED or LIDB_ROOT/build/lidb_embed required")
+    tmp = Path(tempfile.mkdtemp(prefix="parity-io-"))
+    data_a = tmp / "a"
+    data_b = tmp / "b"
+    dump = tmp / "parity.sql"
+    data_a.mkdir()
+    data_b.mkdir()
+    try:
+        mig_a = subprocess.run(
+            [str(embed), "migrate", str(data_a)], capture_output=True, text=True, check=False
+        )
+        if mig_a.returncode != 0:
+            return Result("P-IO-01", "fail", "migrate A failed", {"stderr": mig_a.stderr})
+        ins = subprocess.run(
+            [
+                str(embed),
+                "exec-json",
+                str(data_a),
+                "INSERT INTO parity_items (id, name, owner_id, secret) VALUES (?, ?, ?, ?)",
+            ],
+            input=json.dumps(
+                [
+                    "00000000-0000-4000-8000-00000000io01",
+                    "parity-io",
+                    "00000000-0000-4000-8000-00000000ownr",
+                    "x",
+                ]
+            ),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if ins.returncode != 0:
+            return Result("P-IO-01", "fail", "insert failed", {"stderr": ins.stderr})
+        exp = subprocess.run(
+            [str(embed), "export", str(data_a), "parity_items", "sql", "-o", str(dump)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if exp.returncode != 0 or not dump.is_file() or "INSERT INTO parity_items" not in dump.read_text(
+            encoding="utf-8"
+        ):
+            return Result("P-IO-01", "fail", "export failed", {"stderr": exp.stderr})
+        mig_b = subprocess.run(
+            [str(embed), "migrate", str(data_b)], capture_output=True, text=True, check=False
+        )
+        if mig_b.returncode != 0:
+            return Result("P-IO-01", "fail", "migrate B failed", {"stderr": mig_b.stderr})
+        imp = subprocess.run(
+            [str(embed), "import", str(data_b), "sql", "-i", str(dump)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if imp.returncode != 0:
+            return Result("P-IO-01", "fail", "import failed", {"stderr": imp.stderr})
+        sel = subprocess.run(
+            [str(embed), "exec-json", str(data_b), "SELECT name FROM parity_items WHERE name = ?"],
+            input=json.dumps(["parity-io"]),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if sel.returncode != 0:
+            return Result("P-IO-01", "fail", "select after import failed", {"stderr": sel.stderr})
+        payload = json.loads(sel.stdout or "{}")
+        rows = payload.get("rows") or []
+        if not rows or rows[0].get("name") != "parity-io":
+            return Result("P-IO-01", "fail", "round-trip mismatch", {"payload": payload})
+        bad = subprocess.run(
+            [str(embed), "export", str(data_a), "not_allowlisted", "sql"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if bad.returncode == 0:
+            return Result("P-IO-01", "fail", "expected export of unknown table to fail")
+        return Result(
+            "P-IO-01",
+            "pass",
+            "export/import SQL round-trip OK",
+            {"dump_bytes": dump.stat().st_size},
+        )
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
 
 
 def p_rt_01() -> Result:
-    """Soft realtime probe — skip unless PARITY_REQUIRE_REALTIME=1."""
-    if os.environ.get("PARITY_REQUIRE_REALTIME", "").strip() != "1":
-        return Result("P-RT-01", "skip", "soft gate; set PARITY_REQUIRE_REALTIME=1 to require")
-    return Result("P-RT-01", "fail", "realtime probe not implemented yet")
+    """Phoenix WS join on realtime endpoint (required — no soft skip)."""
+    import asyncio
+
+    ws_url = os.environ.get(
+        "LIBREBASE_PARITY_WS",
+        "ws://127.0.0.1:54323/realtime/v1/websocket",
+    )
+    try:
+        import websockets
+    except ImportError:
+        return Result(
+            "P-RT-01",
+            "fail",
+            "websockets package required for P-RT-01 (pip install websockets)",
+        )
+
+    async def _probe() -> Result:
+        try:
+            async with websockets.connect(ws_url, open_timeout=5, close_timeout=2) as ws:
+                join = {
+                    "topic": "realtime:parity",
+                    "event": "phx_join",
+                    "payload": {
+                        "config": {
+                            "postgres_changes": [
+                                {
+                                    "event": "INSERT",
+                                    "schema": "public",
+                                    "table": "parity_items",
+                                }
+                            ]
+                        }
+                    },
+                    "ref": "1",
+                    "join_ref": "1",
+                }
+                await ws.send(json.dumps(join))
+                raw = await asyncio.wait_for(ws.recv(), timeout=5)
+                msg = json.loads(raw) if isinstance(raw, str) else {}
+                if msg.get("event") != "phx_reply":
+                    return Result("P-RT-01", "fail", f"expected phx_reply got {msg.get('event')}", {"msg": msg})
+                status = (msg.get("payload") or {}).get("status")
+                if status != "ok":
+                    return Result("P-RT-01", "fail", f"join status={status}", {"msg": msg})
+                return Result("P-RT-01", "pass", "phx_join ok", {"ws": ws_url})
+        except Exception as exc:  # noqa: BLE001
+            return Result("P-RT-01", "fail", f"ws probe failed: {exc}", {"ws": ws_url})
+
+    return asyncio.run(_probe())
 
 
 CONTRACTS = [p_sql_01, p_rest_01, p_auth_01, p_rls_01, p_io_01, p_rt_01]

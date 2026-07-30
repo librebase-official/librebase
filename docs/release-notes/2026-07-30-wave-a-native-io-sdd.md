@@ -1,32 +1,31 @@
-# 2026-07-30 — SDD wave-a-native-io + soft P-IO-01
+# 2026-07-30 — SDD wave-a-native-io (hard gates)
 
 ## Summary
 
-Added Spec-Driven Development package for Wave A native testing and SQL/COPY import/export; soft `P-IO-01`; live Wave A required contracts green (2026-07-30 evidence).
+Wave A parity harness has **no soft skips**: P-IO-01 (SQL export/import) and P-RT-01 (Phoenix WS join) are required; live evidence 6/6 pass.
 
 ## Agent continuation
 
-1. **Read:** `docs/sdd/specs/wave-a-native-io/tasks.md` (all MVP done).
-2. **Run:** start lis registry (`LI_PROFILE=librebase`, `LIDB_ROOT`, embed); `LIBREBASE_PARITY_API=http://127.0.0.1:<port> PARITY_FORCE=1 python scripts/parity_runner.py`.
-3. **Then:** reopen/merge librebase PR; open GitLab MRs for lidb/lis; hard-gate P-IO-01 if desired.
-4. **Blocked on:** CREATE TABLE DDL; engine RLS; human merge of sibling MRs.
+1. **Read:** `docs/sdd/specs/wave-a-native-io/`, `tests/parity/contracts.py`.
+2. **Run:** registry API + `python routes/realtime/server.py --port <ws>`; set `LIBREBASE_PARITY_API`, `LIBREBASE_PARITY_WS`, `LIDB_ROOT`/`LIDB_EMBED`; `PARITY_FORCE=1 python scripts/parity_runner.py`.
+3. **Then:** human-merge PR #9; open GitLab MRs for lidb/lis.
+4. **Blocked on:** CREATE TABLE DDL; engine RLS; sibling MR merges.
 
 ## Changed
 
-- `docs/sdd/specs/wave-a-native-io/*`
-- `docs/sdd/specs/supabase-parity/analyze.md`
-- `docs/lidb-capability-matrix.md` — testing honesty + migrate/backup notes
-- `tests/parity/contracts.py` — `P-IO-01` soft skip
+- `tests/parity/contracts.py` — hard P-IO-01 / P-RT-01
+- `scripts/parity_runner.py` — any `fail` or unexpected `skip` fails the run; no `soft` bucket
+- Matrix / pins / SDD AC updates
 
 ## Not changed
 
-- Matrix rows still 🚧 (no fake ✅)
-- Landing/marketing copy
-- Admin billing / Studio SQL editor stubs
+- Storage / Edge / SDK
+- Studio IO UI
+- Engine RLS eval
 
 ## Breaking
 
-N/A.
+Harness no longer ignores P-RT-01 failures. Operators must run realtime WS for green Wave A.
 
 ## Security
 
@@ -34,8 +33,8 @@ N/A.
 
 ## Performance
 
-N/A — 64MB aim unchanged; no measured claim.
+N/A.
 
 ## Downstream
 
-Depends on lidb `2026-07-30-wave-a-parity-export` and lis `2026-07-30-rest-lidb-export`.
+Requires `websockets` for P-RT-01; lidb_embed for P-IO-01.

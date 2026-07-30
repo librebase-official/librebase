@@ -2,8 +2,10 @@
   "status": "passed",
   "date": "2026-07-30",
   "api": "http://127.0.0.1:15421",
-  "passed": ["P-SQL-01", "P-REST-01", "P-AUTH-01", "P-RLS-01"],
-  "skipped": ["P-IO-01", "P-RT-01"],
+  "ws": "ws://127.0.0.1:15423/realtime/v1/websocket",
+  "passed": ["P-SQL-01", "P-REST-01", "P-AUTH-01", "P-RLS-01", "P-IO-01", "P-RT-01"],
+  "skipped": [],
+  "soft": [],
   "pins": { "lidb": "fb03d42", "lis": "7e0e4bb" },
-  "sdd": "docs/sdd/specs/wave-a-native-io/tasks.md — T1–T12 done"
+  "sdd": "docs/sdd/specs/wave-a-native-io — hard gates only"
 }

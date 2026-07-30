@@ -12,12 +12,12 @@
 | 2 | REST `/rest/v1` | PostgREST | **lis** `routes/rest` | ✅ | Wave A: `/rest/v1/parity_items` lidb-backed (P-REST-01 green). PATCH/DELETE via lidb pending |
 | 3 | RLS + JWT | Postgres RLS + GoTrue | **lidb** + **lis** auth | ✅ | Wave A: JWT + lis Python RLS for `parity_items` (P-RLS-01 green). Engine policy eval not wired |
 | 4 | WAL / durability | Postgres WAL | **lidb** | 🚧 | WAL append on insert; ~75% PH-DB N1 on feature branch |
-| 5 | Realtime fanout | Realtime | **lis** `routes/realtime` | 🚧 | Phoenix WS partial; soft P-RT-01 |
+| 5 | Realtime fanout | Realtime | **lis** `routes/realtime` | ✅ | Wave A: Phoenix `phx_join` (P-RT-01 hard). Changefeed row delivery still partial |
 | 6 | Object Storage | Storage | **lidb** blob + **lis** | ⬜ | Wave B |
 | 7 | Edge Functions | Edge Functions | **li-edge** | 🚧 | Scaffold v0.1.0; Wave B |
 | 8 | Connection pooler | Supavisor | **lis** in-process | ⬜ | |
 | 9 | Migrations | CLI / Studio | **lidb** + `lis db migrate` | 🚧 | Bootstrap ensure + auth schema; SQL files not applied by engine; Studio stub |
-| 10 | Backup / restore | Backup | **lis** `db backup` + export | 🚧 | Registry heap tar; app SQL/COPY via `lidb_embed`/`lis db export` (P-IO-01 soft) |
+| 10 | Backup / restore | Backup | **lis** `db backup` + export | 🚧 | Registry heap tar; app SQL/COPY round-trip hard-gated (P-IO-01). Not PITR |
 | 11 | PITR / branching | Branching | **lidb** | ⬜ | Paid Cloud later |
 | 12 | Auth (email/OAuth) | GoTrue | **lis** + **li-oauth** | ✅ | Wave A: `/v1/auth` signup/login (P-AUTH-01 green). OAuth / GoTrue alias deferred |
 | 13 | Logs | Logflare | **li-log** | 🚧 | On lip; not wired into Studio |
@@ -37,4 +37,4 @@
 
 ## Honest bottom line
 
-**Wave A core contracts green** (P-SQL/REST/AUTH/RLS) against lis+lidb @ pins above — evidence `tests/parity/last-report.json` (2026-07-30). Full matrix still incomplete (Storage/Edge/SDK/Realtime soft). Do **not** claim Supabase replacement.
+**Wave A contracts all hard-gated and green** (P-SQL/REST/AUTH/RLS/IO/RT) against lis+lidb @ pins — evidence `docs/sdd/specs/wave-a-native-io/parity-evidence-2026-07-30.json`. Full matrix still incomplete (Storage/Edge/SDK). Do **not** claim Supabase replacement.

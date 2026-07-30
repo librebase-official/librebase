@@ -10,7 +10,7 @@ Supabase-parity Wave A contracts exist but skip without a live stack; lidb migra
 As a **contributor**, I want Wave A contracts to pass against a real lis+lidb stack so that matrix ✅ is evidence-backed.
 
 **Acceptance criteria**
-- AC-1.1: With `LIDB_ROOT` + `lis` + `LI_PROFILE=librebase`, `python scripts/parity_runner.py` exits 0 with status `passed` for P-SQL-01, P-REST-01, P-AUTH-01, P-RLS-01 (P-RT-01 may soft-skip).
+- AC-1.1: With `LIDB_ROOT` + `lis` + `LI_PROFILE=librebase`, `python scripts/parity_runner.py` exits 0 with status `passed` for P-SQL-01, P-REST-01, P-AUTH-01, P-RLS-01, P-IO-01, P-RT-01 (no soft skips).
 - AC-1.2: Without Li, runner still exits 0 with explicit `skipped` (not fake pass).
 - AC-1.3: Matrix rows for SQL/REST/Auth/RLS flip to ✅ only after AC-1.1 evidence; notes cite SHA and report path.
 
@@ -38,7 +38,7 @@ As an **operator**, I want to export and import allowlisted tables as plain SQL 
 - AC-4.2: COPY text format round-trips the same allowlist.
 - AC-4.3: `lis db export` / `lis db import` wrap the embed commands; docs distinguish from `lis db backup` (registry heap tarball).
 - AC-4.4: Unknown tables are refused with a clear error.
-- AC-4.5: Librebase harness gains `P-IO-01` (soft-skip until CLI shipped; then required).
+- AC-4.5: Librebase harness `P-IO-01` is a **hard** contract (export/import round-trip).
 
 ### US-5 — Honest native-Li testing story
 As a **maintainer**, I want docs to say how specs are tested today vs when lit exists so we never claim native Li coverage we do not have.

@@ -11,9 +11,7 @@
 | T7 | **lidb:** `export`/`import` SQL for allowlist + round-trip test | T3 | AC-4.1, AC-4.4 | done |
 | T8 | **lidb:** COPY format + import path | T7 | AC-4.2 | done |
 | T9 | **lis:** `db export`/`db import` + docs vs backup | T8 | AC-4.3 | done |
-| T10 | **librebase:** `P-IO-01` contract + runner | T9 | AC-4.5 | done (soft skip) |
-| T11 | Honesty: matrix note on testing layers; no lit claim | T6 | AC-5.1–5.2 | done |
-| T12 | Release notes (librebase + lidb + lis) with Agent continuation | T6,T10,T11 | per li-release-notes | done |
+| T10 | **librebase:** `P-IO-01` contract + runner | T9 | AC-4.5 | done (hard) |
 
-**Human gates:** SDD accepted 2026-07-30. MVP tasks complete.  
-**Deferred:** CREATE TABLE DDL exec; engine RLS; Studio IO UI; pg_dump custom; lit/native Li; hard P-IO-01 / P-RT-01.
+**Human gates:** SDD accepted 2026-07-30. MVP tasks complete. Soft skips removed 2026-07-30.  
+**Deferred:** CREATE TABLE DDL exec; engine RLS; Studio IO UI; pg_dump custom; lit/native Li.

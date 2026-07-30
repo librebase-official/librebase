@@ -33,7 +33,7 @@ Wave A (`scripts/parity_runner.py`) needs:
 
 Without Li: runner exits **0** with `status: skipped`, `reason: no_lidb` — not a production pass.
 
-**Evidence (2026-07-30):** live run on `:15421` — P-SQL-01, P-REST-01, P-AUTH-01, P-RLS-01 **pass**; P-IO-01/P-RT-01 soft skip. Report: `tests/parity/last-report.json`.
+**Evidence (2026-07-30):** live run — all six contracts **pass** (no soft skips): P-SQL-01, P-REST-01, P-AUTH-01, P-RLS-01, P-IO-01, P-RT-01. API `:15421`, WS `:15423`.
 
 ## Known blockers (post–Wave A)
 
@@ -41,8 +41,7 @@ Without Li: runner exits **0** with `status: skipped`, `reason: no_lidb` — not
 |----------|---------|------|
 | CREATE TABLE DDL | Not in native catalog exec; bootstrap ensure only | lidb |
 | P-RLS engine | Policies enforced in lis Python for Wave A | lidb engine eval |
-| P-IO-01 hard | Soft until `PARITY_REQUIRE_IO=1` | librebase + lidb |
-| P-RT-01 | Soft; realtime partial | lis |
+| Full realtime delivery | Join OK; row fanout / native changefeed incomplete | lis + lidb |
 
 ## Process
 
