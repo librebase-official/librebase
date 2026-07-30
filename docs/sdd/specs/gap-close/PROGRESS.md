@@ -2,30 +2,36 @@
 
 **DoD:** Every row in `docs/lidb-capability-matrix.md` is ✅ (test-backed) or ❌ (honest OOS for v1). Product layers usable with smoke tests.
 
-**Loop started:** 2026-07-30
+**Loop started:** 2026-07-30 · **Last wake:** 2026-07-30T12:35Z
 
 ## Closed
 
 | Item | Evidence |
 |------|----------|
 | PITR / Analytics / Pooler | Matrix ❌ |
-| SDK / CLI / MCP / Admin API | smokes ✅ |
-| Storage filesystem MVP | lis `feat/wave-b-storage-edge` + unit tests ✅ |
-| REST PATCH/DELETE | lidb `9c928eb` + lis wire ✅ |
-| li-httpd compose stub | `deploy/edge/librebase.httpd.toml` 🚧 |
+| SDK / CLI / MCP / Admin API / Admin UI | smokes ✅ |
+| Storage filesystem MVP | lis unit tests ✅ |
+| REST PATCH/DELETE | lidb + lis ✅ |
+| Logs file tail | Studio `/logs` + vitest ✅ |
+| Gateway compose stub | `smoke_httpd_stub.mjs` ✅ |
+| Studio surfaces | `smoke_studio_surfaces.mjs` ✅ |
+
+## In flight
+
+| Track | Target |
+|-------|--------|
+| lidb WAL + CREATE TABLE | `feat/wave-b-wal-ddl` (uncommitted edits present) |
+| lis realtime row delivery | agent |
 
 ## Still open (⬜/🚧)
 
-| # | Cap | Status | Next |
-|---|-----|--------|------|
-| 4 | WAL | 🚧 | WalReader + crash replay |
-| 7 | Edge | 🚧 | Real invoke / WASM |
-| 9 | Migrations | 🚧 | CREATE TABLE then SQL apply |
-| 10 | Backup | 🚧 | Multi-table beyond allowlist |
-| 13 | Logs | 🚧 | Studio wire |
-| 15 | Gateway | 🚧 | Run httpd against stub |
-| 16 | Studio | 🚧 | Full operator UX |
-| 1 note | CREATE TABLE | — | unlocks #9 |
+| # | Cap | Status |
+|---|-----|--------|
+| 4 | WAL | 🚧 |
+| 7 | Edge | 🚧 |
+| 9 | Migrations | 🚧 |
+| 10 | Backup | 🚧 |
+| 5 note | changefeed delivery | partial under ✅ |
 
 ## Stop condition
 

@@ -45,12 +45,18 @@ export function OrgShell({
           <Link href="/instances" className={navClass(pathname, "/instances")}>
             Instances
           </Link>
+          <Link href="/logs" className={navClass(pathname, "/logs")}>
+            Logs
+          </Link>
         </nav>
 
         <nav className="nav-section">
           <div className="nav-label">Admin</div>
           <Link href="/admin" className={navClass(pathname, "/admin")}>
             Admin
+          </Link>
+          <Link href="/login" className={navClass(pathname, "/login")}>
+            Login
           </Link>
           <Link href="/setup" className={navClass(pathname, "/setup")}>
             Setup

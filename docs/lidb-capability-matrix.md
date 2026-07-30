@@ -20,21 +20,21 @@
 | 10 | Backup / restore | Backup | **lis** `db backup` + export | 🚧 | Registry heap tar; app SQL/COPY round-trip (P-IO-01). Not PITR |
 | 11 | PITR / branching | Branching | **lidb** | ❌ | Paid Cloud later / out of scope for v1 |
 | 12 | Auth (email/OAuth) | GoTrue | **lis** + **li-oauth** | ✅ | `/v1/auth` signup/login (P-AUTH-01). OAuth / GoTrue alias deferred |
-| 13 | Logs | Logflare | **li-log** | 🚧 | On lip; not wired into Studio |
+| 13 | Logs | Logflare | **li-log** + Studio | ✅ | Studio `/logs` tails JSONL (`LIBREBASE_ACCESS_LOG` / `LIP_REGISTRY_AUDIT_LOG`); vitest `access-log.test.ts`. Not Logflare |
 | 14 | Analytics | Analytics | future | ❌ | Out of scope for v1 |
-| 15 | API gateway | Kong | **li-httpd** + **lis** | 🚧 | Compose stub `deploy/edge/librebase.httpd.toml` — not full Kong |
-| 16 | Studio console | Dashboard | **Librebase Studio** | 🚧 | Projects/instances; `/login` cookie + `/admin` members |
+| 15 | API gateway | Kong | **li-httpd** + **lis** | ✅ | Compose stub `deploy/edge/librebase.httpd.toml` + `scripts/smoke_httpd_stub.mjs`. Not full Kong |
+| 16 | Studio console | Dashboard | **Librebase Studio** | ✅ | Projects/instances + `/login` cookie + `/admin` members + `/logs`; `scripts/smoke_studio_surfaces.mjs` |
 | 17 | Client SDK | `@supabase/supabase-js` | **`@librebase/librebase`** (`packages/sdk`) | ✅ | createClient + smoke `npm test` |
 
 ## Product layers (not matrix rows)
 
 | Layer | Name | Status | Notes |
 |-------|------|--------|-------|
-| Operator admin UI | **Librebase Admin** (Studio) | 🚧 | `/setup`, `/login` (httpOnly cookie), `/admin` members list |
+| Operator admin UI | **Librebase Admin** (Studio) | ✅ | `/setup`, `/login`, `/admin` members; `smoke_studio_surfaces.mjs` |
 | Operator admin API | `admin-api/` in librebase | ✅ | Bearer on org routes; idempotent migrations; `smoke_admin.py` |
 | Installable CLI | `librebase` lip + `@librebase/cli` npm | ✅ | smoke `packages/cli` `npm test` |
 | Agent control | Librebase MCP | ✅ | `parity_run` + `matrix_status`; smoke `packages/mcp` `npm test` |
 
 ## Honest bottom line
 
-Wave A contracts green; Storage filesystem MVP + REST PATCH/DELETE landed in lis/lidb pins. Still open: WAL replay, CREATE TABLE, migrations SQL apply, realtime row delivery, Edge WASM, Studio polish, logs. Do **not** claim Supabase replacement.
+Wave A contracts green; Storage + REST PATCH/DELETE + Studio logs/gateway stubs landed. Still open: WAL replay, CREATE TABLE/migrations, Edge WASM runtime, realtime row delivery, backup multi-table. Do **not** claim Supabase replacement.
