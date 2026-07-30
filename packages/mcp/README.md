@@ -48,5 +48,13 @@ python admin-api/scripts/admin_server.py
 | `create_instance` / `create_project` | Metadata CRUD |
 | `check_entitlement` | Feature gate |
 | `matrix_status` | Count ✅/🚧/⬜ from docs |
+| `parity_run` | Run Wave A `parity_runner.py` |
+
+## Smoke
+
+```bash
+cd packages/mcp
+npm test
+```
 
 After `admin_setup` / `admin_login`, put the returned `token` in `LIBREBASE_ADMIN_SESSION` for authenticated calls (or restart MCP with that env).

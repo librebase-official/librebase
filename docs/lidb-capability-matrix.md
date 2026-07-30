@@ -4,7 +4,7 @@
 
 **Last audit:** 2026-07-30 · Sources: `li/lidb`, `li/lis`, Librebase SDD `docs/sdd/specs/supabase-parity/` + [`wave-a-native-io/`](sdd/specs/wave-a-native-io/), PH-DB status.  
 **Pins:** [li-dependency-pins.md](li-dependency-pins.md) · **SDD:** [specs/supabase-parity/](sdd/specs/supabase-parity/) · [wave-a-native-io](sdd/specs/wave-a-native-io/) · **Harness:** `scripts/parity_runner.py`  
-**Testing honesty:** Wave A proof = HTTP contracts + lidb embed smoke/pytest. **Not** native Li `lit` (lidb has no `.li` sources yet).
+**Testing honesty:** Wave A proof = HTTP contracts + lidb embed smoke/pytest. **Not** native Li `lit` (lidb has no `.li` sources yet). Constitution: ✅ only with automated test.
 
 | # | Capability | Supabase reference | Linative home | Status | Notes |
 |---|------------|-------------------|---------------|--------|-------|
@@ -18,23 +18,23 @@
 | 8 | Connection pooler | Supavisor | **lis** in-process | ⬜ | |
 | 9 | Migrations | CLI / Studio | **lidb** + `lis db migrate` | 🚧 | Bootstrap ensure + auth schema; SQL files not applied by engine; Studio stub |
 | 10 | Backup / restore | Backup | **lis** `db backup` + export | 🚧 | Registry heap tar; app SQL/COPY round-trip hard-gated (P-IO-01). Not PITR |
-| 11 | PITR / branching | Branching | **lidb** | ⬜ | Paid Cloud later |
+| 11 | PITR / branching | Branching | **lidb** | ❌ | Paid Cloud later / out of scope for v1 — not a Wave A–B deliverable; backup/restore (#10) is the v1 path |
 | 12 | Auth (email/OAuth) | GoTrue | **lis** + **li-oauth** | ✅ | Wave A: `/v1/auth` signup/login (P-AUTH-01 green). OAuth / GoTrue alias deferred |
 | 13 | Logs | Logflare | **li-log** | 🚧 | On lip; not wired into Studio |
-| 14 | Analytics | Analytics | future | ⬜ | |
+| 14 | Analytics | Analytics | future | ❌ | Out of scope for v1 — no Logflare/analytics plane planned before Studio + core data APIs |
 | 15 | API gateway | Kong | **li-httpd** + **lis** | 🚧 | Buildable; not Librebase-composed |
 | 16 | Studio console | Dashboard | **Librebase Studio** | 🚧 | Projects/instances; Admin API optional |
-| 17 | Client SDK | `@supabase/supabase-js` | **`@librebase/librebase`** | ⬜ | Wave B |
+| 17 | Client SDK | `@supabase/supabase-js` | **`@librebase/librebase`** (`packages/sdk`) | ✅ | Minimal createClient + `.from().select/insert`, `.auth.signUp/signIn`, `.storage` stubs → `/rest/v1`, `/v1/auth`, `/storage/v1`. Smoke: `packages/sdk` `npm test` |
 
 ## Product layers (not matrix rows)
 
-| Layer | Name | Status |
-|-------|------|--------|
-| Operator admin UI | **Librebase Admin** (Studio) | 🚧 |
-| Operator admin API | `admin-api/` in librebase | 🚧 |
-| Installable CLI | `librebase` lip + `@librebase/cli` npm | 🚧 |
-| Agent control | Librebase MCP | 🚧 — adding `parity_run` |
+| Layer | Name | Status | Notes |
+|-------|------|--------|-------|
+| Operator admin UI | **Librebase Admin** (Studio) | 🚧 | |
+| Operator admin API | `admin-api/` in librebase | 🚧 | |
+| Installable CLI | `librebase` lip + `@librebase/cli` npm | ✅ | `--help` + commands; smoke `packages/cli` `npm test` |
+| Agent control | Librebase MCP | ✅ | `parity_run` + `matrix_status`; smoke `packages/mcp` `npm test` |
 
 ## Honest bottom line
 
-**Wave A contracts all hard-gated and green** (P-SQL/REST/AUTH/RLS/IO/RT) against lis+lidb @ pins — evidence `docs/sdd/specs/wave-a-native-io/parity-evidence-2026-07-30.json`. Full matrix still incomplete (Storage/Edge/SDK). Do **not** claim Supabase replacement.
+**Wave A contracts all hard-gated and green** (P-SQL/REST/AUTH/RLS/IO/RT) against lis+lidb @ pins — evidence `docs/sdd/specs/wave-a-native-io/parity-evidence-2026-07-30.json`. Full matrix still incomplete (Storage/Edge). SDK scaffold + CLI/MCP smokes exist; do **not** claim Supabase replacement.
