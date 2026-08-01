@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Librebase — Jobs-to-be-Done</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@400;500;600;700&display=swap" />
+  <style>
+:root {
+  --paper: #ffffff;
+  --linen: #f4f4f5;
+  --ink: #0a0a0a;
+  --graphite: #52525b;
+  --accent: #495d36;
+  --accent-on: #fafafa;
+  --line: #e4e4e7;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "IBM Plex Serif", system-ui, -apple-system, sans-serif;
+  line-height: 1.45;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.book {
+  width: min(1140px, 95vw);
+  margin: 0 auto;
+  padding: 24px 0 50px;
+  container-type: inline-size;
+}
+.page {
+  border: 1px solid var(--line);
+  background: var(--paper);
+  min-height: 760px;
+  margin: 0 0 18px;
+  padding: 38px;
+  display: grid;
+  grid-template-columns: minmax(0, 240px) minmax(0, 1fr);
+  gap: 20px;
+  page-break-inside: avoid;
+}
+.page > div {
+  min-width: 0;
+  container-type: inline-size;
+}
+.rail {
+  border-right: 1px solid var(--line);
+  padding-right: 18px;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+.rail-file {
+  margin-top: 10px;
+}
+.rail-meta {
+  margin-top: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-width: 0;
+}
+.rail-meta__block {
+  min-width: 0;
+}
+.rail-meta__label {
+  margin: 0;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+.rail-meta__value {
+  margin: 14px 0 0;
+  overflow-wrap: break-word; word-wrap: break-word; word-break: normal;
+}
+.num {
+  margin: 0;
+  font-family: "IBM Plex Sans", "Iowan Old Style", "Times New Roman", serif;
+  font-size: 58px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.tiny {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--graphite);
+}
+.tiny.dot::before {
+  content: "•";
+  color: var(--accent);
+  margin-right: 8px;
+  font-size: 16px;
+  vertical-align: middle;
+}
+.display {
+  margin: 10px 0 0;
+  font-family: "IBM Plex Sans", "Iowan Old Style", "Times New Roman", serif;
+  font-size: clamp(28px, 8cqi, 92px);
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+  overflow-wrap: break-word; word-wrap: break-word; word-break: normal;
+}
+.display-accent {
+  margin: 0.45em 0 0;
+  font-family: "IBM Plex Sans", "Iowan Old Style", "Times New Roman", serif;
+  font-size: clamp(22px, 6.2cqi, 56px);
+  line-height: 1.12;
+  letter-spacing: -0.015em;
+  overflow-wrap: break-word; word-wrap: break-word; word-break: normal;
+}
+.display-accent em,
+.display em { color: var(--accent); font-style: italic; font-weight: 500; }
+.lede {
+  margin: 14px 0 0;
+  font-family: "IBM Plex Sans", "Iowan Old Style", "Times New Roman", serif;
+  font-size: 34px;
+  line-height: 1.12;
+  overflow-wrap: break-word; word-wrap: break-word; word-break: normal;
+}
+.sublede {
+  margin: 16px 0 0;
+  font-size: 22px;
+  line-height: 1.35;
+  color: var(--graphite);
+  max-width: 68ch;
+  overflow-wrap: break-word; word-wrap: break-word; word-break: normal;
+}
+.grid { display: grid; gap: 12px; }
+.grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.panel {
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--paper) 88%, var(--linen) 12%);
+  padding: 14px;
+  min-height: 120px;
+}
+.panel h4 {
+  margin: 0 0 8px;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--graphite);
+  font-weight: 600;
+}
+.panel p { margin: 0; font-size: 16px; overflow-wrap: break-word; word-wrap: break-word; word-break: normal; }
+.panel ul { margin: 0; padding-left: 18px; }
+.panel li { margin: 6px 0; font-size: 15px; }
+.tone-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.tone-chip {
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
+  background: color-mix(in srgb, var(--accent) 11%, var(--paper));
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--ink);
+}
+.competitor-dimensions-grid .competitor-dimension { grid-column: 1 / -1; }
+.competitor-dimension table.competitor-matrix { margin-top: 12px; }
+.competitor-dimension table.competitor-matrix td { font-size: 13px; }
+table { width: 100%; border-collapse: collapse; }
+th, td {
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+  padding: 8px;
+  font-size: 14px;
+}
+th {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--graphite);
+  font-weight: 600;
+}
+.swatch {
+  display: inline-block;
+  width: 1.1rem;
+  height: 0.9rem;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  border-radius: 2px;
+  margin-right: 0.35rem;
+  vertical-align: text-bottom;
+}
+.logo { display: block; max-width: 190px; max-height: 110px; margin-top: 8px; }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.btn {
+  border: 1px solid var(--line);
+  padding: 10px 13px;
+  font-size: 17px;
+  font-family: "IBM Plex Sans", "Iowan Old Style", "Times New Roman", serif;
+  background: var(--paper);
+  color: var(--ink);
+}
+.btn.primary { background: var(--ink); color: var(--paper); }
+.btn.accent {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-on);
+}
+.foot {
+  border-top: 1px solid var(--line);
+  margin-top: 14px;
+  padding-top: 14px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--graphite);
+}
+.muted { color: var(--graphite); }
+code { background: rgba(0, 0, 0, 0.06); padding: 0.1rem 0.25rem; border-radius: 3px; }
+@media (max-width: 980px) {
+  .page { grid-template-columns: 1fr; min-height: auto; }
+  .rail { border-right: 0; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+}
+
+
+/* majico-pdf-export-print */
+@media print {
+  @page { size: A4; margin: 10mm; }
+  html, body {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: hidden !important;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar,
+  .book::-webkit-scrollbar,
+  .page::-webkit-scrollbar,
+  .page > div::-webkit-scrollbar,
+  .rail::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+  .book {
+    width: 100%;
+    padding: 0;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: hidden !important;
+    display: block;
+    scroll-snap-type: none;
+  }
+  .page {
+    margin-bottom: 8mm;
+    overflow: visible !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    flex: none;
+    width: 100%;
+    box-shadow: none;
+    scroll-snap-align: none;
+    page-break-inside: avoid;
+    page-break-after: always;
+  }
+  .page:last-child {
+    page-break-after: auto;
+  }
+  .page > div {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+  html[data-canvas-embed="1"] body,
+  html[data-canvas-embed="1"] .book,
+  html[data-canvas-embed="1"] .page,
+  html[data-canvas-embed="1"] .page > div,
+  html[data-canvas-embed="1"] .rail {
+    overflow: visible !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+  a { color: inherit; text-decoration: none; }
+}
+/* majico-pdf-export-print */
+@media print {
+  @page { size: A4; margin: 10mm; }
+  html, body {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: hidden !important;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar,
+  .book::-webkit-scrollbar,
+  .page::-webkit-scrollbar,
+  .page > div::-webkit-scrollbar,
+  .rail::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+  .book {
+    width: 100%;
+    padding: 0;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: hidden !important;
+    display: block;
+    scroll-snap-type: none;
+  }
+  .page {
+    margin-bottom: 8mm;
+    overflow: visible !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    flex: none;
+    width: 100%;
+    box-shadow: none;
+    scroll-snap-align: none;
+    page-break-inside: avoid;
+    page-break-after: always;
+  }
+  .page:last-child {
+    page-break-after: auto;
+  }
+  .page > div {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+  html[data-canvas-embed="1"] body,
+  html[data-canvas-embed="1"] .book,
+  html[data-canvas-embed="1"] .page,
+  html[data-canvas-embed="1"] .page > div,
+  html[data-canvas-embed="1"] .rail {
+    overflow: visible !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+  a { color: inherit; text-decoration: none; }
+}
+  </style>
+</head>
+<body>
+  <main class="book">
+    <section class="page">
+    <aside class="rail">
+      <p class="num">01</p>
+      <p class="tiny dot">JTBD canvas</p>
+      <p class="display">Librebase</p>
+      <div class="rail-meta">
+        <div class="rail-meta__block">
+          <p class="tiny rail-meta__label">Job performer</p>
+          <p class="rail-meta__value">Developer or agent builder managing Postgres-compatible backends</p>
+        </div>
+        <div class="rail-meta__block">
+          <p class="tiny rail-meta__label">Focus job</p>
+          <p class="rail-meta__value lede">Manage a lightweight data layer with full visibility into infrastructure costs</p>
+        </div>
+      </div>
+    </aside>
+    <div>
+      <div class="grid grid-1">
+        <article class="panel">
+          <h4>Job stories</h4>
+          <table>
+          <thead>
+            <tr><th>When</th><th>I want to</th><th>So I can</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>I am building an autonomous agent that must connect to live customer data but cannot tolerate the hidden memory overhead of existing managed databases.</td>
+              <td>Deploy an instant backend where every cycle counts and security is built in without configuring external plugins.</td>
+              <td>Launch my first version knowing exactly what I pay for and how much RAM the database consumes.</td>
+            </tr><tr>
+              <td>My platform engineering team faces a compliance audit that requires clear proof of infrastructure spend rather than vague dashboard metrics.</td>
+              <td>Show leadership transparent health indicators so we do not get caught using obscure fees during our review process.</td>
+              <td>Pass the security and cost scrutiny without having to explain hidden charges from other vendors.</td>
+            </tr><tr>
+              <td>I need my agents to communicate directly with other services but must avoid being locked into a proprietary client library.</td>
+              <td>Use native integration standards that allow me to switch providers or build connectors at will.</td>
+              <td>Maintain full control over agent data flows without vendor lock-in.</td>
+            </tr>
+          </tbody>
+        </table>
+        </article>
+      </div>
+    </div>
+  </section>
+    <section class="page">
+    <aside class="rail">
+      <p class="num">02</p>
+      <p class="tiny dot">Outcomes</p>
+      <p class="sublede">Success criteria, context, and aspirations for the focus job.</p>
+    </aside>
+    <div>
+      <div class="grid grid-2">
+        <article class="panel">
+          <h4>Success criteria</h4>
+          <ul><li>Minimize the total RAM consumption per query cycle to under 50 megabytes</li><li>Reduce the likelihood of unexpected overage charges during compliance audits by zero percent</li><li>Increase deployment velocity from days to minutes without external plugin configuration</li><li>Elevate transparency into infrastructure billing so every byte charged matches actual usage</li><li>Minimize agent latency while maintaining secure real-time data synchronization channels</li></ul>
+        </article>
+        <article class="panel">
+          <h4>Circumstances</h4>
+          <ul><li>If context A is a startup launching an MVP versus if the scenario B requires enterprise-grade compliance audits.</li><li>If resource constraints demand minimal memory footprint versus standard managed cloud overhead.</li></ul>
+        </article>
+        <article class="panel" style="grid-column: 1 / -1;">
+          <h4>Aspirations</h4>
+          <p class="muted">No aspirations captured.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+  </main>
+</body>
+</html>
