@@ -1,27 +1,31 @@
 # Majico export note
 
-Downloaded 2026-07-30 / refreshed 2026-08-01.
+Downloaded 2026-07-30 / refreshed 2026-08-01 (staging five-PDF export).
 
 | Artifact | Path |
 |----------|------|
+| Export ZIP | `docs/brand/librebase-brand-export.zip` |
 | Export ZIP contents | `docs/brand/majico-export/` |
+| **Share pack (PDFs)** | `docs/brand/pdfs/` |
 | ICP / GTM digest | `docs/brand/ICP-GTM.md` |
 | GTM blueprint (md) | `docs/brand/gtm-blueprint.md` |
-| **GTM PDFs** | `docs/brand/gtm-pdfs/` |
 | Niche research raw | `docs/brand/niche-research.json` |
 | Studio canvas snapshot | `docs/brand/studio-canvas.json` (empty) |
 | Landing harness HTML | `docs/brand/landing-page-harness.html` |
 
-## GTM PDFs (`docs/brand/gtm-pdfs/`)
+## Share pack (`docs/brand/pdfs/`)
+
+Majico-rendered from staging `download_export_zip` (except GTM blueprint — see note):
 
 | File | Source |
 |------|--------|
-| `librebase-icp-gtm.pdf` | Rendered from `ICP-GTM.md` |
-| `librebase-gtm-blueprint.pdf` | Rendered from `gtm-blueprint.md` |
-| `librebase-brand-profile.pdf` | Majico export |
-| `librebase-master-document.pdf` | Majico export |
-| `librebase-brand-guidelines.pdf` | Majico export |
+| `librebase-brand-guidelines.pdf` | Majico |
+| `librebase-brand-profile.pdf` | Majico |
+| `librebase-master-document.pdf` | Majico |
+| `librebase-icp.pdf` | Majico (ICP / role research snapshot) |
+| `librebase-gtm-blueprint.pdf` | Local render from `gtm-blueprint.md` — Majico ZIP omitted this until `gtm_blueprint` snapshot exists |
 
-Re-render: `python scripts/render_gtm_pdfs.py`
+Copies also live at `docs/brand/*.pdf` for quick attach.
 
-**Note:** Majico Studio `gtm-strategy` / `gtm-jtbd` harness jobs were still processing/pending on staging (workers retrying; SearXNG returned 0). Local PDFs cover the completed niche-research GTM direction until Studio exports land.
+Re-download: Majico MCP `download_export_zip` on project `af1f6d03-4b45-4cb5-8276-548cfacd71ee` (staging).
+Local GTM re-render: `python scripts/render_gtm_pdfs.py`
