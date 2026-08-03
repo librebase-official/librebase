@@ -231,7 +231,7 @@ Studio, CLI, MCP, `parity_runner`, matrix, pins stay in **librebase**. Each wave
 - [x] §1 principles approved
 - [x] This design written under `docs/sdd/specs/parity-roadmap-v2/`
 - [x] `docs/parity-plan.md` points at v2 map
-- [ ] Commit/push + `PROGRESS.json` → `status: done`
+- [x] Commit/push + `PROGRESS.json` → `status: done` (PR #10)
 - [ ] Human picks **Wave 0** (or next) for a separate implement cycle
 
 ## 9. Recommended next implement cycle
