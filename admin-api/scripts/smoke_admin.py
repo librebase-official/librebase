@@ -126,6 +126,16 @@ def main() -> int:
                 print("FAIL: list projects", st, projects, file=sys.stderr)
                 return 1
 
+            # Wave 10: entitlements gate (self-host edition allows project.create)
+            st, ent = http(
+                "GET",
+                f"{base}/org/v1/orgs/{org_id}/entitlements/project.create",
+                token=token,
+            )
+            if st != 200 or int(ent.get("enabled", 0)) < 1:
+                print("FAIL: entitlement project.create", st, ent, file=sys.stderr)
+                return 1
+
             print(json.dumps({"ok": True, "orgId": org_id, "projectId": proj["id"]}))
             return 0
         finally:
