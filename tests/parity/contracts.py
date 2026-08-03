@@ -74,6 +74,29 @@ def p_auth_01() -> Result:
     return Result("P-AUTH-01", "pass", "signup/login/whoami OK", {"token_prefix": str(token)[:12]})
 
 
+def p_auth_02() -> Result:
+    """GoTrue-shaped /auth/v1 alias: signup + password token + user."""
+    email = os.environ.get("PARITY_EMAIL_GOTRUE", "parity-gotrue@example.com")
+    password = os.environ.get("PARITY_PASSWORD", "parity-secret-change-me")
+    status, body = _http("POST", "/auth/v1/signup", body={"email": email, "password": password})
+    if status not in (200, 201, 409):
+        return Result("P-AUTH-02", "fail", f"/auth/v1/signup status={status}", {"body": body})
+    status, body = _http(
+        "POST",
+        "/auth/v1/token?grant_type=password",
+        body={"email": email, "password": password},
+    )
+    token = None
+    if isinstance(body, dict):
+        token = body.get("access_token") or body.get("token")
+    if status != 200 or not token:
+        return Result("P-AUTH-02", "fail", f"/auth/v1/token status={status}", {"body": body})
+    status2, body2 = _http("GET", "/auth/v1/user", headers={"Authorization": f"Bearer {token}"})
+    if status2 != 200:
+        return Result("P-AUTH-02", "fail", f"/auth/v1/user status={status2}", {"body": body2})
+    return Result("P-AUTH-02", "pass", "GoTrue alias signup/token/user OK", {"token_prefix": str(token)[:12]})
+
+
 def p_rest_01() -> Result:
     """CRUD on /rest/v1/{table} with basic filter."""
     table = os.environ.get("PARITY_REST_TABLE", "parity_items")
@@ -326,7 +349,7 @@ def p_rt_01() -> Result:
     return asyncio.run(_probe())
 
 
-CONTRACTS = [p_sql_01, p_rest_01, p_auth_01, p_rls_01, p_io_01, p_rt_01]
+CONTRACTS = [p_sql_01, p_rest_01, p_auth_01, p_auth_02, p_rls_01, p_io_01, p_rt_01]
 
 
 def run_all() -> list[Result]:

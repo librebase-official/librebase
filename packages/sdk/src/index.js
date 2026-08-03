@@ -199,13 +199,17 @@ export function createClient(url, key, options = {}) {
     },
     auth: {
       async signUp({ email, password }) {
-        return authPost("/v1/auth/signup", { email, password });
+        const path = process.env.LIBREBASE_AUTH_GOTRUE === "1" ? "/auth/v1/signup" : "/v1/auth/signup";
+        return authPost(path, { email, password });
       },
       /** Alias for supabase-js familiarity */
       async signIn({ email, password }) {
-        return authPost("/v1/auth/login", { email, password });
+        return this.signInWithPassword({ email, password });
       },
       async signInWithPassword({ email, password }) {
+        if (process.env.LIBREBASE_AUTH_GOTRUE === "1") {
+          return authPost("/auth/v1/token?grant_type=password", { email, password });
+        }
         return authPost("/v1/auth/login", { email, password });
       },
     },
