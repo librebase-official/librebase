@@ -91,7 +91,8 @@ LIBREBASE_SUPABASE_SERVICE_ROLE_KEY=$SbKey
 }
 
 Write-Host "4) Build + run container, nginx, certbot"
-& $Plink -batch -ssh "$VpsUser@$VpsHost" -pw $VpsPass -hostkey $HostKey @"
+# Write remote script with LF endings — Windows CRLF breaks bash (`build\r`, `nginx\x0d`).
+$remoteScript = @"
 set -e
 mkdir -p $RemoteDir
 tar -xzf /tmp/librebase-ui.tgz -C $RemoteDir
@@ -99,7 +100,7 @@ cp /tmp/librebase.env $RemoteDir/.env
 cp /tmp/nginx-librebase.xyz.conf /etc/nginx/conf.d/librebase.xyz.conf
 cd $RemoteDir
 docker compose --env-file .env build
-docker compose --env-file .env up -d
+docker compose --env-file .env up -d --force-recreate
 nginx -t && systemctl reload nginx
 if [ ! -d /etc/letsencrypt/live/librebase.xyz ]; then
   certbot --nginx -d librebase.xyz -d www.librebase.xyz --non-interactive --agree-tos -m julian.kleber@sail.black --redirect || true
@@ -109,5 +110,10 @@ fi
 docker ps --filter name=librebase --format '{{.Names}} {{.Status}}'
 curl -sS -o /dev/null -w 'local:%{http_code}\n' http://127.0.0.1:3005/ || true
 "@
+$remoteScript = $remoteScript -replace "`r`n", "`n"
+$remoteScriptPath = Join-Path $env:TEMP "librebase-ionos-remote.sh"
+[System.IO.File]::WriteAllText($remoteScriptPath, $remoteScript + "`n", [System.Text.UTF8Encoding]::new($false))
+& $Pscp -batch -pw $VpsPass -hostkey $HostKey $remoteScriptPath "${VpsUser}@${VpsHost}:/tmp/librebase-ionos-remote.sh"
+& $Plink -batch -ssh "$VpsUser@$VpsHost" -pw $VpsPass -hostkey $HostKey "bash /tmp/librebase-ionos-remote.sh"
 
 Write-Host "Done. https://librebase.xyz (DNS may take a few minutes)"
