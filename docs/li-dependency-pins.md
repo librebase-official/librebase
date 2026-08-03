@@ -20,7 +20,7 @@
 | Dep | Absolute path | Git (branch @ SHA) | Notes |
 |-----|---------------|--------------------|-------|
 | **lic** | `C:\Users\Julian\Documents\Programming\li\lic-parity-w0` | `main` @ `1a466a6` | Fresh GitLab clone (replaces broken `lic` junction/worktrees). Wave 0 gate: stage0 build + `li-tests/self_host_parity/run_token_parity.sh` |
-| lidb | `C:\Users\Julian\Documents\Programming\li\lidb` | `feat/wave-2-wal-changefeed` @ `23f93ca` | Wave 2 row-shaped changefeed record (MR !3). Includes Wave 1 RLS `9aa11e7` |
+| lidb | `C:\Users\Julian\Documents\Programming\li\lidb` | `feat/wave-3-migrate-depth` @ `e9abac6` | Wave 3 UNIQUE/multi-col INDEX + POLICY metadata (MR !4). Includes W2 `23f93ca` + W1 RLS |
 | lis | `C:\Users\Julian\Documents\Programming\li\lis` | `feat/wave-b-functions-echo` @ `723cc95` | storage/edge echo + REST PATCH; realtime notify on `feat/realtime-changefeed` @ `36eef49` (merge both) |
 | li-oauth | `C:\Users\Julian\Documents\Programming\li-oauth` | `main` @ `92501c6` | OAuth scaffold |
 | li-edge | `C:\Users\Julian\Documents\Programming\li-edge` | `main` @ `2dc7578` | Optional `LI_EDGE_ROOT` invoke |
