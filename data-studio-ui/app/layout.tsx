@@ -35,9 +35,19 @@ export const metadata: Metadata = {
     siteName: "Librebase",
     type: "website",
     locale: "en_US",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "Librebase",
+        type: "image/png",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
+    images: ["/og.png"],
   },
 };
 
