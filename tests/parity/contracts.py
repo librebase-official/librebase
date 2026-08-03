@@ -32,11 +32,17 @@ def _http(
     path: str,
     *,
     body: dict[str, Any] | None = None,
+    raw_body: bytes | None = None,
     headers: dict[str, str] | None = None,
     timeout: float = 5.0,
 ) -> tuple[int, Any]:
-    data = None if body is None else json.dumps(body).encode("utf-8")
-    hdrs = {"Content-Type": "application/json", **(headers or {})}
+    if raw_body is not None:
+        data = raw_body
+        hdrs = {**(headers or {})}
+        hdrs.setdefault("Content-Type", "application/octet-stream")
+    else:
+        data = None if body is None else json.dumps(body).encode("utf-8")
+        hdrs = {"Content-Type": "application/json", **(headers or {})}
     req = urllib.request.Request(_api_base() + path, data=data, headers=hdrs, method=method)
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -95,6 +101,42 @@ def p_auth_02() -> Result:
     if status2 != 200:
         return Result("P-AUTH-02", "fail", f"/auth/v1/user status={status2}", {"body": body2})
     return Result("P-AUTH-02", "pass", "GoTrue alias signup/token/user OK", {"token_prefix": str(token)[:12]})
+
+
+def p_sto_01() -> Result:
+    """S3-shaped storage: PUT object + list prefix (Wave 6)."""
+    email = os.environ.get("PARITY_EMAIL_STO", "parity-sto@example.com")
+    password = os.environ.get("PARITY_PASSWORD", "parity-secret-change-me")
+    _http("POST", "/v1/auth/signup", body={"email": email, "password": password})
+    status_l, login = _http("POST", "/v1/auth/login", body={"email": email, "password": password})
+    token = None
+    if isinstance(login, dict):
+        token = login.get("access_token") or login.get("token")
+    if status_l != 200 or not token:
+        return Result("P-STO-01", "fail", "need auth for storage write", {"login": login})
+    hdrs = {"Authorization": f"Bearer {token}", "Content-Type": "text/plain"}
+    status, body = _http(
+        "PUT",
+        "/storage/v1/object/parity/wave6.txt",
+        raw_body=b"wave6-storage",
+        headers=hdrs,
+    )
+    if status in (0,):
+        return Result("P-STO-01", "fail", "API unreachable", {"body": body})
+    if status in (404, 501, 405):
+        return Result("P-STO-01", "fail", f"storage not implemented (status={status})", {"body": body})
+    if status not in (200, 201):
+        return Result("P-STO-01", "fail", f"PUT status={status}", {"body": body})
+    status_g, body_g = _http(
+        "GET",
+        "/storage/v1/object/list/parity?prefix=wave6",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    if status_g != 200:
+        return Result("P-STO-01", "fail", f"list status={status_g}", {"body": body_g})
+    if not isinstance(body_g, dict) or not body_g.get("objects"):
+        return Result("P-STO-01", "fail", "list returned no objects", {"body": body_g})
+    return Result("P-STO-01", "pass", "PUT+list OK", {"list": body_g})
 
 
 def p_rest_01() -> Result:
@@ -349,7 +391,7 @@ def p_rt_01() -> Result:
     return asyncio.run(_probe())
 
 
-CONTRACTS = [p_sql_01, p_rest_01, p_auth_01, p_auth_02, p_rls_01, p_io_01, p_rt_01]
+CONTRACTS = [p_sql_01, p_rest_01, p_auth_01, p_auth_02, p_sto_01, p_rls_01, p_io_01, p_rt_01]
 
 
 def run_all() -> list[Result]:
