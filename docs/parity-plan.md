@@ -4,13 +4,15 @@
 
 **SDD (authoritative for core vertical):** [docs/sdd/specs/supabase-parity/](sdd/specs/supabase-parity/) (`requirements.md`, `spec.md`, `tasks.md`) · Constitution: [docs/sdd/CONSTITUTION.md](sdd/CONSTITUTION.md) · Pins: [li-dependency-pins.md](li-dependency-pins.md)
 
+**Post–Wave-A surface roadmap (authoritative):** [docs/sdd/specs/parity-roadmap-v2/](sdd/specs/parity-roadmap-v2/) — dependency-ordered waves with **self-hosted `lic` gates**; new API/runtime surface is Li-coupled (no Python/C++ shortcuts). Next implement pick: **Wave 0** (`lic` spine) after P0 pins/selfhost repair.
+
 **Order (non-negotiable):**
 
 1. Fill and keep honest **`docs/lidb-capability-matrix.md`** (✅ only after harness green)
 2. **Edit** lidb / lis (and opt-ins as needed) in sibling checkouts — not pin-tracking alone
 3. Wire Librebase → `lis db start --profile librebase` (stub only via `LIDB_RUNTIME_MODE=dev`)
 4. **Librebase Admin** (this repo): Studio UI + `admin-api/`
-5. Opt-in packages: **li-oauth**, **li-edge**, **li-httpd**, **li-log** (Wave B+)
+5. Opt-in packages: **li-oauth**, **li-edge**, **li-httpd**, **li-log** — sequenced per [parity-roadmap-v2](sdd/specs/parity-roadmap-v2/design.md) Waves 5–8 (Li-first after self-host `lic` gate)
 6. **`@librebase/librebase`** SDK + **`@librebase/cli`** / lip `librebase`
 7. Tag **`v1.0.0` last** (after matrix rows are ✅ or honest ❌)
 

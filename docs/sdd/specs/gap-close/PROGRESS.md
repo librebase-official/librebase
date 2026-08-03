@@ -12,10 +12,19 @@ Last pins: lidb `63bb268` · lis functions-echo `723cc95` (+ realtime `36eef49` 
 
 ## Honesty leftovers (not open matrix rows)
 
-- Edge WASM / Deno parity
-- Native WAL changefeed full-row materialization
-- Full Postgres migrate (POLICY/index)
-- PITR (already ❌)
-- Engine RLS eval
+Tracked as **parity-roadmap-v2** waves (Li-coupled, self-hosted `lic`):
 
-Do **not** tag `v1.0.0` until product decides these leftovers are ❌ or further ✅.
+| Leftover | Wave |
+|----------|------|
+| Engine RLS eval | W1 |
+| Native WAL changefeed rows | W2 |
+| Migrate POLICY / UNIQUE / multi-col | W3 |
+| Li REST rewrite | W4 |
+| GoTrue `/auth/v1` + OAuth | W5 |
+| S3-shaped Storage | W6 |
+| Edge real runtime (not echo) | W7 |
+| Pooler | W8 ✅/❌ |
+| PITR / branching | W9 ✅/❌ (was ❌) |
+| Billing entitlements | W10 |
+
+See [parity-roadmap-v2/design.md](../parity-roadmap-v2/design.md). Do **not** tag `v1.0.0` until every matrix row is ✅ or honest ❌.
