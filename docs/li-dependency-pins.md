@@ -21,9 +21,9 @@
 |-----|---------------|--------------------|-------|
 | **lic** | `C:\Users\Julian\Documents\Programming\li\lic-parity-w0` | `main` @ `1a466a6` | Fresh GitLab clone (replaces broken `lic` junction/worktrees). Wave 0 gate: stage0 build + `li-tests/self_host_parity/run_token_parity.sh` |
 | lidb | `C:\Users\Julian\Documents\Programming\li\lidb` | `feat/wave-3-migrate-depth` @ `e9abac6` | Wave 3 UNIQUE/multi-col INDEX + POLICY metadata (MR !4) |
-| lis | `C:\Users\Julian\Documents\Programming\li\lis` | `feat/wave-6-s3-storage` @ `9cf6019` | Wave 6 S3-shaped list/multipart/signed GET (MR !155). Includes W5 GoTrue + W4 lis-rest |
+| lis | `C:\Users\Julian\Documents\Programming\li\lis` | `feat/wave-7-edge-runtime` @ `41bfc69` | Wave 7 li-edge invoke default (MR !156). Includes W6 S3 + W5 GoTrue + W4 lis-rest |
 | li-oauth | `C:\Users\Julian\Documents\Programming\li-oauth` | `main` @ `92501c6` | OAuth scaffold |
-| li-edge | `C:\Users\Julian\Documents\Programming\li-edge` | `main` @ `2dc7578` | Optional `LI_EDGE_ROOT` invoke |
+| li-edge | `C:\Users\Julian\Documents\Programming\li-edge` | `feat/wave-7-invoke` @ `708a6fa` | `scripts/invoke.py` real runtime (MR !1); set `LI_EDGE_ROOT` or sibling auto-discover |
 | li-httpd | `C:\Users\Julian\Documents\Programming\li\li-httpd` | `main` @ `3b7472e` | Compose stub: `deploy/edge/librebase.httpd.toml` |
 
 **lis tip note:** Prefer merging `feat/realtime-changefeed` (`36eef49`) into the functions-echo line so one pin carries both notify + echo.
@@ -52,7 +52,7 @@ Tracked in [parity-roadmap-v2](sdd/specs/parity-roadmap-v2/design.md):
 | Li REST rewrite | W4 | Python `/rest/v1` MVP | lis |
 | GoTrue `/auth/v1` + OAuth | W5 | `/v1/auth` only | lis + li-oauth |
 | S3-shaped Storage | W6 | Filesystem MVP | lis |
-| Edge real runtime | W7 | Echo MVP | li-edge |
+| Edge real runtime | W7 | Done — li-edge invoke (not Deno) | li-edge |
 | Pooler | W8 | Matrix ❌ or li-pool | li-pool |
 | PITR / branching | W9 | Matrix ❌ or lidb | lidb |
 | Billing entitlements | W10 | Studio/Admin gates | librebase |

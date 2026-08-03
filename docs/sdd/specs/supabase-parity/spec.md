@@ -61,7 +61,7 @@ flowchart TB
 | lidb | `C:\Users\Julian\Documents\Programming\li\lidb` | `39853cc` (`feat/wp-j-embed-session-reuse`) |
 | lis | `C:\Users\Julian\Documents\Programming\li\lis` | `82da467` (`main`) |
 | li-oauth | `...\li-oauth` | `92501c6` |
-| li-edge | `...\li-edge` | `2dc7578` |
+| li-edge | `...\li-edge` | `708a6fa` |
 | li-httpd | `...\li\li-httpd` | `3b7472e` |
 
 Env: `LIDB_ROOT`, `lis` on `PATH` (or `LIS_ROOT`). Prefer merge lidb feature work toward consumable main/tag for CI.

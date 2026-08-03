@@ -139,6 +139,32 @@ def p_sto_01() -> Result:
     return Result("P-STO-01", "pass", "PUT+list OK", {"list": body_g})
 
 
+def p_fn_01() -> Result:
+    """Edge invoke returns runtime li-edge (not echo) — Wave 7."""
+    status, body = _http(
+        "POST",
+        "/functions/v1/hello",
+        raw_body=b'{"ping":true}',
+        headers={"Content-Type": "application/json"},
+    )
+    if status in (0,):
+        return Result("P-FN-01", "fail", "API unreachable", {"body": body})
+    if status == 501:
+        return Result(
+            "P-FN-01",
+            "fail",
+            "edge unavailable — set LI_EDGE_ROOT to li-edge with scripts/invoke.py",
+            {"body": body},
+        )
+    if status != 200 or not isinstance(body, dict):
+        return Result("P-FN-01", "fail", f"invoke status={status}", {"body": body})
+    if body.get("runtime") == "echo":
+        return Result("P-FN-01", "fail", "got echo runtime — Wave 7 requires li-edge", {"body": body})
+    if body.get("runtime") != "li-edge":
+        return Result("P-FN-01", "fail", f"unexpected runtime={body.get('runtime')}", {"body": body})
+    return Result("P-FN-01", "pass", "li-edge invoke OK", {"body": body})
+
+
 def p_rest_01() -> Result:
     """CRUD on /rest/v1/{table} with basic filter."""
     table = os.environ.get("PARITY_REST_TABLE", "parity_items")
@@ -391,7 +417,7 @@ def p_rt_01() -> Result:
     return asyncio.run(_probe())
 
 
-CONTRACTS = [p_sql_01, p_rest_01, p_auth_01, p_auth_02, p_sto_01, p_rls_01, p_io_01, p_rt_01]
+CONTRACTS = [p_sql_01, p_rest_01, p_auth_01, p_auth_02, p_sto_01, p_fn_01, p_rls_01, p_io_01, p_rt_01]
 
 
 def run_all() -> list[Result]:

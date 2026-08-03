@@ -2,9 +2,9 @@
 
 **Status legend:** ⬜ not started · 🚧 in progress · ✅ usable · ❌ out of scope for v1
 
-**Last audit:** 2026-08-03 · Sources: `lic` @ `1a466a6` (self-host stage0 built), `li/lidb` @ `9aa11e7` (`feat/wave-1-engine-rls`), `li/lis` @ `723cc95` · **Roadmap:** [parity-roadmap-v2](sdd/specs/parity-roadmap-v2/)  
+**Last audit:** 2026-08-03 · Sources: `lic` @ `1a466a6`, lidb @ `e9abac6`, lis @ `41bfc69`, li-edge @ `708a6fa` · **Roadmap:** [parity-roadmap-v2](sdd/specs/parity-roadmap-v2/) (`status=done`)  
 **Pins:** [li-dependency-pins.md](li-dependency-pins.md) · **Harness:** `scripts/parity_runner.py`  
-**Testing honesty:** Wave A = HTTP + embed smoke/pytest. Wave 1 engine RLS = lidb session `set_claims` pytest. Storage/functions = lis unit tests. **Not** native Li `lit` in lidb yet.
+**Testing honesty:** Wave A = HTTP + embed smoke/pytest. Wave 1 engine RLS = lidb session `set_claims` pytest. Storage/functions = lis unit tests. Edge = P-FN-01 (`runtime: li-edge`). **Not** native Li `lit` in lidb yet.
 
 | # | Capability | Supabase reference | Linative home | Status | Notes |
 |---|------------|-------------------|---------------|--------|-------|
@@ -14,7 +14,7 @@
 | 4 | WAL / durability | Postgres WAL | **lidb** | ✅ | WalReader + empty-`catalog.heap` crash-replay smoke (`test_wal_crash_replay_restores_insert`). UPDATE/DELETE WAL still stub; append follows catalog persist |
 | 5 | Realtime fanout | Realtime | **lis** `routes/realtime` | 🚧 | Phoenix join ✅. lidb changefeed now emits row `record` @ `23f93ca`; lis native poll still falls back when only `payload_bytes` historically — re-pin + live P-RT-02 follow-up |
 | 6 | Object Storage | Storage | **lis** `routes/storage` + `packages/lis-storage` | ✅ | S3-shaped MVP @ `9cf6019`: list, multipart, HMAC signed GET, `public_read` policy + PUT/GET/DELETE. Not AWS SigV4 / full S3 / CDN |
-| 7 | Edge Functions | Edge Functions | **lis** + **li-edge** | ✅ | Echo MVP / optional `LI_EDGE_ROOT` — Wave 7 real runtime |
+| 7 | Edge Functions | Edge Functions | **lis** + **li-edge** | ✅ | Wave 7: `scripts/invoke.py` (`runtime: li-edge`) @ `708a6fa` / lis `41bfc69`. Echo only with `LI_FUNCTIONS_ECHO=1`. Not Deno/WASM |
 | 8 | Connection pooler | Supavisor | **lis** in-process | ❌ | **Wave 8 settled:** OOS for v1 — in-process embed; no `li-pool` |
 | 9 | Migrations | CLI / Studio | **lidb** + `lis db migrate` | ✅ | Allowlisted CREATE TABLE + single-col INDEX; POLICY/UNIQUE/multi-col → Wave 3 |
 | 10 | Backup / restore | Backup | **lis** `db backup` + export | ✅ | Multi-table SQL/COPY allowlist. Not PITR |
@@ -37,4 +37,4 @@
 
 ## Honest bottom line
 
-Wave A green; Wave 0 self-host `lic` stage0 built @ `1a466a6`; Wave 1 engine RLS in lidb @ `9aa11e7` (MR open). Waves 8–9 honest ❌. Remaining Li-coupled surface: W2–W7 + W10 entitlement smoke + lis engine wire. Do **not** claim Supabase replacement.
+Wave A green; roadmap waves 0–10 marked done (W4 partial: full Li HTTP REST still blocked on lic P0 httpd). Waves 8–9 honest ❌. Follow-ups: lis `LI_RLS_ENGINE` wire, Deno/WASM Edge, SigV4 Storage. Do **not** claim Supabase replacement.
