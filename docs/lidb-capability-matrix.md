@@ -12,7 +12,7 @@
 | 2 | REST `/rest/v1` | PostgREST | **lis** `routes/rest` | ✅ | GET/POST/PATCH/DELETE `parity_items` (lidb UPDATE/DELETE @ `9c928eb` + lis wire). Memory PATCH smoke green |
 | 3 | RLS + JWT | Postgres RLS + GoTrue | **lidb** + **lis** auth | 🚧 | JWT + lis Python RLS (Wave A). **Engine eval** landed lidb `9aa11e7` (`set_claims` session); lis `LI_RLS_ENGINE=1` wire follow-up |
 | 4 | WAL / durability | Postgres WAL | **lidb** | ✅ | WalReader + empty-`catalog.heap` crash-replay smoke (`test_wal_crash_replay_restores_insert`). UPDATE/DELETE WAL still stub; append follows catalog persist |
-| 5 | Realtime fanout | Realtime | **lis** `routes/realtime` | ✅ | Phoenix `phx_join` (P-RT-01) + REST INSERT `parity_items` → `postgres_changes` (JSONL notify MVP; not native WAL rows yet) |
+| 5 | Realtime fanout | Realtime | **lis** `routes/realtime` | 🚧 | Phoenix join ✅. lidb changefeed now emits row `record` @ `23f93ca`; lis native poll still falls back when only `payload_bytes` historically — re-pin + live P-RT-02 follow-up |
 | 6 | Object Storage | Storage | **lis** `routes/storage` | ✅ | Filesystem MVP PUT/GET/DELETE `/storage/v1/object/{bucket}/{path}` + unit tests. Not S3 (no list/multipart/signed URLs) — Wave 6 |
 | 7 | Edge Functions | Edge Functions | **lis** + **li-edge** | ✅ | Echo MVP / optional `LI_EDGE_ROOT` — Wave 7 real runtime |
 | 8 | Connection pooler | Supavisor | **lis** in-process | ❌ | **Wave 8 settled:** OOS for v1 — in-process embed; no `li-pool` |
