@@ -1,12 +1,14 @@
 # Li dependency pins (Librebase — lidb / lis)
 
-**Last audit:** 2026-07-30  
-**Rule:** Edit Li packages in sibling checkouts; bump pins here; flip matrix ✅ only after Wave A harness green. Do not vendor forks into librebase.
+**Last audit:** 2026-08-03  
+**Rule:** Edit Li packages in sibling checkouts; bump pins here; flip matrix ✅ only after Wave A harness green. Do not vendor forks into librebase.  
+**Post–Wave-A:** [parity-roadmap-v2](sdd/specs/parity-roadmap-v2/design.md) — new surface requires **self-hosted `lic` ≥ pin** ([wave-0](sdd/specs/parity-roadmap-v2/wave-0-lic-spine.md)).
 
 ## Sibling paths (dev / harness)
 
 | Package | Default path | Env |
 |---------|--------------|-----|
+| **lic** (self-host) | `../li/lic-parity-w0` | `LIC_ROOT` / `LI_REPO_ROOT` |
 | lidb | `../li/lidb` relative to librebase, or absolute below | `LIDB_ROOT` |
 | lis | `../li/lis` | `PATH` (`lis` CLI) or `LIS_ROOT` |
 | li-oauth | `../li-oauth` | lip later |
@@ -17,7 +19,8 @@
 
 | Dep | Absolute path | Git (branch @ SHA) | Notes |
 |-----|---------------|--------------------|-------|
-| lidb | `C:\Users\Julian\Documents\Programming\li\lidb` | `feat/wave-b-create-index` @ `e9f8570` | WAL + CREATE TABLE + SQL migrate + multi-table export + single-col CREATE INDEX (hash/map) |
+| **lic** | `C:\Users\Julian\Documents\Programming\li\lic-parity-w0` | `main` @ `1a466a6` | Fresh GitLab clone (replaces broken `lic` junction/worktrees). Wave 0 gate: stage0 build + `li-tests/self_host_parity/run_token_parity.sh` |
+| lidb | `C:\Users\Julian\Documents\Programming\li\lidb` | `feat/wave-1-engine-rls` @ `9aa11e7` | Wave 1 engine RLS `set_claims` (MR !2). Prior: WAL + CREATE TABLE + SQL migrate + CREATE INDEX @ `e9f8570` |
 | lis | `C:\Users\Julian\Documents\Programming\li\lis` | `feat/wave-b-functions-echo` @ `723cc95` | storage/edge echo + REST PATCH; realtime notify on `feat/realtime-changefeed` @ `36eef49` (merge both) |
 | li-oauth | `C:\Users\Julian\Documents\Programming\li-oauth` | `main` @ `92501c6` | OAuth scaffold |
 | li-edge | `C:\Users\Julian\Documents\Programming\li-edge` | `main` @ `2dc7578` | Optional `LI_EDGE_ROOT` invoke |
@@ -39,13 +42,20 @@ Without Li: runner exits **0** with `status: skipped`, `reason: no_lidb` — not
 
 ## Known follow-ups (honest, not v1 blockers)
 
-| Contract | Note | Home |
-|----------|------|------|
-| Engine RLS | Policies still lis Python | lidb |
-| Native WAL changefeed rows | JSONL notify MVP for realtime | lis + lidb |
-| WAL-before-persist / UPDATE-DELETE WAL | Crash-replay smoke covers insert restore | lidb |
-| Edge WASM / Deno | Echo MVP only | li-edge |
-| Full Postgres migrate | CREATE TABLE + allowlisted single-col CREATE INDEX apply; no POLICY / UNIQUE / multi-col | lidb |
+Tracked in [parity-roadmap-v2](sdd/specs/parity-roadmap-v2/design.md):
+
+| Contract | Wave | Note | Home |
+|----------|------|------|------|
+| Engine RLS | W1 | Policies still lis Python until engine claims | lidb |
+| Native WAL changefeed rows | W2 | JSONL notify MVP for realtime | lis + lidb |
+| Migrate POLICY / UNIQUE / multi-col | W3 | Allowlisted CREATE TABLE + single-col INDEX only | lidb |
+| Li REST rewrite | W4 | Python `/rest/v1` MVP | lis |
+| GoTrue `/auth/v1` + OAuth | W5 | `/v1/auth` only | lis + li-oauth |
+| S3-shaped Storage | W6 | Filesystem MVP | lis |
+| Edge real runtime | W7 | Echo MVP | li-edge |
+| Pooler | W8 | Matrix ❌ or li-pool | li-pool |
+| PITR / branching | W9 | Matrix ❌ or lidb | lidb |
+| Billing entitlements | W10 | Studio/Admin gates | librebase |
 
 ## Process
 
