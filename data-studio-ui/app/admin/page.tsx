@@ -1,5 +1,10 @@
 import Link from "next/link";
-import { adminApiEnabled, adminHealth, adminMe } from "@/lib/librebase-admin-client";
+import {
+  adminApiEnabled,
+  adminHealth,
+  adminListMembers,
+  adminMe,
+} from "@/lib/librebase-admin-client";
 import { resolveStudioOrgId } from "@/lib/org-context";
 
 export const dynamic = "force-dynamic";
@@ -11,9 +16,11 @@ export default async function AdminPage() {
 
   let me: Awaited<ReturnType<typeof adminMe>> | null = null;
   let meError: string | null = null;
+  let members: Awaited<ReturnType<typeof adminListMembers>> = [];
   if (enabled && healthy) {
     try {
       me = await adminMe();
+      members = await adminListMembers(me.activeOrgId || orgId);
     } catch (e) {
       meError = e instanceof Error ? e.message : "Could not load /org/v1/me";
     }
@@ -28,9 +35,14 @@ export default async function AdminPage() {
             Operator panel — org metadata and entitlements (product layer, not lidb).
           </p>
         </div>
-        <Link href="/setup" className="btn">
-          Setup
-        </Link>
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          <Link href="/login" className="btn">
+            Login
+          </Link>
+          <Link href="/setup" className="btn">
+            Setup
+          </Link>
+        </div>
       </div>
 
       <dl style={{ display: "grid", gap: "0.75rem" }}>
@@ -67,10 +79,34 @@ export default async function AdminPage() {
         {meError && (
           <div>
             <dt className="muted">Session</dt>
-            <dd style={{ color: "var(--warn)" }}>{meError}</dd>
+            <dd style={{ color: "var(--warn)" }}>
+              {meError} — <Link href="/login">sign in</Link>
+            </dd>
           </div>
         )}
       </dl>
+
+      {members.length > 0 && (
+        <section style={{ marginTop: "2rem" }}>
+          <h2 style={{ fontSize: "1.1rem" }}>Members</h2>
+          <ul style={{ listStyle: "none", padding: 0, marginTop: "0.75rem" }}>
+            {members.map((m) => (
+              <li
+                key={m.userId}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  padding: "0.4rem 0",
+                  borderBottom: "1px solid var(--border, #3333)",
+                }}
+              >
+                <span>{m.email}</span>
+                <span className="muted">{m.role}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <p style={{ marginTop: "2rem" }}>
         <Link href="/">← Projects</Link>

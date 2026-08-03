@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Librebase — GTM blueprint</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@400;500;600;700&display=swap" />
+  <style>
+:root {
+  --paper: #ffffff;
+  --linen: #f4f4f5;
+  --ink: #0a0a0a;
+  --graphite: #52525b;
+  --accent: #495d36;
+  --accent-on: #fafafa;
+  --line: #e4e4e7;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "IBM Plex Serif", system-ui, -apple-system, sans-serif;
+  line-height: 1.45;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.book {
+  width: min(1140px, 95vw);
+  margin: 0 auto;
+  padding: 24px 0 50px;
+  container-type: inline-size;
+}
+.page {
+  border: 1px solid var(--line);
+  background: var(--paper);
+  min-height: 760px;
+  margin: 0 0 18px;
+  padding: 38px;
+  display: grid;
+  grid-template-columns: minmax(0, 240px) minmax(0, 1fr);
+  gap: 20px;
+  page-break-inside: avoid;
+}
+.page > div {
+  min-width: 0;
+  container-type: inline-size;
+}
+.rail {
+  border-right: 1px solid var(--line);
+  padding-right: 18px;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+.rail-file {
+  margin-top: 10px;
+}
+.rail-meta {
+  margin-top: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-width: 0;
+}
+.rail-meta__block {
+  min-width: 0;
+}
+.rail-meta__label {
+  margin: 0;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+.rail-meta__value {
+  margin: 14px 0 0;
+  overflow-wrap: break-word; word-wrap: break-word; word-break: normal;
+}
+.num {
+  margin: 0;
+  font-family: "IBM Plex Sans", "Iowan Old Style", "Times New Roman", serif;
+  font-size: 58px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.tiny {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--graphite);
+}
+.tiny.dot::before {
+  content: "•";
+  color: var(--accent);
+  margin-right: 8px;
+  font-size: 16px;
+  vertical-align: middle;
+}
+.display {
+  margin: 10px 0 0;
+  font-family: "IBM Plex Sans", "Iowan Old Style", "Times New Roman", serif;
+  font-size: clamp(28px, 8cqi, 92px);
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+  overflow-wrap: break-word; word-wrap: break-word; word-break: normal;
+}
+.display-accent {
+  margin: 0.45em 0 0;
+  font-family: "IBM Plex Sans", "Iowan Old Style", "Times New Roman", serif;
+  font-size: clamp(22px, 6.2cqi, 56px);
+  line-height: 1.12;
+  letter-spacing: -0.015em;
+  overflow-wrap: break-word; word-wrap: break-word; word-break: normal;
+}
+.display-accent em,
+.display em { color: var(--accent); font-style: italic; font-weight: 500; }
+.lede {
+  margin: 14px 0 0;
+  font-family: "IBM Plex Sans", "Iowan Old Style", "Times New Roman", serif;
+  font-size: 34px;
+  line-height: 1.12;
+  overflow-wrap: break-word; word-wrap: break-word; word-break: normal;
+}
+.sublede {
+  margin: 16px 0 0;
+  font-size: 22px;
+  line-height: 1.35;
+  color: var(--graphite);
+  max-width: 68ch;
+  overflow-wrap: break-word; word-wrap: break-word; word-break: normal;
+}
+.grid { display: grid; gap: 12px; }
+.grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.panel {
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--paper) 88%, var(--linen) 12%);
+  padding: 14px;
+  min-height: 120px;
+}
+.panel h4 {
+  margin: 0 0 8px;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--graphite);
+  font-weight: 600;
+}
+.panel p { margin: 0; font-size: 16px; overflow-wrap: break-word; word-wrap: break-word; word-break: normal; }
+.panel ul { margin: 0; padding-left: 18px; }
+.panel li { margin: 6px 0; font-size: 15px; }
+.tone-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.tone-chip {
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
+  background: color-mix(in srgb, var(--accent) 11%, var(--paper));
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--ink);
+}
+.competitor-dimensions-grid .competitor-dimension { grid-column: 1 / -1; }
+.competitor-dimension table.competitor-matrix { margin-top: 12px; }
+.competitor-dimension table.competitor-matrix td { font-size: 13px; }
+table { width: 100%; border-collapse: collapse; }
+th, td {
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+  padding: 8px;
+  font-size: 14px;
+}
+th {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--graphite);
+  font-weight: 600;
+}
+.swatch {
+  display: inline-block;
+  width: 1.1rem;
+  height: 0.9rem;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  border-radius: 2px;
+  margin-right: 0.35rem;
+  vertical-align: text-bottom;
+}
+.logo { display: block; max-width: 190px; max-height: 110px; margin-top: 8px; }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.btn {
+  border: 1px solid var(--line);
+  padding: 10px 13px;
+  font-size: 17px;
+  font-family: "IBM Plex Sans", "Iowan Old Style", "Times New Roman", serif;
+  background: var(--paper);
+  color: var(--ink);
+}
+.btn.primary { background: var(--ink); color: var(--paper); }
+.btn.accent {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-on);
+}
+.foot {
+  border-top: 1px solid var(--line);
+  margin-top: 14px;
+  padding-top: 14px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--graphite);
+}
+.muted { color: var(--graphite); }
+code { background: rgba(0, 0, 0, 0.06); padding: 0.1rem 0.25rem; border-radius: 3px; }
+@media (max-width: 980px) {
+  .page { grid-template-columns: 1fr; min-height: auto; }
+  .rail { border-right: 0; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+}
+
+
+/* majico-pdf-export-print */
+@media print {
+  @page { size: A4; margin: 10mm; }
+  html, body {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: hidden !important;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar,
+  .book::-webkit-scrollbar,
+  .page::-webkit-scrollbar,
+  .page > div::-webkit-scrollbar,
+  .rail::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+  .book {
+    width: 100%;
+    padding: 0;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: hidden !important;
+    display: block;
+    scroll-snap-type: none;
+  }
+  .page {
+    margin-bottom: 8mm;
+    overflow: visible !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    flex: none;
+    width: 100%;
+    box-shadow: none;
+    scroll-snap-align: none;
+    page-break-inside: avoid;
+    page-break-after: always;
+  }
+  .page:last-child {
+    page-break-after: auto;
+  }
+  .page > div {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+  html[data-canvas-embed="1"] body,
+  html[data-canvas-embed="1"] .book,
+  html[data-canvas-embed="1"] .page,
+  html[data-canvas-embed="1"] .page > div,
+  html[data-canvas-embed="1"] .rail {
+    overflow: visible !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+  a { color: inherit; text-decoration: none; }
+}
+/* majico-pdf-export-print */
+@media print {
+  @page { size: A4; margin: 10mm; }
+  html, body {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: hidden !important;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar,
+  .book::-webkit-scrollbar,
+  .page::-webkit-scrollbar,
+  .page > div::-webkit-scrollbar,
+  .rail::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+  .book {
+    width: 100%;
+    padding: 0;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: hidden !important;
+    display: block;
+    scroll-snap-type: none;
+  }
+  .page {
+    margin-bottom: 8mm;
+    overflow: visible !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    flex: none;
+    width: 100%;
+    box-shadow: none;
+    scroll-snap-align: none;
+    page-break-inside: avoid;
+    page-break-after: always;
+  }
+  .page:last-child {
+    page-break-after: auto;
+  }
+  .page > div {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+  html[data-canvas-embed="1"] body,
+  html[data-canvas-embed="1"] .book,
+  html[data-canvas-embed="1"] .page,
+  html[data-canvas-embed="1"] .page > div,
+  html[data-canvas-embed="1"] .rail {
+    overflow: visible !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+  a { color: inherit; text-decoration: none; }
+}
+  </style>
+</head>
+<body>
+  <main class="book">
+    <section class="page">
+    <aside class="rail">
+      <p class="num">01</p>
+      <p class="tiny dot">Go-to-market</p>
+      <p class="display">Librebase</p>
+      <div class="rail-meta">
+        <div class="rail-meta__block">
+          <p class="tiny rail-meta__label">Primary channel</p>
+          <p class="rail-meta__value lede">X</p>
+        </div>
+        <div class="rail-meta__block">
+          <p class="tiny rail-meta__label">Market</p>
+          <p class="rail-meta__value">Senior backend developers platform engineers at regulated fintech or healthcare </p>
+        </div>
+      </div>
+    </aside>
+    <div>
+      <div class="grid grid-2">
+        <article class="panel">
+    <p class="tiny">Target market</p>
+    <p>Senior backend developers platform engineers at regulated fintech or healthcare firms who build autonomous agents on Postgres-compatible stacks using Li Rust Node Go.</p>
+  </article>
+        <article class="panel">
+    <p class="tiny">Positioning</p>
+    <p>Librebase helps developer teams to reduce RAM consumption per query cycle while maintaining full visibility into infrastructure costs for compliance audits without the hidden fees of managed backends.</p>
+  </article>
+        <article class="panel">
+    <p class="tiny">Primary message</p>
+    <p class="muted">Not set</p>
+  </article>
+        <article class="panel">
+    <p class="tiny">Supporting channels</p>
+    <ul><li>TikTok</li></ul>
+  </article>
+        <article class="panel">
+    <p class="tiny">Content engine focus</p>
+    <ul><li>TikTok | short form | organic followers | technical demo clip showing real-time RAM drop when switching from standard Postgres to Librebase in Li language architecture</li><li>X | long form | high intent conversion | thread comparing authentic infrastructure costs against hidden charges found in managed SaaS offerings while highlighting native MCP integration benefits for agent builders.</li><li>TikTok | short form | organic followers | quick teardown of vendor lockin risks using proprietary client libraries versus open standards supported by the Li language runtime.</li></ul>
+  </article>
+        <article class="panel">
+    <p class="tiny">One-page style</p>
+    <p><strong>Prospects</strong> — Technical developers on X search for lightweight Postgres-compatible solutions that show true RAM usage metrics immediately.</p>
+           <p><strong>Leads</strong> — Leads join the waitlist by posting a short thread demonstrating honest health status indicators versus obscured SaaS dashboards then download open source samples to build their first agent node in minutes.</p>
+           <p><strong>Customers</strong> — Customers drive referrals by sharing transparent benchmarks of low memory footprint across regulated workloads during developer conference sessions.</p>
+  </article>
+      </div>
+    </div>
+  </section>
+    <section class="page">
+    <aside class="rail">
+      <p class="num">02</p>
+      <p class="tiny dot">Checklist · JTBD</p>
+      <p class="display">Librebase</p>
+    </aside>
+    <div>
+      <div class="grid grid-2">
+        <article class="panel">
+    <p class="tiny">Micro-SaaS checklist</p>
+    <ul><li><strong>usp:</strong> Runs entirely within the Li language to ensure a small memory footprint reducing overhead for resource-constrained environments and delivering strong security defaults through built-in authentication REST APIs without relying on fake-green SaaS dashboard interfaces. The architecture eliminates hidden costs associated with proprietary client libraries while enabling direct communication between agents via native MCP integration rather than vendor lockin protocols that obscure true infrastructure spend in managed backends.</li><li><strong>aha Moment:</strong> Seeing real-time health status indicators reflect true infrastructure costs without obscured metrics behind a dashboard interface.</li><li><strong>core Result:</strong> Reduces total RAM consumption per query cycle to under 50 megabytes</li><li><strong>onboarding:</strong> Deploy local instance via single command line script that installs built-in auth REST API layers and row-level security features compatible with standard Postgres tools immediately upon execution on any Linux container environment. The process requires no external plugins to maintain transparency over infrastructure spend while enabling instant start of real-time sync capabilities for agent teams.</li><li><strong>user Vs Buyer:</strong> Developer writes agent code directly to test low-latency syncs; CTO approves deployment because honest metrics prevent surprise costs during quarterly compliance reviews or budget planning cycles for resource-constrained environments.</li><li><strong>pseo Modifier:</strong> low memory usage honest metrics agent-first data layer</li><li><strong>target Market:</strong> Senior backend developers at regulated firms building autonomous agents on Postgres-compatible stacks using Li Rust Node Go or C++ environments with strict memory limits and audit requirements for compliance audits. The product reduces overhead by integrating native MCP communication protocols that avoid heavy external plugins while keeping security defaults active out of the box without requiring complex configuration steps from platform engineers.</li><li><strong>primary Channel:</strong> X</li><li><strong>primary Repurposing:</strong> Turn long form technical threads on X into short demo clips that highlight memory footprint reductions and native MCP integration advantages across multiple social platforms to reach organic followers effectively without paid promotion budgets. This tactic republishes content from one channel into others by adding captions or voiceovers explaining why the Li language architecture matters for team autonomy.</li></ul>
+  </article>
+        <article class="panel">
+    <p class="tiny">JTBD snapshot</p>
+    <p><strong>Performer</strong> — Developer or agent builder managing Postgres-compatible backends</p>
+           <p><strong>Focus job</strong> — Manage a lightweight data layer with full visibility into infrastructure costs</p>
+           <ul><li>Minimize the total RAM consumption per query cycle to under 50 megabytes</li><li>Reduce the likelihood of unexpected overage charges during compliance audits by zero percent</li><li>Increase deployment velocity from days to minutes without external plugin configuration</li><li>Elevate transparency into infrastructure billing so every byte charged matches actual usage</li><li>Minimize agent latency while maintaining secure real-time data synchronization channels</li></ul>
+  </article>
+      </div>
+    </div>
+  </section>
+  </main>
+</body>
+</html>

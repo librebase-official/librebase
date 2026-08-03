@@ -1,6 +1,6 @@
-# Li dependency pins (Librebase ↔ lidb / lis)
+# Li dependency pins (Librebase — lidb / lis)
 
-**Last audit:** 2026-07-29  
+**Last audit:** 2026-07-30  
 **Rule:** Edit Li packages in sibling checkouts; bump pins here; flip matrix ✅ only after Wave A harness green. Do not vendor forks into librebase.
 
 ## Sibling paths (dev / harness)
@@ -17,39 +17,38 @@
 
 | Dep | Absolute path | Git (branch @ SHA) | Notes |
 |-----|---------------|--------------------|-------|
-| lidb | `C:\Users\Julian\Documents\Programming\li\lidb` | `feat/wp-j-embed-session-reuse` @ `39853cc` | Prefer merge toward `main` for CI |
-| lis | `C:\Users\Julian\Documents\Programming\li\lis` | `main` @ `82da467` | Add `profiles/librebase.toml` + `routes/rest/` |
-| li-oauth | `C:\Users\Julian\Documents\Programming\li-oauth` | `main` @ `92501c6` | Wave B / OAuth |
-| li-edge | `C:\Users\Julian\Documents\Programming\li-edge` | `main` @ `2dc7578` | Wave B |
-| li-httpd | `C:\Users\Julian\Documents\Programming\li\li-httpd` | `main` @ `3b7472e` | Gateway compose later |
+| lidb | `C:\Users\Julian\Documents\Programming\li\lidb` | `feat/wave-b-create-index` @ `e9f8570` | WAL + CREATE TABLE + SQL migrate + multi-table export + single-col CREATE INDEX (hash/map) |
+| lis | `C:\Users\Julian\Documents\Programming\li\lis` | `feat/wave-b-functions-echo` @ `723cc95` | storage/edge echo + REST PATCH; realtime notify on `feat/realtime-changefeed` @ `36eef49` (merge both) |
+| li-oauth | `C:\Users\Julian\Documents\Programming\li-oauth` | `main` @ `92501c6` | OAuth scaffold |
+| li-edge | `C:\Users\Julian\Documents\Programming\li-edge` | `main` @ `2dc7578` | Optional `LI_EDGE_ROOT` invoke |
+| li-httpd | `C:\Users\Julian\Documents\Programming\li\li-httpd` | `main` @ `3b7472e` | Compose stub: `deploy/edge/librebase.httpd.toml` |
+
+**lis tip note:** Prefer merging `feat/realtime-changefeed` (`36eef49`) into the functions-echo line so one pin carries both notify + echo.
 
 ## Harness requires ≥
 
 Wave A (`scripts/parity_runner.py`) needs:
 
 1. `LIDB_ROOT` pointing at a lidb tree that can embed / migrate
-2. `lis` on `PATH` (or `LIS_ROOT/bin` prepended)
-3. Profile **`librebase`** when present (`LI_PROFILE=librebase`); else document fallback `registry-min`
+2. `lis` on `PATH` (or `LIS_ROOT`) + registry server (or `python routes/registry/server.py`)
+3. `LI_PROFILE=librebase`, `LI_JWT_SECRET`, `LIBREBASE_PARITY_API` (default `http://127.0.0.1:54321`; use alternate port if OS-blocked)
 
 Without Li: runner exits **0** with `status: skipped`, `reason: no_lidb` — not a production pass.
 
-## Known blockers (Wave A)
+**Evidence (2026-07-30):** live run — all six contracts **pass** (no soft skips): P-SQL-01, P-REST-01, P-AUTH-01, P-RLS-01, P-IO-01, P-RT-01. API `:15421`, WS `:15423`.
 
-| Contract | Blocker | Home |
-|----------|---------|------|
-| P-SQL-01 | CREATE TABLE not in native catalog exec; use migration ensure | lidb |
-| P-REST-01 | No `/rest/v1/{table}` (registry `/v1/packages*` only) | lis `routes/rest/` |
-| P-AUTH-01 | MVP exists at `/v1/auth/*` | lis (harden claims) |
-| P-RLS-01 | Policies in SQL; engine eval not wired | lidb + lis JWT GUCs |
-| P-RT-01 | Soft; realtime ~35% | lis `routes/realtime` |
+## Known follow-ups (honest, not v1 blockers)
+
+| Contract | Note | Home |
+|----------|------|------|
+| Engine RLS | Policies still lis Python | lidb |
+| Native WAL changefeed rows | JSONL notify MVP for realtime | lis + lidb |
+| WAL-before-persist / UPDATE-DELETE WAL | Crash-replay smoke covers insert restore | lidb |
+| Edge WASM / Deno | Echo MVP only | li-edge |
+| Full Postgres migrate | CREATE TABLE + allowlisted single-col CREATE INDEX apply; no POLICY / UNIQUE / multi-col | lidb |
 
 ## Process
 
 1. Implement in Li repo → commit/PR there  
 2. Update SHA in this file  
-3. `python scripts/parity_runner.py`  
-4. Update `docs/lidb-capability-matrix.md` ✅ only on green named IDs  
-
-## License note
-
-Librebase first-party target: **MIT** (constitution). lidb/lis/li-* remain **GPL-3.0-or-later** until separately relicensed.
+3. `python scripts/parity_runner.py` (with stack up) → matrix ✅ only on pass  

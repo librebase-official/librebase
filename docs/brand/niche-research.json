@@ -1,0 +1,379 @@
+﻿{
+    "id":  "071be8dd-45ff-4937-a735-898805e4a58c",
+    "type":  "niche_research",
+    "status":  "completed",
+    "payload":  {
+                    "source":  "mcp-submit-brief",
+                    "sourceFlowId":  "071be8dd-45ff-4937-a735-898805e4a58c",
+                    "marketRealityScan":  true,
+                    "marketRealityDepth":  "deep"
+                },
+    "result":  {
+                   "rationale":  "Data/science niche often fits Sage (clarity) with a touch of Outlaw (disrupt).",
+                   "nicheSummary":  "From web research (summarized): The market currently favors all-in-one backends like Supabase that bundle authentication storage and real-time syncs into a single dashboard while developers seek open-source alternatives without vendor lock-in. Buyers compare tools based on their ability to simplify SQL data management yet they increasingly worry about hidden costs associated with managed BaaS models in regulated industries. Messaging clusters heavily around the convenience of ready-made templates versus the long-term dependency risks created by proprietary client libraries and auth systems. Librebase can credibly own this space by offering a low memory Postgres-compatible database built in Li that prioritizes honest health metrics instead of fake-green status indicators. This angle positions your product as an agent-first solution for teams needing strong security defaults and native MCP integration rather than managed overhead or SaaS dashboards that obscure true infrastructure costs.",
+                   "balanceReason":  "A balanced mix fits most brands; adjust the slider to lean more primary or secondary.",
+                   "marketReality":  {
+                                         "meta":  {
+                                                      "version":  1,
+                                                      "checked_at":  "2026-07-29T14:43:14.283Z",
+                                                      "sources_used":  [
+                                                                           "github",
+                                                                           "hackernews",
+                                                                           "npm",
+                                                                           "google"
+                                                                       ]
+                                                  },
+                                         "trend":  "unknown",
+                                         "evidence":  [
+                                                          {
+                                                              "type":  "repo_count",
+                                                              "count":  0,
+                                                              "query":  "Librebase — High-performance Postgres-compatible database written in Li",
+                                                              "source":  "github"
+                                                          },
+                                                          {
+                                                              "type":  "repo_count",
+                                                              "count":  0,
+                                                              "query":  "librebase high performance postgres compatible",
+                                                              "source":  "github"
+                                                          },
+                                                          {
+                                                              "type":  "repo_count",
+                                                              "count":  0,
+                                                              "query":  "librebase high",
+                                                              "source":  "github"
+                                                          },
+                                                          {
+                                                              "type":  "story_hits_12mo",
+                                                              "count":  0,
+                                                              "query":  "Librebase — High-performance Postgres-compatible database written in Li",
+                                                              "source":  "hackernews"
+                                                          },
+                                                          {
+                                                              "type":  "story_hits_12mo",
+                                                              "count":  0,
+                                                              "query":  "librebase high performance postgres compatible",
+                                                              "source":  "hackernews"
+                                                          },
+                                                          {
+                                                              "type":  "story_hits_12mo",
+                                                              "count":  0,
+                                                              "query":  "librebase high",
+                                                              "source":  "hackernews"
+                                                          },
+                                                          {
+                                                              "type":  "package_total",
+                                                              "count":  0,
+                                                              "query":  "Librebase — High-performance Postgres-compatible database written in Li",
+                                                              "source":  "npm"
+                                                          },
+                                                          {
+                                                              "type":  "package_total",
+                                                              "count":  202650,
+                                                              "query":  "librebase high performance postgres compatible",
+                                                              "source":  "npm"
+                                                          },
+                                                          {
+                                                              "type":  "package_total",
+                                                              "count":  52822,
+                                                              "query":  "librebase high",
+                                                              "source":  "npm"
+                                                          },
+                                                          {
+                                                              "type":  "organic_results",
+                                                              "count":  10,
+                                                              "query":  "Librebase — High-performance Postgres-compatible database written in Li",
+                                                              "source":  "google"
+                                                          },
+                                                          {
+                                                              "type":  "organic_results",
+                                                              "count":  10,
+                                                              "query":  "librebase high performance postgres compatible",
+                                                              "source":  "google"
+                                                          },
+                                                          {
+                                                              "type":  "organic_results",
+                                                              "count":  10,
+                                                              "query":  "librebase high",
+                                                              "source":  "google"
+                                                          }
+                                                      ],
+                                         "pivot_hints":  [
+                                                             "Signals are moderate or sparse in these keyword slices. Validate demand with users, not only index counts.",
+                                                             "npm shows a very broad package universe for these terms. Treat npm hits as ecosystem noise unless titles clearly match your product."
+                                                         ],
+                                         "top_similars":  [
+
+                                                          ],
+                                         "reality_signal":  28,
+                                         "duplicate_likelihood":  "low"
+                                     },
+                   "suggestedTones":  [
+                                          {
+                                              "id":  "professional",
+                                              "reason":  "A default fit for most brands."
+                                          }
+                                      ],
+                   "topCompetitors":  [
+                                          {
+                                              "name":  "Supabase",
+                                              "description":  "Supabase provides a production-grade platform that bundles Postgres databases, authentication, storage, and real-time capabilities into one portable system for developers building applications without vendor lock-in. This solution targets teams requiring instant APIs and vector embeddings to create backend services with strong security defaults rather than relying on limited dashboards."
+                                          },
+                                          {
+                                              "name":  "Neon",
+                                              "description":  "Neon provides a serverless Postgres database platform that bundles authentication, storage, and AI features for teams building applications and agents. This solution targets developers who want a low-memory backend without relying on fake-green SaaS dashboards or complex setups."
+                                          },
+                                          {
+                                              "name":  "Turso",
+                                              "description":  "Turso provides a lightweight database built in Li that runs efficiently on diverse environments like servers and devices while offering Postgres compatibility for teams using AI agents. This solution targets developers who need small-footprint storage without fake health dashboards or heavy overhead from traditional systems."
+                                          },
+                                          {
+                                              "name":  "Nhost",
+                                              "description":  "Nhost provides a managed backend platform featuring Postgres, GraphQL, authentication, and serverless functions for developers building scalable applications. The company serves engineering teams who need to launch quickly while maintaining full control over their infrastructure using open-source tools like PostgreSQL and Hasura."
+                                          }
+                                      ],
+                   "guidelinesJobId":  "3a191bc4-9363-467e-9831-254803ed1089",
+                   "suggestedBalance":  0.5,
+                   "suggestedLogoIds":  [
+                                            "shield",
+                                            "slash-bold",
+                                            "moon"
+                                        ],
+                   "positioningReason":  "Differentiating helps new brands get noticed.",
+                   "suggestedArchetype":  "sage",
+                   "suggestedSecondary":  "outlaw",
+                   "relevantCompetitors":  [
+
+                                           ],
+                   "suggestedBrandStory":  "We help Developers, platform teams, and agent builders who need a Postgres-compatible backend with a small footprint, honest health status, and MCP/REST APIs — not fake-green SaaS dashboards. with Librebase — High-performance Postgres-compatible database written in Li — low memory, strong security defaults, Auth/REST/Realtime for teams and agents.. Edit this to reflect your brand story.",
+                   "competitorDimensions":  {
+                                                "dimensions":  [
+                                                                   {
+                                                                       "matrix":  [
+                                                                                      {
+                                                                                          "strength":  "Offers a fully bundled ecosystem including Auth and Storage reducing initial setup time.",
+                                                                                          "weakness":  "Heavy resource consumption and hidden costs in the Pro tier obscure true infrastructure spend.",
+                                                                                          "competitor":  "Supabase",
+                                                                                          "positioning":  "One-stop shop for rapid application prototyping without managing backend complexity.",
+                                                                                          "priceMotion":  "Freemium model that escalates quickly to vendor lock-in via proprietary extensions."
+                                                                                      },
+                                                                                      {
+                                                                                          "strength":  "Enables per-project billing and instant scaling ideal for variable load serverless workloads.",
+                                                                                          "weakness":  "Lacks native agent-first features like embedded MCP integration out of the box.",
+                                                                                          "competitor":  "Neon",
+                                                                                          "positioning":  "Serverless data platform prioritizing flexibility over local deployment density.",
+                                                                                          "priceMotion":  "Pay-per-use pricing that favors high-volume throughput but lacks predictable low-memory baselines."
+                                                                                      },
+                                                                                      {
+                                                                                          "strength":  "Runs on diverse devices with a minimal footprint suitable for edge and agent execution environments.",
+                                                                                          "weakness":  "Limited ecosystem tools compared to Supabase\u0027s extensive marketplace of ready-made templates.",
+                                                                                          "competitor":  "Turso",
+                                                                                          "positioning":  "Edge-native SQL store focusing on speed and lightweight deployment rather than enterprise dashboards.",
+                                                                                          "priceMotion":  "Community-driven free tier with paid scaling options that require self-hosted integration for advanced features."
+                                                                                      }
+                                                                                  ],
+                                                                       "dimension":  "gtm",
+                                                                       "topCompetitors":  [
+                                                                                              {
+                                                                                                  "name":  "Supabase",
+                                                                                                  "description":  "All-in-one backend platform with managed auth, storage, and real-time APIs bundled into a single SaaS dashboard."
+                                                                                              },
+                                                                                              {
+                                                                                                  "name":  "Neon",
+                                                                                                  "description":  "Serverless Postgres provider focusing on branching database capabilities and serverless scaling for developer workflows."
+                                                                                              },
+                                                                                              {
+                                                                                                  "name":  "Turso",
+                                                                                                  "description":  "Lightweight, edge-native SQL store leveraging LibSQL technology to run locally with minimal overhead."
+                                                                                              }
+                                                                                          ],
+                                                                       "gtmDirectionSuggestion":  {
+                                                                                                      "icp":  "Security-conscious agent teams in regulated industries fearing vendor lock-in and obscured cost structures.",
+                                                                                                      "wedge":  "Agent-first data layer that replaces the \u0027fake-green\u0027 SaaS dashboard with raw, transparent health metrics.",
+                                                                                                      "motion":  "Product-led waitlist offering zero-cost evaluation for enterprise-grade security defaults without hidden fees.",
+                                                                                                      "channel":  "Developer forums (e.g., r/Postgres) and MCP protocol community Discord",
+                                                                                                      "summary":  "Based on the competitive landscape, consider launching via a wedge strategy targeting autonomous agent builders who need transparency. Focus your motion on honest health metrics and low-memory performance as key differentiators against heavy SaaS bundles.",
+                                                                                                      "whitespace":  "The gap between lightweight edge databases lacking native Auth/REST APIs and heavy managed backends hiding costs."
+                                                                                                  }
+                                                                   },
+                                                                   {
+                                                                       "matrix":  [
+                                                                                      {
+                                                                                          "strength":  "Strong community narrative leveraging open-source credibility for a SaaS product.",
+                                                                                          "weakness":  "Messaging often conflates convenience with dependency, obscuring long-term lock-in risks.",
+                                                                                          "competitor":  "Supabase",
+                                                                                          "positioning":  "The \u0027Postgres alternative\u0027 that simplifies backend creation but implies reliance on their ecosystem.",
+                                                                                          "priceMotion":  "Brand equity driven by free tier virality rather than transparent cost structures."
+                                                                                      },
+                                                                                      {
+                                                                                          "strength":  "Clear messaging around serverless scalability appealing to DevOps and platform teams.",
+                                                                                          "weakness":  "Focus on billing mechanics overshadows the need for honest health status indicators in agent workflows.",
+                                                                                          "competitor":  "Neon",
+                                                                                          "positioning":  "The \u0027serverless\u0027 database brand focused on infrastructure flexibility over data integrity transparency.",
+                                                                                          "priceMotion":  "Pricing motion communicated through complex per-minute usage models rather than flat predictable costs."
+                                                                                      },
+                                                                                      {
+                                                                                          "strength":  "Lean, edge-focused branding that resonates with developers building distributed systems.",
+                                                                                          "weakness":  "Identity lacks the comprehensive API/Security narrative required for enterprise adoption in agents.",
+                                                                                          "competitor":  "Turso",
+                                                                                          "positioning":  "The \u0027lightweight\u0027 database brand prioritizing runtime efficiency over feature completeness.",
+                                                                                          "priceMotion":  "Community-first motion relying on open-core reputation rather than managed service trust."
+                                                                                      }
+                                                                                  ],
+                                                                       "dimension":  "branding",
+                                                                       "topCompetitors":  [
+                                                                                              {
+                                                                                                  "name":  "Supabase",
+                                                                                                  "description":  "Positions as an open-source adjacent SaaS with a bold, community-driven tech brand identity."
+                                                                                              },
+                                                                                              {
+                                                                                                  "name":  "Neon",
+                                                                                                  "description":  "Uses cloud-native terminology like \u0027serverless\u0027 and \u0027branching\u0027 to appeal to modern infrastructure teams."
+                                                                                              }
+                                                                                          ]
+                                                                   },
+                                                                   {
+                                                                       "matrix":  [
+                                                                                      {
+                                                                                          "strength":  "Comprehensive visual information density allowing management of Auth, API, and DB in a single pane.",
+                                                                                          "weakness":  "Visually cluttered interface often displaying \u0027fake-green\u0027 status indicators masking real infrastructure errors.",
+                                                                                          "competitor":  "Supabase Dashboard UI",
+                                                                                          "positioning":  "Data-dense design that prioritizes feature access over cognitive clarity for agent builders.",
+                                                                                          "priceMotion":  "Complex UI requires extensive onboarding time, acting as a barrier to low-friction adoption."
+                                                                                      },
+                                                                                      {
+                                                                                          "strength":  "Clean, monochromatic aesthetic aligned with modern serverless tooling preferences.",
+                                                                                          "weakness":  "Sparse visual feedback fails to provide deep insights into data health or hidden costs for regulated teams.",
+                                                                                          "competitor":  "Neon Console UI",
+                                                                                          "positioning":  "Terminal-centric design appealing to CLI power users but alienating non-expert platform teams.",
+                                                                                          "priceMotion":  "Visual simplicity does not translate to pricing transparency, leaving users guessing true usage."
+                                                                                      },
+                                                                                      {
+                                                                                          "strength":  "Mobile-friendly and lightweight interfaces designed for edge deployment scenarios.",
+                                                                                          "weakness":  "Lacks robust security configuration panels needed for enterprise-grade agent authentication flows.",
+                                                                                          "competitor":  "Turso UI",
+                                                                                          "positioning":  "Rustic, developer-only design prioritizing raw code visibility over polished admin experiences.",
+                                                                                          "priceMotion":  "Visual minimalism mirrors a community-led model lacking the resources for dedicated UI refinement."
+                                                                                      }
+                                                                                  ],
+                                                                       "dimension":  "design",
+                                                                       "topCompetitors":  [
+                                                                                              {
+                                                                                                  "name":  "Supabase Dashboard UI",
+                                                                                                  "description":  "A unified, data-rich dashboard combining SQL editor, Auth logs, and Storage buckets into one interface."
+                                                                                              },
+                                                                                              {
+                                                                                                  "name":  "Neon Console UI",
+                                                                                                  "description":  "Minimalist terminal-inspired design focused on connection strings and branching visualization."
+                                                                                              }
+                                                                                          ]
+                                                                   },
+                                                                   {
+                                                                       "matrix":  [
+                                                                                      {
+                                                                                          "strength":  "Rich ecosystem of generated migrations and pre-built functions accelerates initial application scaffolding.",
+                                                                                          "weakness":  "Proprietary client libraries create dependency risks preventing true open-source portability or local control.",
+                                                                                          "competitor":  "Supabase CLI \u0026 SDKs",
+                                                                                          "positioning":  "Wrapper-heavy development model that abstracts SQL away from direct agent data layer access.",
+                                                                                          "priceMotion":  "Advanced features locked behind managed SDK updates rather than standardizing on raw protocols like MCP."
+                                                                                      },
+                                                                                      {
+                                                                                          "strength":  "Seamless integration with existing ORM stacks and migration tools familiar to legacy teams.",
+                                                                                          "weakness":  "Server-side enforcement limits true local debugging capabilities needed for low-memory edge agents.",
+                                                                                          "competitor":  "Neon Driver Connectors",
+                                                                                          "positioning":  "Bridge technology connecting standard drivers but adding vendor-specific overhead layers.",
+                                                                                          "priceMotion":  "Integration complexity drives adoption costs higher than a native Li-based implementation would allow."
+                                                                                      },
+                                                                                      {
+                                                                                          "strength":  "Lightweight binaries compatible with diverse OS environments reducing deployment friction.",
+                                                                                          "weakness":  "Limited library support restricts usage to raw SQL or custom clients, slowing rapid iteration cycles.",
+                                                                                          "competitor":  "Turso CLI",
+                                                                                          "positioning":  "Tool-first approach requiring developers to build glue code rather than leveraging a full platform abstraction.",
+                                                                                          "priceMotion":  "Free but requires engineering time investment to replace missing functionality found in commercial suites."
+                                                                                      }
+                                                                                  ],
+                                                                       "dimension":  "development",
+                                                                       "topCompetitors":  [
+                                                                                              {
+                                                                                                  "name":  "Supabase CLI \u0026 SDKs",
+                                                                                                  "description":  "JavaScript/TypeScript based client libraries and CLI tools that abstract away direct database interaction."
+                                                                                              },
+                                                                                              {
+                                                                                                  "name":  "Neon Driver Connectors",
+                                                                                                  "description":  "Standard PostgreSQL drivers extended with serverless features for connecting existing apps to their platform."
+                                                                                              }
+                                                                                          ]
+                                                                   }
+                                                               ]
+                                            },
+                   "nameOccupancySummary":  "The brand name Librebase conflicts directly with established tools like LibreOffice Base which serves as a desktop database front end rather than an all-in-one backend service. This distinction creates a clear opportunity to position your product not as another visual spreadsheet tool but as the first low-memory Postgres agent that prioritizes honest health metrics over managed overhead. You should explicitly qualify your messaging with terms like Li-native or MCP-first to separate yourself from the open-source office suite ecosystem and emphasize security defaults instead of proprietary client libraries.",
+                   "suggestedPositioning":  "standout",
+                   "companiesWithSameName":  [
+                                                 {
+                                                     "url":  "https://en.wikipedia.org/wiki/LibreOffice",
+                                                     "name":  "LibreOffice - Wikipedia",
+                                                     "snippet":  "LibreOffice is a free and open-source office productivity software suite developed by The Document Foundation (TDF). It was created in 2010 as a fork of ..."
+                                                 },
+                                                 {
+                                                     "url":  "https://www.libreoffice.org/",
+                                                     "name":  "LibreOffice",
+                                                     "snippet":  "LibreOffice is a free office suite. ... LibreOffice. Download. Personal Use · Business Use · Other Versions · Release Notes ..."
+                                                 },
+                                                 {
+                                                     "url":  "https://mariadb.com/docs/server/clients-and-utilities/graphical-and-enhanced-clients/libreoffice-base",
+                                                     "name":  "LibreOffice Base | Server | MariaDB Documentation",
+                                                     "snippet":  "Documentation · Developer Hub. Company. About MariaDB · Newsroom · Leadership · MariaDB Careers · Legal · Privacy Policy. © 2026 MariaDB. All ..."
+                                                 },
+                                                 {
+                                                     "url":  "https://www.youtube.com/watch?v=zZrZT4-qTzI",
+                                                     "name":  "Getting Started with LibreOffice Base for Beginners - YouTube",
+                                                     "snippet":  "... co.uk/ Courses are available through Microsoft Teams, Online and ... #LibreOfficeBase #DatabaseTutorial #OpenSourceSoftware #LibreOffice # ..."
+                                                 },
+                                                 {
+                                                     "url":  "https://www.reddit.com/r/libreoffice/comments/y0ezht/whither_libreoffice_base/",
+                                                     "name":  "Whither Libreoffice Base? - Reddit",
+                                                     "snippet":  "The whole concept of desktop databases fits oddly in the IT world as it is the domain of power users and tinkerers rather that corporate IT or ..."
+                                                 },
+                                                 {
+                                                     "url":  "https://en.wikipedia.org/wiki/LibreOffice_Base",
+                                                     "name":  "LibreOffice Base - Wikipedia",
+                                                     "snippet":  "LibreOffice Base is designed to allow users to easily create, access, modify, and view databases and their data. This is done by providing users with a graphical user interface that allows users to work with four main tools: Tables, queries, forms, and reports. Base includes software wizards ..."
+                                                 },
+                                                 {
+                                                     "url":  "https://www.g2.com/products/libreoffice-base/reviews",
+                                                     "name":  "LibreOffice Base Reviews 2026: Details, Pricing, \u0026 Features | G2",
+                                                     "snippet":  "LibreOffice Base is extremely user friendly and it allows users to easily create and manage data. The best part about the data manager is that it\u0027s free! It\u0027s ..."
+                                                 },
+                                                 {
+                                                     "url":  "https://www.reddit.com/r/libreoffice/comments/18yshp5/do_i_have_a_good_use_case_for_librebase/",
+                                                     "name":  "Do I have a good use case for LibreBase? : r/libreoffice - Reddit",
+                                                     "snippet":  "Each school has a variety of grade levels and programs (ie SPED, TK, Hospital Care, etc.) The attendance year is split into 10 or 11 \"Months\" ..."
+                                                 },
+                                                 {
+                                                     "url":  "https://de.libreoffice.org/discover/base/",
+                                                     "name":  "Base | LibreOffice - Freie Office Suite – Nachfolger von OpenOffice",
+                                                     "snippet":  "Base, database, database frontend, LibreOffice, ODF, Open Standards, SQL, ODBC."
+                                                 },
+                                                 {
+                                                     "url":  "https://www.youtube.com/watch?v=AegPtlBuiAk",
+                                                     "name":  "Starting LibreOffice Base: How Do You Build Your First Database ...",
+                                                     "snippet":  "... brand‑new LibreOffice Base database How to design tables with the right field types How to create relationships between tables How to build ..."
+                                                 }
+                                             ],
+                   "competitorGapInsights":  null,
+                   "competitivePositioning":  "No direct competitors were identified in this niche and the following establishes a first-mover position based on the brand profile. We build Librebase for developers platform teams and agent builders who require a Postgres-compatible backend with minimal memory usage. This solution delivers strong security defaults through built-in authentication rest APIs and real-time syncs without relying on fake-green SaaS dashboards.\n\nOur focus remains on honest health status indicators that reflect true infrastructure costs rather than obscured metrics common in managed backends. We prioritize open standards including MCP integration to prevent vendor lockin while maintaining high performance for regulated industries where transparency matters most. The architecture runs entirely within the Li language to ensure a small footprint and robust security out of the box without requiring external plugins or heavy overhead.\n\nLibrebase positions itself as an agent-first data layer that simplifies SQL management while eliminating hidden costs associated with proprietary client libraries. This approach empowers teams to own their infrastructure fully instead of depending on ready-made templates created by other vendors. We deliver a secure scalable and transparent foundation for the next generation of autonomous agents and collaborative workspaces without compromise. The single takeaway for how this brand positions as first mover is its commitment to honest metrics low memory usage and full control over agent data flows.",
+                   "competitorSearchQueries":  [
+                                                   "High-performance Postgres-compatible database written in Li — low memory, strong security defaults, Auth/REST/Realtime for teams and agents. postgres compatible database agentic database low memory database supabase alternative mcp database li language database row level security postgres self hosted postgres platform auth rest realtime database database for ai agents competitors for Developers, platform teams, and agent builders who need a Postgres-compatible backend with a small footprint, honest health status, and MCP/REST APIs — not fake-green SaaS dashboards.",
+                                                   "best tools for High-performance Postgres-compatible database written in Li — low memory, strong security defaults, Auth/REST/Realtime for teams and agents. postgres compatible database agentic database low memory database supabase alternative mcp database li language database row level security postgres self hosted postgres platform auth rest realtime database database for ai agents Developers, platform teams, and agent builders who need a Postgres-compatible backend with a small footprint, honest health status, and MCP/REST APIs — not fake-green SaaS dashboards.",
+                                                   "Developers, platform teams, and agent builders who need a Postgres-compatible backend with a small footprint, honest health status, and MCP/REST APIs — not fake-green SaaS dashboards. High-performance Postgres-compatible database written in Li — low memory, strong security defaults, Auth/REST/Realtime for teams and agents. postgres compatible database agentic database low memory database supabase alternative mcp database li language database row level security postgres self hosted postgres platform auth rest realtime database database for ai agents software alternatives",
+                                                   "High-performance Postgres-compatible database written in Li — low memory, strong security defaults, Auth/REST/Realtime for teams and agents. postgres compatible database agentic database low memory database supabase alternative mcp database li language database row level security postgres self hosted postgres platform auth rest realtime database database for ai agents solutions for Developers, platform teams, and agent builders who need a Postgres-compatible backend with a small footprint, honest health status, and MCP/REST APIs — not fake-green SaaS dashboards.",
+                                                   "High-performance Postgres-compatible database written in Li — low memory, strong security defaults, Auth/REST/Realtime for teams and agents. postgres compatible database agentic database low memory database supabase alternative mcp database li language database row level security postgres self hosted postgres platform auth rest realtime database database for ai agents alternatives",
+                                                   "High-performance Postgres-compatible database written in Li — low memory, strong security defaults, Auth/REST/Realtime for teams and agents. postgres compatible database agentic database low memory database supabase alternative mcp database li language database row level security postgres self hosted postgres platform auth rest realtime database database for ai agents competitors tools"
+                                               ],
+                   "competitorSearchQueryCount":  6,
+                   "positioningAgainstSimilarNames":  "There is a name in your niche that is very close or the same as your company name: LibreOffice Base. You must differentiate Librebase from LibreOffice Base to avoid confusion in search results and developer discussions. Emphasize that Librebase is an agent-first backend solution with native MCP integration rather than a desktop database frontend for spreadsheet users. Adopt a tagline like Open Backend for Agent Workflows to clarify your specific value proposition against the established office suite product. Suggested alternative names (validated by web search as relatively free): OpenBackend, AgentDB, MCPBase."
+               },
+    "error":  null,
+    "created_at":  "2026-07-29T10:48:54.094813+00:00",
+    "updated_at":  "2026-07-29T14:43:30.43+00:00"
+}

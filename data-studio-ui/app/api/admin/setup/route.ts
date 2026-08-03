@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { adminSetup, adminApiEnabled } from "@/lib/librebase-admin-client";
+import {
+  adminSetup,
+  adminApiEnabled,
+  SESSION_COOKIE,
+} from "@/lib/librebase-admin-client";
 
 export async function POST(request: Request) {
   if (!adminApiEnabled()) {
@@ -30,13 +34,20 @@ export async function POST(request: Request) {
       password: body.password,
       slug: body.slug,
     });
-    // Persist session for subsequent server calls in this process (dev).
     process.env.LIBREBASE_ADMIN_SESSION = result.token;
     process.env.LIBREBASE_ORG_ID = result.orgId;
-    return NextResponse.json(result, { status: 201 });
+    const res = NextResponse.json(result, { status: 201 });
+    res.cookies.set(SESSION_COOKIE, result.token, {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
+    });
+    return res;
   } catch (error) {
     const message = error instanceof Error ? error.message : "Setup failed";
-    const status = message.includes("409") || message.includes("already") ? 409 : 500;
+    const status =
+      message.includes("409") || message.includes("already") ? 409 : 500;
     return NextResponse.json({ error: message }, { status });
   }
 }

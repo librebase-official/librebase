@@ -56,10 +56,12 @@ def main() -> int:
         return 0
 
     results: list[Result] = run_all()
-    required_fail = [r for r in results if r.status == "fail" and r.id != "P-RT-01"]
-    soft = [r for r in results if r.id == "P-RT-01"]
+    required_fail = [r for r in results if r.status == "fail"]
+    # Any skip while Li is present is a harness bug — treat as failure.
+    unexpected_skip = [r for r in results if r.status == "skip"]
+    failed = required_fail + unexpected_skip
     payload = {
-        "status": "failed" if required_fail else "passed",
+        "status": "failed" if failed else "passed",
         "passed": sum(1 for r in results if r.status == "pass"),
         "failed": sum(1 for r in results if r.status == "fail"),
         "skipped": sum(1 for r in results if r.status == "skip"),
@@ -67,11 +69,10 @@ def main() -> int:
             {"id": r.id, "status": r.status, "detail": r.detail, "evidence": r.evidence}
             for r in results
         ],
-        "soft": [{"id": r.id, "status": r.status, "detail": r.detail} for r in soft],
     }
     _write_report(payload)
     print(json.dumps(payload, indent=2))
-    return 1 if required_fail else 0
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":
