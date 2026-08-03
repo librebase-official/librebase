@@ -21,7 +21,7 @@
 |-----|---------------|--------------------|-------|
 | **lic** | `C:\Users\Julian\Documents\Programming\li\lic-parity-w0` | `main` @ `1a466a6` | Fresh GitLab clone (replaces broken `lic` junction/worktrees). Wave 0 gate: stage0 build + `li-tests/self_host_parity/run_token_parity.sh` |
 | lidb | `C:\Users\Julian\Documents\Programming\li\lidb` | `feat/wave-2-wal-changefeed` @ `23f93ca` | Wave 2 row-shaped changefeed record (MR !3). Includes Wave 1 RLS `9aa11e7` |
-| lis | `C:\Users\Julian\Documents\Programming\li\lis` | `feat/wave-b-functions-echo` @ `723cc95` | storage/edge echo + REST PATCH; realtime notify on `feat/realtime-changefeed` @ `36eef49` (merge both) |
+| lis | `C:\Users\Julian\Documents\Programming\li\lis` | `feat/wave-4-lis-rest` @ `08ecd3e` | Wave 4 lis-rest .li + lic gate + LI_REST_REQUIRE_LI (MR !153). Python `/rest/v1` MVP until lic P0 httpd |
 | li-oauth | `C:\Users\Julian\Documents\Programming\li-oauth` | `main` @ `92501c6` | OAuth scaffold |
 | li-edge | `C:\Users\Julian\Documents\Programming\li-edge` | `main` @ `2dc7578` | Optional `LI_EDGE_ROOT` invoke |
 | li-httpd | `C:\Users\Julian\Documents\Programming\li\li-httpd` | `main` @ `3b7472e` | Compose stub: `deploy/edge/librebase.httpd.toml` |
