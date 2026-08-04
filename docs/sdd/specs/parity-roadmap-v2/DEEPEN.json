@@ -23,6 +23,7 @@
   },
   "north_star": "B_full_clone",
   "lean_ram": true,
-  "updated": "2026-08-04T07:25:00Z",
-  "note": "Phase 3: magiclink OTP, render passthrough, MCP create/delete user + migration + logs (22 tools). Remaining: real image CDN, full SigV4, Playwright, SMTP email."
+  "updated": "2026-08-04T08:25:00Z",
+  "note": "Phase 3 remainders offloaded to k8s worker librebase-parity-deepen (li-swarm). Remaining: real image CDN, full SigV4, Playwright, SMTP email.",
+  "k8s_worker": "librebase-parity-deepen"
 }
