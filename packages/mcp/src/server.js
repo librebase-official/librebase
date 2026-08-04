@@ -393,6 +393,60 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         isError: !r.ok || r.status === 0,
       };
     }
+    if (name === "create_auth_user") {
+      const r = await projectFetch("/auth/v1/admin/users", {
+        apiBase: args.apiBase,
+        bearer: args.bearer,
+        method: "POST",
+        body: { email: args.email, password: args.password },
+      });
+      return {
+        content: [{ type: "text", text: JSON.stringify(r, null, 2) }],
+        isError: !r.ok || r.status === 0,
+      };
+    }
+    if (name === "delete_auth_user") {
+      const r = await projectFetch(`/auth/v1/admin/users/${encodeURIComponent(args.userId)}`, {
+        apiBase: args.apiBase,
+        bearer: args.bearer,
+        method: "DELETE",
+      });
+      return {
+        content: [{ type: "text", text: JSON.stringify(r, null, 2) }],
+        isError: !r.ok || r.status === 0,
+      };
+    }
+    if (name === "apply_migration") {
+      let out = await projectFetch("/v1/sql", {
+        apiBase: args.apiBase,
+        bearer: args.bearer,
+        method: "POST",
+        body: { sql: args.sql, name: args.name },
+      });
+      if (out.status === 404 || out.status === 0) {
+        out = await projectFetch("/rest/v1/rpc/exec", {
+          apiBase: args.apiBase,
+          bearer: args.bearer,
+          method: "POST",
+          body: { sql: args.sql },
+        });
+      }
+      return {
+        content: [{ type: "text", text: JSON.stringify(out, null, 2) }],
+        isError: !out.ok || out.status === 0,
+      };
+    }
+    if (name === "get_logs") {
+      const limit = args.limit ?? 50;
+      const r = await projectFetch(`/logs?limit=${limit}`, {
+        apiBase: args.apiBase,
+        bearer: args.bearer,
+      });
+      return {
+        content: [{ type: "text", text: JSON.stringify(r, null, 2) }],
+        isError: r.status === 0,
+      };
+    }
     return {
       content: [{ type: "text", text: `Unknown tool: ${name}` }],
       isError: true,

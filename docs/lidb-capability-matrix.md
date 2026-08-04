@@ -13,7 +13,8 @@
 | 3 | RLS + JWT | Postgres RLS + GoTrue | **lidb** + **lis** auth | 🚧 | JWT + lis Python RLS (Wave A). **Engine eval** landed lidb `9aa11e7` (`set_claims` session); lis `LI_RLS_ENGINE=1` wire follow-up |
 | 4 | WAL / durability | Postgres WAL | **lidb** | ✅ | WalReader + empty-`catalog.heap` crash-replay smoke (`test_wal_crash_replay_restores_insert`). UPDATE/DELETE WAL still stub; append follows catalog persist |
 | 5 | Realtime fanout | Realtime | **lis** `routes/realtime` | 🚧 | Phoenix join ✅. lidb changefeed now emits row `record` @ `23f93ca`; lis native poll still falls back when only `payload_bytes` historically — re-pin + live P-RT-02 follow-up |
-| 6 | Object Storage | Storage | **lis** `routes/storage` + `packages/lis-storage` | ✅ | Buckets + HMAC + SigV4-shaped + **TUS stub** (`/upload/resumable`). Multipart, `public_read`. ❌ image CDN / full AWS SigV4 |
+| 6 | Object Storage | Storage | **lis** `routes/storage` | ✅ | Buckets + HMAC + SigV4-shaped + TUS stub + **render passthrough** (`/render/image`, no real CDN resize) |
+| 12 | Auth (email/OAuth) | GoTrue | **lis** + **li-oauth** | 🚧 | Password + refresh + OAuth + MFA + admin + **magiclink OTP** (`LI_OTP_MOCK`). No SMTP / phone yet |
 | 7 | Edge Functions | Edge Functions | **lis** + **li-edge** | ✅ | Wave 7: `scripts/invoke.py` (`runtime: li-edge`) @ `708a6fa` / lis `41bfc69`. Echo only with `LI_FUNCTIONS_ECHO=1`. Not Deno/WASM |
 | 8 | Connection pooler | Supavisor | **lis** in-process | ❌ | **Wave 8 settled:** OOS for v1 — in-process embed; no `li-pool` |
 | 9 | Migrations | CLI / Studio | **lidb** + `lis db migrate` | ✅ | Allowlisted CREATE TABLE + single-col INDEX; POLICY/UNIQUE/multi-col → Wave 3 |

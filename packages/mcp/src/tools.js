@@ -193,6 +193,59 @@ export const tools = [
       },
     },
   },
+  {
+    name: "create_auth_user",
+    description: "POST /auth/v1/admin/users (service_role)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        apiBase: { type: "string" },
+        bearer: { type: "string" },
+        email: { type: "string" },
+        password: { type: "string" },
+      },
+      required: ["email", "password"],
+    },
+  },
+  {
+    name: "delete_auth_user",
+    description: "DELETE /auth/v1/admin/users/{id} (service_role)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        apiBase: { type: "string" },
+        bearer: { type: "string" },
+        userId: { type: "string" },
+      },
+      required: ["userId"],
+    },
+  },
+  {
+    name: "apply_migration",
+    description: "POST SQL migration via /v1/sql or rpc/exec (fail closed)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        apiBase: { type: "string" },
+        bearer: { type: "string" },
+        sql: { type: "string" },
+        name: { type: "string" },
+      },
+      required: ["sql"],
+    },
+  },
+  {
+    name: "get_logs",
+    description: "GET project logs if /logs or Studio logs URL configured",
+    inputSchema: {
+      type: "object",
+      properties: {
+        apiBase: { type: "string" },
+        bearer: { type: "string" },
+        limit: { type: "number" },
+      },
+    },
+  },
 ];
 
 export const TOOL_NAMES = tools.map((t) => t.name);

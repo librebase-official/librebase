@@ -1,6 +1,6 @@
 {
-  "status": "done",
-  "phase": 2,
+  "status": "in_progress",
+  "phase": 3,
   "slices": {
     "auth_refresh": "done",
     "auth_oauth_github": "done",
@@ -16,10 +16,13 @@
     "mcp_full_supabase": "partial",
     "auth_admin_api": "done",
     "storage_tus": "done_stub",
-    "cdn_image": "done_oos"
+    "cdn_image": "passthrough_stub",
+    "auth_magiclink": "done",
+    "storage_render_passthrough": "done",
+    "mcp_phase3": "done"
   },
   "north_star": "B_full_clone",
   "lean_ram": true,
-  "updated": "2026-08-04T07:15:00Z",
-  "note": "Phase 1+2 deepen gate closed (lean). Shipped: refresh, OAuth, buckets, MFA, admin users, SigV4-shaped, TUS stub, MCP tools. Deferred/OOS: browser Playwright, full AWS SigV4, image CDN, full Supabase MCP set. Re-open DEEPEN to continue B."
+  "updated": "2026-08-04T07:25:00Z",
+  "note": "Phase 3: magiclink OTP, render passthrough, MCP create/delete user + migration + logs (22 tools). Remaining: real image CDN, full SigV4, Playwright, SMTP email."
 }
