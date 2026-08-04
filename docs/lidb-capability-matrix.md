@@ -19,7 +19,7 @@
 | 9 | Migrations | CLI / Studio | **lidb** + `lis db migrate` | ✅ | Allowlisted CREATE TABLE + single-col INDEX; POLICY/UNIQUE/multi-col → Wave 3 |
 | 10 | Backup / restore | Backup | **lis** `db backup` + export | ✅ | Multi-table SQL/COPY allowlist. Not PITR |
 | 11 | PITR / branching | Branching | **lidb** | ❌ | **Wave 9 settled:** OOS for v1 / paid Cloud later |
-| 12 | Auth (email/OAuth) | GoTrue | **lis** + **li-oauth** | 🚧 | Password + refresh rotate + **GitHub OAuth** (`LI_OAUTH_ENABLED`, PKCE; `LI_OAUTH_MOCK` for tests). MFA / admin / more providers still deepen-to-B |
+| 12 | Auth (email/OAuth) | GoTrue | **lis** + **li-oauth** | 🚧 | Password + refresh + GitHub OAuth + **TOTP MFA** + **admin users** (`/auth/v1/admin/users`, service_role). Hooks / phone / magic-link still deepen-to-B |
 | 13 | Logs | Logflare | **li-log** + Studio | ✅ | Studio `/logs` JSONL tail |
 | 14 | Analytics | Analytics | future | ❌ | Out of scope for v1 |
 | 15 | API gateway | Kong | **li-httpd** + **lis** | ✅ | Compose stub + smoke |

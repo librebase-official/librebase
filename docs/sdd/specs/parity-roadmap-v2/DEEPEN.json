@@ -14,12 +14,12 @@
     "mfa_totp": "done",
     "storage_sigv4": "done_shaped_mvp",
     "mcp_full_supabase": "partial",
-    "auth_admin_api": "pending",
+    "auth_admin_api": "done",
     "storage_tus": "pending",
     "cdn_image": "pending"
   },
   "north_star": "B_full_clone",
   "lean_ram": true,
-  "updated": "2026-08-04T07:05:00Z",
-  "note": "SigV4-shaped query signing MVP + MCP edge/mfa tools. Remaining B: GoTrue admin, TUS, CDN/image, full MCP set."
+  "updated": "2026-08-04T07:10:00Z",
+  "note": "GoTrue admin users MVP (service_role). Next: TUS stub or CDN/image OOS honesty + status=done for Phase 2 gate."
 }

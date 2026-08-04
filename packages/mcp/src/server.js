@@ -379,6 +379,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         isError: !r.ok || r.status === 0,
       };
     }
+    if (name === "list_auth_users") {
+      const q = new URLSearchParams();
+      if (args.page != null) q.set("page", String(args.page));
+      if (args.perPage != null) q.set("per_page", String(args.perPage));
+      const qs = q.toString();
+      const r = await projectFetch(`/auth/v1/admin/users${qs ? `?${qs}` : ""}`, {
+        apiBase: args.apiBase,
+        bearer: args.bearer,
+      });
+      return {
+        content: [{ type: "text", text: JSON.stringify(r, null, 2) }],
+        isError: !r.ok || r.status === 0,
+      };
+    }
     return {
       content: [{ type: "text", text: `Unknown tool: ${name}` }],
       isError: true,

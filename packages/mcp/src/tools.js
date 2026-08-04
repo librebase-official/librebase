@@ -180,6 +180,19 @@ export const tools = [
       },
     },
   },
+  {
+    name: "list_auth_users",
+    description: "GET /auth/v1/admin/users (requires service_role bearer)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        apiBase: { type: "string" },
+        bearer: { type: "string" },
+        page: { type: "number" },
+        perPage: { type: "number" },
+      },
+    },
+  },
 ];
 
 export const TOOL_NAMES = tools.map((t) => t.name);

@@ -14,6 +14,7 @@ assert.ok(TOOL_NAMES.includes("list_tables"), "list_tables missing");
 assert.ok(TOOL_NAMES.includes("list_storage_buckets"), "list_storage_buckets missing");
 assert.ok(TOOL_NAMES.includes("list_edge_functions"), "list_edge_functions missing");
 assert.ok(TOOL_NAMES.includes("get_auth_mfa_status"), "get_auth_mfa_status missing");
+assert.ok(TOOL_NAMES.includes("list_auth_users"), "list_auth_users missing");
 
 for (const t of tools) {
   assert.equal(typeof t.name, "string");
