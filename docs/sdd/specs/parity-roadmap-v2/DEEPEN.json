@@ -6,12 +6,12 @@
     "auth_oauth_github": "pending",
     "storage_buckets": "done",
     "mcp_sql": "done",
-    "sdk_thin": "pending",
+    "sdk_thin": "done",
     "parity_contracts": "done",
-    "e2e": "pending"
+    "e2e": "done_lean"
   },
   "north_star": "B_full_clone",
   "lean_ram": true,
-  "updated": "2026-08-04T06:30:00Z",
-  "note": "Phase 1: refresh rotate + bucket CRUD + MCP SQL tools; next OAuth GitHub + SDK + E2E"
+  "updated": "2026-08-04T06:45:00Z",
+  "note": "Lean E2E scripts/e2e_deepen_phase1.py green. Next: GitHub OAuth wire + Playwright browser E2E; then deepen toward B"
 }
