@@ -246,6 +246,49 @@ export const tools = [
       },
     },
   },
+  {
+    name: "sign_storage_url",
+    description: "POST /storage/v1/object/sign/{bucket}/{path} (HMAC or sigv4 query)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        apiBase: { type: "string" },
+        bearer: { type: "string" },
+        bucket: { type: "string" },
+        path: { type: "string" },
+        expiresIn: { type: "number" },
+        sigv4: { type: "boolean" },
+      },
+      required: ["bucket", "path"],
+    },
+  },
+  {
+    name: "auth_otp",
+    description: "POST /auth/v1/otp magiclink (LI_SMTP_MOCK / LI_OTP_MOCK for tests)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        apiBase: { type: "string" },
+        email: { type: "string" },
+        type: { type: "string" },
+      },
+      required: ["email"],
+    },
+  },
+  {
+    name: "get_project_url",
+    description: "Return configured project API base (LIBREBASE_PARITY_API / override)",
+    inputSchema: {
+      type: "object",
+      properties: { apiBase: { type: "string" } },
+    },
+  },
+  {
+    name: "get_publishable_keys",
+    description: "Return anon/publishable keys from env (honest stub — fail closed if unset)",
+    inputSchema: { type: "object", properties: {} },
+  },
 ];
+
 
 export const TOOL_NAMES = tools.map((t) => t.name);

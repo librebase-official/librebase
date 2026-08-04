@@ -18,6 +18,10 @@ assert.ok(TOOL_NAMES.includes("list_auth_users"), "list_auth_users missing");
 assert.ok(TOOL_NAMES.includes("create_auth_user"), "create_auth_user missing");
 assert.ok(TOOL_NAMES.includes("apply_migration"), "apply_migration missing");
 assert.ok(TOOL_NAMES.includes("get_logs"), "get_logs missing");
+assert.ok(TOOL_NAMES.includes("sign_storage_url"), "sign_storage_url missing");
+assert.ok(TOOL_NAMES.includes("auth_otp"), "auth_otp missing");
+assert.ok(TOOL_NAMES.includes("get_project_url"), "get_project_url missing");
+assert.ok(TOOL_NAMES.includes("get_publishable_keys"), "get_publishable_keys missing");
 
 for (const t of tools) {
   assert.equal(typeof t.name, "string");

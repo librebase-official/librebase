@@ -447,6 +447,80 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         isError: r.status === 0,
       };
     }
+    if (name === "sign_storage_url") {
+      const bucket = encodeURIComponent(String(args.bucket));
+      const objectPath = String(args.path || "").replace(/^\/+/, "");
+      const r = await projectFetch(`/storage/v1/object/sign/${bucket}/${objectPath}`, {
+        apiBase: args.apiBase,
+        bearer: args.bearer,
+        method: "POST",
+        body: {
+          expiresIn: args.expiresIn ?? 60,
+          sigv4: Boolean(args.sigv4),
+        },
+      });
+      return {
+        content: [{ type: "text", text: JSON.stringify(r, null, 2) }],
+        isError: !r.ok || r.status === 0,
+      };
+    }
+    if (name === "auth_otp") {
+      const r = await projectFetch("/auth/v1/otp", {
+        apiBase: args.apiBase,
+        bearer: args.bearer,
+        method: "POST",
+        body: { email: args.email, type: args.type || "magiclink" },
+      });
+      return {
+        content: [{ type: "text", text: JSON.stringify(r, null, 2) }],
+        isError: !r.ok || r.status === 0,
+      };
+    }
+    if (name === "get_project_url") {
+      const base = projectApiBase(args.apiBase);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              { ok: true, project_url: base, honesty: "from env / override — not Supabase management API" },
+              null,
+              2,
+            ),
+          },
+        ],
+      };
+    }
+    if (name === "get_publishable_keys") {
+      const anon =
+        process.env.LIBREBASE_ANON_KEY ||
+        process.env.LI_ANON_KEY ||
+        process.env.SUPABASE_ANON_KEY ||
+        "";
+      if (!anon) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                ok: false,
+                error: "publishable_keys_unset",
+                honesty: "Set LIBREBASE_ANON_KEY — fail closed (no invented keys)",
+              }),
+            },
+          ],
+          isError: true,
+        };
+      }
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({ ok: true, anon_key: anon, publishable: [anon] }, null, 2),
+          },
+        ],
+      };
+    }
     return {
       content: [{ type: "text", text: `Unknown tool: ${name}` }],
       isError: true,
