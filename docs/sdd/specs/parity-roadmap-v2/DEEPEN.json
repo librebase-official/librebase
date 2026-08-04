@@ -1,0 +1,17 @@
+{
+  "status": "in_progress",
+  "phase": 1,
+  "slices": {
+    "auth_refresh": "done",
+    "auth_oauth_github": "pending",
+    "storage_buckets": "done",
+    "mcp_sql": "done",
+    "sdk_thin": "pending",
+    "parity_contracts": "done",
+    "e2e": "pending"
+  },
+  "north_star": "B_full_clone",
+  "lean_ram": true,
+  "updated": "2026-08-04T06:30:00Z",
+  "note": "Phase 1: refresh rotate + bucket CRUD + MCP SQL tools; next OAuth GitHub + SDK + E2E"
+}

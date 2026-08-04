@@ -9,6 +9,9 @@ assert.ok(Array.isArray(tools) && tools.length > 0);
 assert.ok(TOOL_NAMES.includes("parity_run"), "parity_run missing");
 assert.ok(TOOL_NAMES.includes("matrix_status"), "matrix_status missing");
 assert.ok(TOOL_NAMES.includes("admin_health"), "admin_health missing");
+assert.ok(TOOL_NAMES.includes("execute_sql"), "execute_sql missing");
+assert.ok(TOOL_NAMES.includes("list_tables"), "list_tables missing");
+assert.ok(TOOL_NAMES.includes("list_storage_buckets"), "list_storage_buckets missing");
 
 for (const t of tools) {
   assert.equal(typeof t.name, "string");

@@ -32,6 +32,46 @@ const ADMIN_URL = (
   process.env.LIBREBASE_ADMIN_URL ?? "http://127.0.0.1:54330"
 ).replace(/\/$/, "");
 
+function projectApiBase(override) {
+  return (
+    override ||
+    process.env.LIBREBASE_PARITY_API ||
+    process.env.LIBREBASE_PROJECT_API ||
+    "http://127.0.0.1:54321"
+  ).replace(/\/$/, "");
+}
+
+async function projectFetch(pathname, { apiBase, bearer, method = "GET", body } = {}) {
+  const base = projectApiBase(apiBase);
+  const headers = { "Content-Type": "application/json" };
+  const token =
+    bearer ||
+    process.env.LIBREBASE_PROJECT_SESSION ||
+    process.env.LIBREBASE_ADMIN_SESSION;
+  if (token) headers.Authorization = `Bearer ${token}`;
+  let res;
+  try {
+    res = await fetch(`${base}${pathname}`, {
+      method,
+      headers,
+      body: body != null ? JSON.stringify(body) : undefined,
+    });
+  } catch (e) {
+    return {
+      ok: false,
+      status: 0,
+      body: { error: "unreachable", message: e instanceof Error ? e.message : String(e) },
+    };
+  }
+  const text = await res.text();
+  let json;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    json = { raw: text };
+  }
+  return { ok: res.ok, status: res.status, body: json, apiBase: base };
+}
 function sessionHeaders() {
   const token =
     process.env.LIBREBASE_ADMIN_SESSION ?? process.env.LIBREBASE_ORG_SESSION;
@@ -250,6 +290,73 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             ),
           },
         ],
+      };
+    }
+    if (name === "execute_sql") {
+      const r = await projectFetch("/rest/v1/rpc/exec", {
+        apiBase: args.apiBase,
+        bearer: args.bearer,
+        method: "POST",
+        body: { sql: args.sql },
+      });
+      // Prefer PostgREST-shaped; if 404 try thin /v1/sql
+      let out = r;
+      if (r.status === 404 || r.status === 0) {
+        out = await projectFetch("/v1/sql", {
+          apiBase: args.apiBase,
+          bearer: args.bearer,
+          method: "POST",
+          body: { sql: args.sql },
+        });
+      }
+      return {
+        content: [{ type: "text", text: JSON.stringify(out, null, 2) }],
+        isError: !out.ok || out.status === 0,
+      };
+    }
+    if (name === "list_tables") {
+      const schema = args.schema || "public";
+      const r = await projectFetch(
+        `/rest/v1/?select=*&limit=0`,
+        { apiBase: args.apiBase, bearer: args.bearer },
+      );
+      // Honest: if OpenAPI root unavailable, return fail-closed probe
+      if (!r.ok || r.status === 0) {
+        const probe = await projectFetch(`/storage/v1`, {
+          apiBase: args.apiBase,
+          bearer: args.bearer,
+        });
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  ok: false,
+                  schema,
+                  error: "list_tables_unavailable",
+                  rest: r,
+                  storage_probe: probe,
+                  honesty: "Wire OpenAPI / information_schema when REST exposes it",
+                },
+                null,
+                2,
+              ),
+            },
+          ],
+          isError: true,
+        };
+      }
+      return { content: [{ type: "text", text: JSON.stringify(r, null, 2) }] };
+    }
+    if (name === "list_storage_buckets") {
+      const r = await projectFetch("/storage/v1/bucket", {
+        apiBase: args.apiBase,
+        bearer: args.bearer,
+      });
+      return {
+        content: [{ type: "text", text: JSON.stringify(r, null, 2) }],
+        isError: !r.ok || r.status === 0,
       };
     }
     return {

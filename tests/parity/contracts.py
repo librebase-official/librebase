@@ -139,6 +139,76 @@ def p_sto_01() -> Result:
     return Result("P-STO-01", "pass", "PUT+list OK", {"list": body_g})
 
 
+def p_auth_03() -> Result:
+    """Refresh token grant rotates and yields usable session — deepen Phase 1."""
+    email = os.environ.get("PARITY_EMAIL_REFRESH", "parity-refresh@example.com")
+    password = os.environ.get("PARITY_PASSWORD", "parity-secret-change-me")
+    status, body = _http("POST", "/v1/auth/signup", body={"email": email, "password": password})
+    if status not in (200, 201, 409):
+        return Result("P-AUTH-03", "fail", f"signup status={status}", {"body": body})
+    status, login = _http("POST", "/v1/auth/login", body={"email": email, "password": password})
+    if status != 200 or not isinstance(login, dict) or not login.get("refresh_token"):
+        return Result("P-AUTH-03", "fail", f"login missing refresh status={status}", {"body": login})
+    old = login["refresh_token"]
+    status2, refreshed = _http(
+        "POST",
+        "/auth/v1/token?grant_type=refresh_token",
+        body={"refresh_token": old},
+    )
+    if status2 != 200 or not isinstance(refreshed, dict) or not refreshed.get("access_token"):
+        return Result("P-AUTH-03", "fail", f"refresh status={status2}", {"body": refreshed})
+    if refreshed.get("refresh_token") == old:
+        return Result("P-AUTH-03", "fail", "refresh_token not rotated", {"body": refreshed})
+    status3, who = _http(
+        "GET",
+        "/auth/v1/user",
+        headers={"Authorization": f"Bearer {refreshed['access_token']}"},
+    )
+    if status3 != 200:
+        return Result("P-AUTH-03", "fail", f"user after refresh status={status3}", {"body": who})
+    status4, again = _http(
+        "POST",
+        "/auth/v1/token?grant_type=refresh_token",
+        body={"refresh_token": old},
+    )
+    if status4 != 401:
+        return Result("P-AUTH-03", "fail", f"old refresh should 401 got {status4}", {"body": again})
+    return Result("P-AUTH-03", "pass", "refresh rotate + revoke OK")
+
+
+def p_sto_02() -> Result:
+    """Bucket create + list — deepen Phase 1."""
+    email = os.environ.get("PARITY_EMAIL", "parity-user@example.com")
+    password = os.environ.get("PARITY_PASSWORD", "parity-secret-change-me")
+    _http("POST", "/v1/auth/signup", body={"email": email, "password": password})
+    status_l, login = _http("POST", "/v1/auth/login", body={"email": email, "password": password})
+    token = None
+    if isinstance(login, dict):
+        token = login.get("access_token") or login.get("token")
+    if status_l != 200 or not token:
+        return Result("P-STO-02", "fail", "need auth for buckets", {"login": login})
+    name = os.environ.get("PARITY_BUCKET", "parity-bucket")
+    status, body = _http(
+        "POST",
+        "/storage/v1/bucket",
+        body={"name": name, "public": False},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    if status not in (200, 409):
+        return Result("P-STO-02", "fail", f"create bucket status={status}", {"body": body})
+    status2, listed = _http(
+        "GET",
+        "/storage/v1/bucket",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    if status2 != 200 or not isinstance(listed, dict):
+        return Result("P-STO-02", "fail", f"list buckets status={status2}", {"body": listed})
+    names = [b.get("name") for b in (listed.get("buckets") or [])]
+    if name not in names:
+        return Result("P-STO-02", "fail", "created bucket missing from list", {"listed": listed})
+    return Result("P-STO-02", "pass", "bucket create+list OK", {"buckets": names})
+
+
 def p_fn_01() -> Result:
     """Edge invoke returns runtime li-edge (not echo) — Wave 7."""
     status, body = _http(
@@ -417,7 +487,19 @@ def p_rt_01() -> Result:
     return asyncio.run(_probe())
 
 
-CONTRACTS = [p_sql_01, p_rest_01, p_auth_01, p_auth_02, p_sto_01, p_fn_01, p_rls_01, p_io_01, p_rt_01]
+CONTRACTS = [
+    p_sql_01,
+    p_rest_01,
+    p_auth_01,
+    p_auth_02,
+    p_auth_03,
+    p_sto_01,
+    p_sto_02,
+    p_fn_01,
+    p_rls_01,
+    p_io_01,
+    p_rt_01,
+]
 
 
 def run_all() -> list[Result]:

@@ -121,6 +121,43 @@ export const tools = [
     description: "Summarize capability matrix + last parity harness report",
     inputSchema: { type: "object", properties: {} },
   },
+  {
+    name: "execute_sql",
+    description:
+      "POST SQL to project API /rest/v1/rpc/exec or LIBREBASE_SQL_URL; fail closed if unreachable",
+    inputSchema: {
+      type: "object",
+      properties: {
+        sql: { type: "string" },
+        apiBase: { type: "string", description: "Override LIBREBASE_PARITY_API / project API" },
+        bearer: { type: "string" },
+      },
+      required: ["sql"],
+    },
+  },
+  {
+    name: "list_tables",
+    description: "List tables via GET /rest/v1/ (or information_schema probe)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        apiBase: { type: "string" },
+        bearer: { type: "string" },
+        schema: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "list_storage_buckets",
+    description: "GET /storage/v1/bucket on project API",
+    inputSchema: {
+      type: "object",
+      properties: {
+        apiBase: { type: "string" },
+        bearer: { type: "string" },
+      },
+    },
+  },
 ];
 
 export const TOOL_NAMES = tools.map((t) => t.name);

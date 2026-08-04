@@ -13,13 +13,13 @@
 | 3 | RLS + JWT | Postgres RLS + GoTrue | **lidb** + **lis** auth | 🚧 | JWT + lis Python RLS (Wave A). **Engine eval** landed lidb `9aa11e7` (`set_claims` session); lis `LI_RLS_ENGINE=1` wire follow-up |
 | 4 | WAL / durability | Postgres WAL | **lidb** | ✅ | WalReader + empty-`catalog.heap` crash-replay smoke (`test_wal_crash_replay_restores_insert`). UPDATE/DELETE WAL still stub; append follows catalog persist |
 | 5 | Realtime fanout | Realtime | **lis** `routes/realtime` | 🚧 | Phoenix join ✅. lidb changefeed now emits row `record` @ `23f93ca`; lis native poll still falls back when only `payload_bytes` historically — re-pin + live P-RT-02 follow-up |
-| 6 | Object Storage | Storage | **lis** `routes/storage` + `packages/lis-storage` | ✅ | S3-shaped MVP @ `9cf6019`: list, multipart, HMAC signed GET, `public_read` policy + PUT/GET/DELETE. Not AWS SigV4 / full S3 / CDN |
+| 6 | Object Storage | Storage | **lis** `routes/storage` + `packages/lis-storage` | ✅ | S3-shaped + **bucket CRUD** (list/create/delete, force). HMAC signed GET, multipart, `public_read`. Not AWS SigV4 / TUS / CDN |
 | 7 | Edge Functions | Edge Functions | **lis** + **li-edge** | ✅ | Wave 7: `scripts/invoke.py` (`runtime: li-edge`) @ `708a6fa` / lis `41bfc69`. Echo only with `LI_FUNCTIONS_ECHO=1`. Not Deno/WASM |
 | 8 | Connection pooler | Supavisor | **lis** in-process | ❌ | **Wave 8 settled:** OOS for v1 — in-process embed; no `li-pool` |
 | 9 | Migrations | CLI / Studio | **lidb** + `lis db migrate` | ✅ | Allowlisted CREATE TABLE + single-col INDEX; POLICY/UNIQUE/multi-col → Wave 3 |
 | 10 | Backup / restore | Backup | **lis** `db backup` + export | ✅ | Multi-table SQL/COPY allowlist. Not PITR |
 | 11 | PITR / branching | Branching | **lidb** | ❌ | **Wave 9 settled:** OOS for v1 / paid Cloud later |
-| 12 | Auth (email/OAuth) | GoTrue | **lis** + **li-oauth** | ✅ | `/v1/auth` (P-AUTH-01) + GoTrue `/auth/v1` alias (P-AUTH-02) @ `4f6b7c0`. OAuth provider HTTP depth still scaffold (li-oauth lic gate) |
+| 12 | Auth (email/OAuth) | GoTrue | **lis** + **li-oauth** | 🚧 | `/v1/auth` + `/auth/v1` + **refresh_token** rotate (P-AUTH-03). OAuth providers / MFA / admin still deepen-to-B |
 | 13 | Logs | Logflare | **li-log** + Studio | ✅ | Studio `/logs` JSONL tail |
 | 14 | Analytics | Analytics | future | ❌ | Out of scope for v1 |
 | 15 | API gateway | Kong | **li-httpd** + **lis** | ✅ | Compose stub + smoke |
@@ -33,7 +33,7 @@
 | Operator admin UI | **Librebase Admin** (Studio) | ✅ | `/setup`, `/login`, `/admin` members |
 | Operator admin API | `admin-api/` in librebase | ✅ | Bearer + entitlements (Wave 10 gates on create/launch) |
 | Installable CLI | `librebase` lip + `@librebase/cli` npm | ✅ | smoke |
-| Agent control | Librebase MCP | ✅ | `parity_run` + `matrix_status` |
+| Agent control | Librebase MCP | 🚧 | Admin/parity + `execute_sql` / `list_tables` / `list_storage_buckets` (fail closed). Not full Supabase MCP set |
 
 ## Honest bottom line
 
