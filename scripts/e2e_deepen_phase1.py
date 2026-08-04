@@ -21,6 +21,8 @@ sys.path.insert(0, str(_LIS))
 os.environ.setdefault("LI_JWT_SECRET", "e2e-deepen-secret")
 os.environ.setdefault("LI_REGISTRY_MOCK", "1")
 os.environ.setdefault("LI_AUTH_BACKEND", "mock")
+os.environ["LI_OAUTH_ENABLED"] = "1"
+os.environ["LI_OAUTH_MOCK"] = "1"
 
 
 def main() -> int:
@@ -28,11 +30,13 @@ def main() -> int:
     os.environ["LI_DATA_DIR"] = tmp
     os.environ["LI_STORAGE_DIR"] = str(Path(tmp) / "storage")
 
+    from routes.auth.oauth import reset_oauth_store
     from routes.auth.store import reset_auth_store
     from routes.registry.handlers import handle_request
     from routes.storage.handlers import reset_storage_for_tests
 
     reset_auth_store()
+    reset_oauth_store(tmp)
     reset_storage_for_tests(Path(tmp) / "storage")
 
     def call(method: str, path: str, *, body: dict | bytes | None = None, token: str | None = None):
@@ -102,6 +106,24 @@ def main() -> int:
     assert st == 200, listed
     names = [b["name"] for b in listed["buckets"]]
     assert "e2e-media" in names
+
+    # GitHub OAuth (mock)
+    status, _, payload = handle_request(
+        "GET",
+        "/auth/v1/authorize?provider=github&format=json",
+        headers={"Accept": "application/json"},
+    )
+    start = json.loads(payload.decode())
+    assert status == 200, start
+    state = start["state"]
+    status, _, payload = handle_request(
+        "GET",
+        f"/auth/v1/callback?provider=github&code=mock_e2e-oauth@librebase.test&state={state}",
+    )
+    oauth_sess = json.loads(payload.decode())
+    assert status == 200, oauth_sess
+    assert oauth_sess.get("access_token")
+    assert oauth_sess.get("provider") == "github"
 
     print("e2e deepen: ok")
     return 0

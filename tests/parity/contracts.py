@@ -176,6 +176,38 @@ def p_auth_03() -> Result:
     return Result("P-AUTH-03", "pass", "refresh rotate + revoke OK")
 
 
+def p_auth_04() -> Result:
+    """GitHub OAuth mock authorize→callback session — deepen Phase 1."""
+    if os.environ.get("PARITY_OAUTH", "").strip().lower() not in ("1", "true", "yes"):
+        return Result("P-AUTH-04", "skip", "set PARITY_OAUTH=1 (+ LI_OAUTH_*) to exercise")
+    status, start = _http(
+        "GET",
+        "/auth/v1/authorize?provider=github&format=json",
+        headers={"Accept": "application/json"},
+    )
+    if status == 0:
+        return Result("P-AUTH-04", "fail", "API unreachable", {"body": start})
+    if status == 501:
+        return Result("P-AUTH-04", "fail", "oauth not enabled on API", {"body": start})
+    if status != 200 or not isinstance(start, dict) or not start.get("state"):
+        return Result("P-AUTH-04", "fail", f"authorize status={status}", {"body": start})
+    if os.environ.get("LI_OAUTH_MOCK", "").strip().lower() not in ("1", "true", "yes"):
+        return Result(
+            "P-AUTH-04",
+            "pass",
+            "authorize URL minted (live GitHub — callback not exercised without secrets)",
+            {"url_prefix": str(start.get("url", ""))[:48]},
+        )
+    state = start["state"]
+    status2, session = _http(
+        "GET",
+        f"/auth/v1/callback?provider=github&code=mock_parity-oauth@example.com&state={state}",
+    )
+    if status2 != 200 or not isinstance(session, dict) or not session.get("access_token"):
+        return Result("P-AUTH-04", "fail", f"callback status={status2}", {"body": session})
+    return Result("P-AUTH-04", "pass", "mock OAuth session OK", {"provider": session.get("provider")})
+
+
 def p_sto_02() -> Result:
     """Bucket create + list — deepen Phase 1."""
     email = os.environ.get("PARITY_EMAIL", "parity-user@example.com")
@@ -493,6 +525,7 @@ CONTRACTS = [
     p_auth_01,
     p_auth_02,
     p_auth_03,
+    p_auth_04,
     p_sto_01,
     p_sto_02,
     p_fn_01,

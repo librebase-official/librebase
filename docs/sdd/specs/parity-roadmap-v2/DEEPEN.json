@@ -1,6 +1,6 @@
 {
   "status": "in_progress",
-  "phase": 1,
+  "phase": 2,
   "slices": {
     "auth_refresh": "done",
     "auth_oauth_github": "done",
@@ -8,10 +8,15 @@
     "mcp_sql": "done",
     "sdk_thin": "done",
     "parity_contracts": "done",
-    "e2e": "done_lean"
+    "e2e": "done_lean",
+    "e2e_oauth": "done",
+    "playwright_browser": "deferred_lean",
+    "mfa_totp": "done",
+    "storage_sigv4": "pending",
+    "mcp_full_supabase": "pending"
   },
   "north_star": "B_full_clone",
   "lean_ram": true,
-  "updated": "2026-08-04T06:50:00Z",
-  "note": "Phase 1 thin slices complete (OAuth mock+live path). Next toward B: Playwright E2E, MFA/admin, SigV4/TUS, full MCP set — then status=done when Phase 1 accepted or continue B"
+  "updated": "2026-08-04T07:00:00Z",
+  "note": "Phase 2: lean TOTP MFA enroll/verify done. Next: SigV4-shaped signing MVP or expand MCP tools."
 }
