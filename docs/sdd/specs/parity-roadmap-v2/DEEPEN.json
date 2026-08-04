@@ -3,7 +3,7 @@
   "phase": 1,
   "slices": {
     "auth_refresh": "done",
-    "auth_oauth_github": "pending",
+    "auth_oauth_github": "done",
     "storage_buckets": "done",
     "mcp_sql": "done",
     "sdk_thin": "done",
@@ -12,6 +12,6 @@
   },
   "north_star": "B_full_clone",
   "lean_ram": true,
-  "updated": "2026-08-04T06:45:00Z",
-  "note": "Lean E2E scripts/e2e_deepen_phase1.py green. Next: GitHub OAuth wire + Playwright browser E2E; then deepen toward B"
+  "updated": "2026-08-04T06:50:00Z",
+  "note": "Phase 1 thin slices complete (OAuth mock+live path). Next toward B: Playwright E2E, MFA/admin, SigV4/TUS, full MCP set — then status=done when Phase 1 accepted or continue B"
 }
