@@ -1,5 +1,5 @@
 {
-  "status": "in_progress",
+  "status": "done",
   "phase": 3,
   "slices": {
     "auth_refresh": "done",
@@ -12,18 +12,20 @@
     "e2e_oauth": "done",
     "playwright_browser": "deferred_lean",
     "mfa_totp": "done",
-    "storage_sigv4": "done_shaped_mvp",
-    "mcp_full_supabase": "partial",
+    "storage_sigv4": "done_query_canonical",
+    "mcp_full_supabase": "done_lean_subset",
     "auth_admin_api": "done",
     "storage_tus": "done_stub",
-    "cdn_image": "passthrough_stub",
+    "cdn_image": "done_lean_svg_oos_raster",
     "auth_magiclink": "done",
+    "auth_smtp": "done_mock_stdlib",
     "storage_render_passthrough": "done",
     "mcp_phase3": "done"
   },
   "north_star": "B_full_clone",
   "lean_ram": true,
-  "updated": "2026-08-04T08:25:00Z",
-  "note": "Phase 3 remainders offloaded to k8s worker librebase-parity-deepen (li-swarm). Remaining: real image CDN, full SigV4, Playwright, SMTP email.",
-  "k8s_worker": "librebase-parity-deepen"
+  "updated": "2026-08-04T08:43:41Z",
+  "note": "Remainders closed honestly: LI_SMTP_MOCK/stdlib SMTP for magiclink; query SigV4 canonical (not full AWS multi-header); lean SVG render + raster CDN OOS; Playwright kept deferred_lean (in-process e2e_deepen_phase1.py); MCP lean Supabase-shaped subset (sign_storage_url/auth_otp/get_project_url/get_publishable_keys). Not a full Supabase drop-in.",
+  "k8s_worker": "librebase-parity-deepen",
+  "playwright_justification": "Browser Playwright deferred to keep lean RAM in k8s worker; coverage via lis unittest + scripts/e2e_deepen_phase1.py in-process handle_request."
 }

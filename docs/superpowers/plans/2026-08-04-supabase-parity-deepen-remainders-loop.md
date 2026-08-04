@@ -7,22 +7,22 @@
 
 - id: smtp-email
   content: Lean SMTP/mock path for magiclink OTP; tests; DEEPEN auth_smtp
-  status: pending
+  status: completed
 - id: sigv4-full
   content: Deepen storage SigV4 beyond shaped MVP; tests; DEEPEN storage_sigv4
-  status: pending
+  status: completed
 - id: cdn-image
   content: Lean image transform or honest OOS; DEEPEN cdn_image
-  status: pending
+  status: completed
 - id: playwright-or-defer
   content: Playwright browser E2E or keep deferred_lean with justification
-  status: pending
+  status: completed
 - id: mcp-close-gaps
   content: Cheap MCP gaps toward mcp_full_supabase; stay lean
-  status: pending
+  status: completed
 - id: deepen-done
   content: DEEPEN.json status=done + push lis MR !161 + librebase PR #20
-  status: pending
+  status: completed
 
 ## DoD
 

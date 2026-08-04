@@ -43,6 +43,10 @@ test -f "$ROOT/data/goal-directed-sprints/wp-supabase-parity-deepen-remainders.m
   || { echo "check-deepen-remainders-gate: missing sprint goal file" >&2; exit 1; }
 
 if [[ -f "$ROOT/scripts/e2e_deepen_phase1.py" ]]; then
+  if [[ -z "${LIS_ROOT:-}" ]]; then
+    if [[ -d /workspace/lis ]]; then export LIS_ROOT=/workspace/lis;
+    elif [[ -d "$ROOT/../lis" ]]; then export LIS_ROOT="$ROOT/../lis"; fi
+  fi
   python3 "$ROOT/scripts/e2e_deepen_phase1.py" || {
     echo "check-deepen-remainders-gate: lean e2e failed" >&2
     exit 1

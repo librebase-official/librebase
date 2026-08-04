@@ -13,9 +13,15 @@ import sys
 import tempfile
 from pathlib import Path
 
-_LIS = Path(os.environ.get("LIS_ROOT", Path(__file__).resolve().parents[2] / ".." / "li" / "lis")).resolve()
-if not _LIS.is_dir():
-    _LIS = Path(r"C:\Users\Julian\Documents\Programming\li\lis")
+_default_candidates = [
+    Path(__file__).resolve().parents[2] / ".." / "lis",
+    Path(__file__).resolve().parents[2] / ".." / "li" / "lis",
+    Path("/workspace/lis"),
+    Path(r"C:\Users\Julian\Documents\Programming\li\lis"),
+]
+_LIS = Path(os.environ["LIS_ROOT"]).resolve() if os.environ.get("LIS_ROOT") else None
+if _LIS is None or not _LIS.is_dir():
+    _LIS = next((p.resolve() for p in _default_candidates if p.is_dir()), _default_candidates[0].resolve())
 sys.path.insert(0, str(_LIS))
 
 os.environ.setdefault("LI_JWT_SECRET", "e2e-deepen-secret")
@@ -23,6 +29,8 @@ os.environ.setdefault("LI_REGISTRY_MOCK", "1")
 os.environ.setdefault("LI_AUTH_BACKEND", "mock")
 os.environ["LI_OAUTH_ENABLED"] = "1"
 os.environ["LI_OAUTH_MOCK"] = "1"
+os.environ["LI_SMTP_MOCK"] = "1"
+os.environ["LI_OTP_MOCK"] = "1"
 
 
 def main() -> int:
@@ -106,6 +114,35 @@ def main() -> int:
     assert st == 200, listed
     names = [b["name"] for b in listed["buckets"]]
     assert "e2e-media" in names
+
+
+    # SigV4 canonical signed GET
+    st, _, signed_v4 = call(
+        "POST",
+        "/storage/v1/object/sign/e2e-media/hello.txt",
+        body={"expiresIn": 60, "sigv4": True},
+        token=access,
+    )
+    assert st == 200, signed_v4
+    assert signed_v4.get("shaped") == "sigv4-query-canonical", signed_v4
+    st, _, raw_v4 = call("GET", signed_v4["signedURL"])
+    assert st == 200
+    assert raw_v4 == b"hello-e2e"
+
+    # Magiclink + SMTP mock
+    from routes.auth.smtp import reset_smtp_outbox, get_smtp_outbox
+    reset_smtp_outbox()
+    st, _, otp = call("POST", "/auth/v1/otp", body={"email": "e2e-otp@librebase.test", "type": "magiclink"})
+    assert st == 200, otp
+    assert otp.get("email_delivery", {}).get("delivered") is True
+    assert get_smtp_outbox(), "smtp outbox empty"
+    st, _, sess = call(
+        "POST",
+        "/auth/v1/verify",
+        body={"email": "e2e-otp@librebase.test", "token": otp["token"], "type": "magiclink"},
+    )
+    assert st == 200, sess
+    assert sess.get("access_token")
 
     # GitHub OAuth (mock)
     status, _, payload = handle_request(
