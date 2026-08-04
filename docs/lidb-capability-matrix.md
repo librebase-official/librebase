@@ -13,7 +13,7 @@
 | 3 | RLS + JWT | Postgres RLS + GoTrue | **lidb** + **lis** auth | 🚧 | JWT + lis Python RLS (Wave A). **Engine eval** landed lidb `9aa11e7` (`set_claims` session); lis `LI_RLS_ENGINE=1` wire follow-up |
 | 4 | WAL / durability | Postgres WAL | **lidb** | ✅ | WalReader + empty-`catalog.heap` crash-replay smoke (`test_wal_crash_replay_restores_insert`). UPDATE/DELETE WAL still stub; append follows catalog persist |
 | 5 | Realtime fanout | Realtime | **lis** `routes/realtime` | 🚧 | Phoenix join ✅. lidb changefeed now emits row `record` @ `23f93ca`; lis native poll still falls back when only `payload_bytes` historically — re-pin + live P-RT-02 follow-up |
-| 6 | Object Storage | Storage | **lis** `routes/storage` + `packages/lis-storage` | ✅ | S3-shaped + **bucket CRUD** (list/create/delete, force). HMAC signed GET, multipart, `public_read`. Not AWS SigV4 / TUS / CDN |
+| 6 | Object Storage | Storage | **lis** `routes/storage` + `packages/lis-storage` | ✅ | Bucket CRUD + HMAC signed GET + **SigV4-shaped** query MVP (`signV4:true`). Multipart, `public_read`. Not full AWS SigV4 / TUS / CDN |
 | 7 | Edge Functions | Edge Functions | **lis** + **li-edge** | ✅ | Wave 7: `scripts/invoke.py` (`runtime: li-edge`) @ `708a6fa` / lis `41bfc69`. Echo only with `LI_FUNCTIONS_ECHO=1`. Not Deno/WASM |
 | 8 | Connection pooler | Supavisor | **lis** in-process | ❌ | **Wave 8 settled:** OOS for v1 — in-process embed; no `li-pool` |
 | 9 | Migrations | CLI / Studio | **lidb** + `lis db migrate` | ✅ | Allowlisted CREATE TABLE + single-col INDEX; POLICY/UNIQUE/multi-col → Wave 3 |

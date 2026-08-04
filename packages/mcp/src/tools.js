@@ -158,6 +158,28 @@ export const tools = [
       },
     },
   },
+  {
+    name: "list_edge_functions",
+    description: "GET /functions/v1 meta / list (lean — may return service banner only)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        apiBase: { type: "string" },
+        bearer: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "get_auth_mfa_status",
+    description: "GET /v1/auth/mfa for current bearer session",
+    inputSchema: {
+      type: "object",
+      properties: {
+        apiBase: { type: "string" },
+        bearer: { type: "string" },
+      },
+    },
+  },
 ];
 
 export const TOOL_NAMES = tools.map((t) => t.name);

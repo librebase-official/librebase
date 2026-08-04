@@ -359,6 +359,26 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         isError: !r.ok || r.status === 0,
       };
     }
+    if (name === "list_edge_functions") {
+      const r = await projectFetch("/functions/v1", {
+        apiBase: args.apiBase,
+        bearer: args.bearer,
+      });
+      return {
+        content: [{ type: "text", text: JSON.stringify(r, null, 2) }],
+        isError: r.status === 0,
+      };
+    }
+    if (name === "get_auth_mfa_status") {
+      const r = await projectFetch("/v1/auth/mfa", {
+        apiBase: args.apiBase,
+        bearer: args.bearer,
+      });
+      return {
+        content: [{ type: "text", text: JSON.stringify(r, null, 2) }],
+        isError: !r.ok || r.status === 0,
+      };
+    }
     return {
       content: [{ type: "text", text: `Unknown tool: ${name}` }],
       isError: true,
