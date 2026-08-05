@@ -1,34 +1,60 @@
 #!/usr/bin/env python3
-"""Librebase OLTP compare: lidb vs Postgres, with and without indexes.
+"""Librebase OLTP compare: lidb vs Postgres (fairness modes + multi-scenario).
 
 Honesty
 -------
-- Reports measured P50/P95 only — never invents ratios without a Postgres URL.
-- Prefer in-process EmbeddedSession (avoids exec-json subprocess masking index gains).
-- Falls back to subprocess exec-json if liorm session unavailable.
-- lidb indexed path requires CREATE INDEX (feat/wave-b-create-index+).
-- Do not claim "as fast as Supabase" until CI publishes green rows.
+- Reports measured P50/P95 (and ops/sec where relevant) — never invents ratios
+  without a Postgres URL.
+- Modes: embed_inprocess (EmbeddedSession) vs embed_execjson (subprocess spawn).
+- Gate candidate today: point_lookup_with_index in embed_inprocess (hash_map index).
+- Do not claim "as fast as Supabase" until CI publishes green gated rows + P5 btree
+  (or an explicit hash_map footnote forever).
 
 Env
 ---
   LIDB_ROOT / LIDB_EMBED  — lidb checkout or embed binary
   POSTGRES_URL            — optional; enables Postgres compare
   BENCH_ROWS / BENCH_WARMUP / BENCH_MEASURE
+  HARDWARE_NOTE           — free-text runner description for the JSON payload
+  OLTP_CONCURRENT_WORKERS / OLTP_CONCURRENT_OPS_PER_WORKER
 """
 from __future__ import annotations
 
 import argparse
 import json
 import os
+import platform
 import statistics
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
+
+# Scenario catalogs
+SCENARIO_CORE = (
+    "point_lookup_no_index",
+    "point_lookup_with_index",
+    "point_insert",
+    "indexed_read_write_mix",
+)
+SCENARIO_ALL = SCENARIO_CORE + (
+    "range_scan_name_prefix",
+    "concurrent_readers",
+)
+SCENARIO_META = {
+    "point_lookup_no_index": "diagnostic",
+    "point_lookup_with_index": "gated",
+    "point_insert": "soft",
+    "indexed_read_write_mix": "soft",
+    "range_scan_name_prefix": "diagnostic",
+    "concurrent_readers": "soft",
+}
 
 
 def p95_ms(samples: list[float]) -> float:
@@ -38,26 +64,33 @@ def p95_ms(samples: list[float]) -> float:
     return ordered[max(0, int(round(0.95 * (len(ordered) - 1))))]
 
 
-def timing_stats(samples: list[float]) -> dict:
+def timing_stats(samples: list[float], *, wall_s: float | None = None, ops: int | None = None) -> dict:
     if not samples:
-        return {"mean_ms": 0.0, "p50_ms": 0.0, "p95_ms": 0.0, "n": 0}
-    return {
-        "mean_ms": round(statistics.mean(samples), 4),
-        "p50_ms": round(statistics.median(samples), 4),
-        "p95_ms": round(p95_ms(samples), 4),
-        "n": len(samples),
-    }
+        out = {"mean_ms": 0.0, "p50_ms": 0.0, "p95_ms": 0.0, "n": 0}
+    else:
+        out = {
+            "mean_ms": round(statistics.mean(samples), 4),
+            "p50_ms": round(statistics.median(samples), 4),
+            "p95_ms": round(p95_ms(samples), 4),
+            "n": len(samples),
+        }
+    if wall_s is not None and ops is not None and wall_s > 0:
+        out["ops_per_sec"] = round(ops / wall_s, 2)
+        out["wall_s"] = round(wall_s, 4)
+    return out
 
 
 def time_fn(fn, *, warmup: int, measure: int) -> dict:
     for _ in range(warmup):
         fn()
     samples: list[float] = []
+    t_wall0 = time.perf_counter()
     for _ in range(measure):
         t0 = time.perf_counter()
         fn()
         samples.append((time.perf_counter() - t0) * 1000.0)
-    return timing_stats(samples)
+    wall_s = time.perf_counter() - t_wall0
+    return timing_stats(samples, wall_s=wall_s, ops=measure)
 
 
 def find_lidb_root() -> Path:
@@ -67,6 +100,22 @@ def find_lidb_root() -> Path:
             r"C:\Users\Julian\Documents\Programming\li\lidb",
         )
     )
+
+
+def lidb_pin(root: Path) -> str:
+    try:
+        proc = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            return proc.stdout.strip()
+    except OSError:
+        pass
+    return "unknown"
 
 
 def find_embed() -> Path | None:
@@ -154,29 +203,107 @@ def pg_prepare(conn, n: int) -> str:
     return target
 
 
-def run(*, rows: int, warmup: int, measure: int) -> dict:
+def resolve_scenarios(spec: str) -> list[str]:
+    key = spec.strip().lower()
+    if key == "core":
+        return list(SCENARIO_CORE)
+    if key == "all":
+        return list(SCENARIO_ALL)
+    if key == "list":
+        return []
+    # comma-separated custom list
+    parts = [p.strip() for p in spec.split(",") if p.strip()]
+    unknown = [p for p in parts if p not in SCENARIO_ALL]
+    if unknown:
+        raise SystemExit(f"unknown scenarios: {unknown}; known={list(SCENARIO_ALL)}")
+    return parts
+
+
+def scenario_row(
+    *,
+    engine: str,
+    scenario: str,
+    index: bool | None,
+    status: str,
+    stats: dict | None = None,
+    note: str | None = None,
+    extra: dict | None = None,
+) -> dict:
+    row = {
+        "engine": engine,
+        "scenario": scenario,
+        "gate_class": SCENARIO_META.get(scenario, "diagnostic"),
+        "index": index,
+        "status": status,
+    }
+    if stats:
+        row.update(stats)
+    else:
+        row.update({"mean_ms": None, "p50_ms": None, "p95_ms": None, "n": 0})
+    if note:
+        row["note"] = note
+    if extra:
+        row.update(extra)
+    return row
+
+
+def run(
+    *,
+    rows: int,
+    warmup: int,
+    measure: int,
+    mode: str,
+    scenarios: list[str],
+    concurrent_workers: int,
+    concurrent_ops: int,
+) -> dict:
     embed = find_embed()
     if embed is None:
         raise RuntimeError("lidb_embed not found — set LIDB_EMBED or LIDB_ROOT")
 
+    root = find_lidb_root()
+    pin = lidb_pin(root)
+    want = set(scenarios)
+    out_scenarios: list[dict] = []
+
     with tempfile.TemporaryDirectory(prefix="lb-oltp-") as tmp:
         data = Path(tmp) / "lidb"
         data.mkdir(parents=True, exist_ok=True)
-        session = try_session(data)
-        mode = "in_process" if session is not None else "subprocess_exec_json"
 
-        def exec_sql(sql: str, params: list[str] | None = None) -> list:
-            if session is not None:
-                return session.exec_parameterized(sql, params or [])
-            return embed_exec(embed, data, sql, params)
+        session = None
+        lock = threading.Lock()
+        concurrent_note = None
 
-        if session is None:
+        if mode == "embed_inprocess":
+            session = try_session(data)
+            if session is None:
+                raise RuntimeError(
+                    "embed_inprocess requested but EmbeddedSession unavailable "
+                    "(liorm/embed_engine + migrate). Use --mode embed_execjson or fix LIDB_ROOT."
+                )
+            concurrent_note = (
+                "lidb concurrent_readers uses a mutex around EmbeddedSession "
+                "(embed not assumed thread-safe) — soft/diagnostic throughput"
+            )
+        elif mode == "embed_execjson":
             subprocess.run(
                 [str(embed), "migrate", str(data)],
                 check=True,
                 capture_output=True,
                 text=True,
             )
+            concurrent_note = (
+                "lidb concurrent_readers uses parallel exec-json subprocesses "
+                "(includes spawn cost)"
+            )
+        else:
+            raise ValueError(f"unknown mode: {mode}")
+
+        def exec_sql(sql: str, params: list[str] | None = None) -> list:
+            if session is not None:
+                with lock:
+                    return session.exec_parameterized(sql, params or [])
+            return embed_exec(embed, data, sql, params)
 
         exec_sql(
             "CREATE TABLE IF NOT EXISTS bench_items (id uuid, name text, owner_id uuid)"
@@ -196,7 +323,19 @@ def run(*, rows: int, warmup: int, measure: int) -> dict:
             if not out:
                 raise RuntimeError("lidb lookup miss")
 
-        no_idx = time_fn(lidb_lookup, warmup=warmup, measure=measure)
+        no_idx = None
+        if "point_lookup_no_index" in want:
+            no_idx = time_fn(lidb_lookup, warmup=warmup, measure=measure)
+            out_scenarios.append(
+                scenario_row(
+                    engine="lidb",
+                    scenario="point_lookup_no_index",
+                    index=False,
+                    status="measured",
+                    stats=no_idx,
+                )
+            )
+
         indexed_ok = True
         try:
             exec_sql(
@@ -205,46 +344,159 @@ def run(*, rows: int, warmup: int, measure: int) -> dict:
         except Exception:
             indexed_ok = False
 
-        with_idx = (
-            time_fn(lidb_lookup, warmup=warmup, measure=measure) if indexed_ok else None
-        )
-
-        scenarios: list[dict] = [
-            {
-                "engine": "lidb",
-                "scenario": "point_lookup_no_index",
-                "index": False,
-                "status": "measured",
-                **no_idx,
-            }
-        ]
-        if with_idx is not None:
-            row = {
-                "engine": "lidb",
-                "scenario": "point_lookup_with_index",
-                "index": True,
-                "status": "measured",
-                **with_idx,
-            }
-            if no_idx["p95_ms"] > 0:
-                row["speedup_vs_no_index_p95"] = round(
-                    no_idx["p95_ms"] / with_idx["p95_ms"], 4
+        with_idx = None
+        if "point_lookup_with_index" in want:
+            if indexed_ok:
+                with_idx = time_fn(lidb_lookup, warmup=warmup, measure=measure)
+                extra = {}
+                if no_idx and no_idx["p95_ms"] > 0:
+                    extra["speedup_vs_no_index_p95"] = round(
+                        no_idx["p95_ms"] / with_idx["p95_ms"], 4
+                    )
+                out_scenarios.append(
+                    scenario_row(
+                        engine="lidb",
+                        scenario="point_lookup_with_index",
+                        index=True,
+                        status="measured",
+                        stats=with_idx,
+                        extra=extra,
+                    )
                 )
-            scenarios.append(row)
-        else:
-            scenarios.append(
-                {
-                    "engine": "lidb",
-                    "scenario": "point_lookup_with_index",
-                    "index": True,
-                    "status": "index_unsupported",
-                    "mean_ms": None,
-                    "p50_ms": None,
-                    "p95_ms": None,
-                    "n": 0,
-                    "note": "CREATE INDEX not available in this lidb_embed build",
-                }
+            else:
+                out_scenarios.append(
+                    scenario_row(
+                        engine="lidb",
+                        scenario="point_lookup_with_index",
+                        index=True,
+                        status="index_unsupported",
+                        note="CREATE INDEX not available in this lidb_embed build",
+                    )
+                )
+
+        if "point_insert" in want:
+            def lidb_insert() -> None:
+                exec_sql(
+                    "INSERT INTO bench_items (id, name, owner_id) VALUES (?, ?, ?)",
+                    [str(uuid.uuid4()), f"ins-{uuid.uuid4().hex[:8]}", str(uuid.uuid4())],
+                )
+
+            ins = time_fn(lidb_insert, warmup=warmup, measure=measure)
+            out_scenarios.append(
+                scenario_row(
+                    engine="lidb",
+                    scenario="point_insert",
+                    index=None,
+                    status="measured",
+                    stats=ins,
+                )
             )
+
+        if "indexed_read_write_mix" in want:
+            if not indexed_ok:
+                out_scenarios.append(
+                    scenario_row(
+                        engine="lidb",
+                        scenario="indexed_read_write_mix",
+                        index=True,
+                        status="index_unsupported",
+                        note="CREATE INDEX required for mix scenario",
+                    )
+                )
+            else:
+                counter = {"i": 0}
+
+                def lidb_mix() -> None:
+                    counter["i"] += 1
+                    if counter["i"] % 5 == 0:
+                        exec_sql(
+                            "INSERT INTO bench_items (id, name, owner_id) VALUES (?, ?, ?)",
+                            [
+                                str(uuid.uuid4()),
+                                f"mix-{uuid.uuid4().hex[:8]}",
+                                str(uuid.uuid4()),
+                            ],
+                        )
+                    else:
+                        lidb_lookup()
+
+                mix = time_fn(lidb_mix, warmup=warmup, measure=measure)
+                out_scenarios.append(
+                    scenario_row(
+                        engine="lidb",
+                        scenario="indexed_read_write_mix",
+                        index=True,
+                        status="measured",
+                        stats=mix,
+                        note="80% indexed SELECT / 20% INSERT",
+                    )
+                )
+
+        if "range_scan_name_prefix" in want:
+            def lidb_range() -> None:
+                out = exec_sql(
+                    "SELECT id, name FROM bench_items WHERE name LIKE ? LIMIT 50",
+                    ["lookup-%"],
+                )
+                if not out:
+                    raise RuntimeError("lidb range miss")
+
+            rng = time_fn(lidb_range, warmup=warmup, measure=measure)
+            out_scenarios.append(
+                scenario_row(
+                    engine="lidb",
+                    scenario="range_scan_name_prefix",
+                    index=indexed_ok,
+                    status="measured",
+                    stats=rng,
+                    note="diagnostic until btree (P5); hash_map may not help LIKE",
+                )
+            )
+
+        if "concurrent_readers" in want:
+            if not indexed_ok:
+                out_scenarios.append(
+                    scenario_row(
+                        engine="lidb",
+                        scenario="concurrent_readers",
+                        index=True,
+                        status="index_unsupported",
+                        note="CREATE INDEX required",
+                    )
+                )
+            else:
+                total_ops = concurrent_workers * concurrent_ops
+
+                def worker_ops(_: int) -> list[float]:
+                    samples: list[float] = []
+                    for _j in range(concurrent_ops):
+                        t0 = time.perf_counter()
+                        lidb_lookup()
+                        samples.append((time.perf_counter() - t0) * 1000.0)
+                    return samples
+
+                t0 = time.perf_counter()
+                all_samples: list[float] = []
+                with ThreadPoolExecutor(max_workers=concurrent_workers) as pool:
+                    futs = [pool.submit(worker_ops, w) for w in range(concurrent_workers)]
+                    for fut in as_completed(futs):
+                        all_samples.extend(fut.result())
+                wall_s = time.perf_counter() - t0
+                stats = timing_stats(all_samples, wall_s=wall_s, ops=total_ops)
+                out_scenarios.append(
+                    scenario_row(
+                        engine="lidb",
+                        scenario="concurrent_readers",
+                        index=True,
+                        status="measured",
+                        stats=stats,
+                        note=concurrent_note,
+                        extra={
+                            "workers": concurrent_workers,
+                            "ops_per_worker": concurrent_ops,
+                        },
+                    )
+                )
 
         if session is not None:
             session.close()
@@ -254,6 +506,7 @@ def run(*, rows: int, warmup: int, measure: int) -> dict:
             try:
                 pg_target = pg_prepare(pg, rows)
                 cur = pg.cursor()
+                pg_url = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL")
 
                 def pg_lookup() -> None:
                     cur.execute(
@@ -263,65 +516,222 @@ def run(*, rows: int, warmup: int, measure: int) -> dict:
                     if not cur.fetchone():
                         raise RuntimeError("postgres lookup miss")
 
-                pg_no = time_fn(pg_lookup, warmup=warmup, measure=measure)
-                scenarios.append(
-                    {
-                        "engine": "postgres",
-                        "scenario": "point_lookup_no_index",
-                        "index": False,
-                        "status": "measured",
-                        **pg_no,
-                    }
-                )
+                pg_no = None
+                if "point_lookup_no_index" in want:
+                    pg_no = time_fn(pg_lookup, warmup=warmup, measure=measure)
+                    out_scenarios.append(
+                        scenario_row(
+                            engine="postgres",
+                            scenario="point_lookup_no_index",
+                            index=False,
+                            status="measured",
+                            stats=pg_no,
+                        )
+                    )
+
                 cur.execute("CREATE INDEX idx_bench_items_name ON bench_items (name)")
                 pg.commit()
                 cur.execute("ANALYZE bench_items")
                 pg.commit()
-                pg_yes = time_fn(pg_lookup, warmup=warmup, measure=measure)
-                pg_idx = {
-                    "engine": "postgres",
-                    "scenario": "point_lookup_with_index",
-                    "index": True,
-                    "status": "measured",
-                    **pg_yes,
-                }
-                if pg_no["p95_ms"] > 0:
-                    pg_idx["speedup_vs_no_index_p95"] = round(
-                        pg_no["p95_ms"] / pg_yes["p95_ms"], 4
+
+                if "point_lookup_with_index" in want:
+                    pg_yes = time_fn(pg_lookup, warmup=warmup, measure=measure)
+                    extra = {}
+                    if pg_no and pg_no["p95_ms"] > 0:
+                        extra["speedup_vs_no_index_p95"] = round(
+                            pg_no["p95_ms"] / pg_yes["p95_ms"], 4
+                        )
+                    out_scenarios.append(
+                        scenario_row(
+                            engine="postgres",
+                            scenario="point_lookup_with_index",
+                            index=True,
+                            status="measured",
+                            stats=pg_yes,
+                            extra=extra,
+                        )
                     )
-                scenarios.append(pg_idx)
+
+                if "point_insert" in want:
+                    def pg_insert() -> None:
+                        cur.execute(
+                            "INSERT INTO bench_items (id, name, owner_id) VALUES (%s, %s, %s)",
+                            (
+                                str(uuid.uuid4()),
+                                f"ins-{uuid.uuid4().hex[:8]}",
+                                str(uuid.uuid4()),
+                            ),
+                        )
+                        pg.commit()
+
+                    pg_ins = time_fn(pg_insert, warmup=warmup, measure=measure)
+                    out_scenarios.append(
+                        scenario_row(
+                            engine="postgres",
+                            scenario="point_insert",
+                            index=None,
+                            status="measured",
+                            stats=pg_ins,
+                        )
+                    )
+
+                if "indexed_read_write_mix" in want:
+                    counter = {"i": 0}
+
+                    def pg_mix() -> None:
+                        counter["i"] += 1
+                        if counter["i"] % 5 == 0:
+                            cur.execute(
+                                "INSERT INTO bench_items (id, name, owner_id) VALUES (%s, %s, %s)",
+                                (
+                                    str(uuid.uuid4()),
+                                    f"mix-{uuid.uuid4().hex[:8]}",
+                                    str(uuid.uuid4()),
+                                ),
+                            )
+                            pg.commit()
+                        else:
+                            pg_lookup()
+
+                    pg_mix_stats = time_fn(pg_mix, warmup=warmup, measure=measure)
+                    out_scenarios.append(
+                        scenario_row(
+                            engine="postgres",
+                            scenario="indexed_read_write_mix",
+                            index=True,
+                            status="measured",
+                            stats=pg_mix_stats,
+                            note="80% indexed SELECT / 20% INSERT",
+                        )
+                    )
+
+                if "range_scan_name_prefix" in want:
+                    def pg_range() -> None:
+                        cur.execute(
+                            "SELECT id, name FROM bench_items WHERE name LIKE %s LIMIT 50",
+                            ("lookup-%",),
+                        )
+                        if not cur.fetchall():
+                            raise RuntimeError("postgres range miss")
+
+                    pg_rng = time_fn(pg_range, warmup=warmup, measure=measure)
+                    out_scenarios.append(
+                        scenario_row(
+                            engine="postgres",
+                            scenario="range_scan_name_prefix",
+                            index=True,
+                            status="measured",
+                            stats=pg_rng,
+                        )
+                    )
+
+                if "concurrent_readers" in want:
+                    total_ops = concurrent_workers * concurrent_ops
+
+                    def pg_worker(_: int) -> list[float]:
+                        conn = psycopg2_connect(pg_url)
+                        try:
+                            c = conn.cursor()
+                            samples: list[float] = []
+                            for _j in range(concurrent_ops):
+                                t0 = time.perf_counter()
+                                c.execute(
+                                    "SELECT id, name FROM bench_items WHERE name = %s",
+                                    (pg_target,),
+                                )
+                                if not c.fetchone():
+                                    raise RuntimeError("postgres concurrent miss")
+                                samples.append((time.perf_counter() - t0) * 1000.0)
+                            c.close()
+                            return samples
+                        finally:
+                            conn.close()
+
+                    t0 = time.perf_counter()
+                    all_samples: list[float] = []
+                    with ThreadPoolExecutor(max_workers=concurrent_workers) as pool:
+                        futs = [
+                            pool.submit(pg_worker, w) for w in range(concurrent_workers)
+                        ]
+                        for fut in as_completed(futs):
+                            all_samples.extend(fut.result())
+                    wall_s = time.perf_counter() - t0
+                    stats = timing_stats(all_samples, wall_s=wall_s, ops=total_ops)
+                    out_scenarios.append(
+                        scenario_row(
+                            engine="postgres",
+                            scenario="concurrent_readers",
+                            index=True,
+                            status="measured",
+                            stats=stats,
+                            note="one Postgres connection per worker",
+                            extra={
+                                "workers": concurrent_workers,
+                                "ops_per_worker": concurrent_ops,
+                            },
+                        )
+                    )
+
                 cur.close()
             finally:
                 pg.close()
 
+    # Attach ratios (P95 and ops/sec where both present)
     by_key = {
-        (s["engine"], s["index"]): s for s in scenarios if s["status"] == "measured"
+        (s["engine"], s["scenario"]): s
+        for s in out_scenarios
+        if s["status"] == "measured"
     }
-    for s in scenarios:
+    for s in out_scenarios:
         if s["engine"] != "lidb" or s["status"] != "measured":
             continue
-        pg_row = by_key.get(("postgres", s["index"]))
-        if pg_row and pg_row.get("p95_ms"):
+        pg_row = by_key.get(("postgres", s["scenario"]))
+        if not pg_row:
+            continue
+        if pg_row.get("p95_ms"):
             s["ratio_vs_postgres_p95"] = round(s["p95_ms"] / pg_row["p95_ms"], 4)
+        if pg_row.get("ops_per_sec") and s.get("ops_per_sec"):
+            # higher ops is better → postgres/lidb so <1 means lidb faster
+            s["ratio_vs_postgres_ops"] = round(
+                pg_row["ops_per_sec"] / s["ops_per_sec"], 4
+            )
+
+    hardware_note = os.environ.get("HARDWARE_NOTE", "").strip() or (
+        "unspecified — set HARDWARE_NOTE for reproducible same-hardware claims"
+    )
 
     return {
         "suite": "librebase-oltp-index-compare",
         "rows_seeded": rows,
         "warmup": warmup,
         "measure": measure,
-        "lidb_mode": mode,
+        "mode": mode,
+        "lidb_mode": mode,  # back-compat alias
+        "scenarios_selected": scenarios,
         "embed": str(embed),
-        "lidb_pin": "e9f8570",
+        "lidb_pin": pin,
+        "lidb_root": str(root),
+        "runner_os": platform.platform(),
+        "hardware_note": hardware_note,
+        "index_impl": "hash_map",
         "postgres": bool(
             os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL")
         ),
         "honesty": (
-            "Aims only until CI green. Prefer in-process EmbeddedSession so index gains "
-            "are not masked by exec-json spawn. lidb index = in-memory hash/map — not "
-            "B-tree / Postgres parity."
+            "Aims only until CI green. embed_inprocess vs TCP Postgres is a labeled "
+            "microbench (not fair_sql). index_impl=hash_map — not B-tree / Postgres "
+            "parity; gated marketing claim needs P1 green + P5 btree (or forever footnote)."
         ),
-        "scenarios": scenarios,
+        "scenarios": out_scenarios,
     }
+
+
+def psycopg2_connect(url: str | None):
+    import psycopg2  # type: ignore
+
+    if not url:
+        raise RuntimeError("POSTGRES_URL required for concurrent Postgres workers")
+    return psycopg2.connect(url)
 
 
 def main() -> int:
@@ -332,24 +742,66 @@ def main() -> int:
         "--measure", type=int, default=int(os.environ.get("BENCH_MEASURE", "100"))
     )
     ap.add_argument(
+        "--mode",
+        choices=("embed_inprocess", "embed_execjson"),
+        default=os.environ.get("OLTP_MODE", "embed_inprocess"),
+        help="Fairness mode (default: embed_inprocess)",
+    )
+    ap.add_argument(
+        "--scenarios",
+        default=os.environ.get("OLTP_SCENARIOS", "core"),
+        help="all | core | list | comma-separated scenario ids",
+    )
+    ap.add_argument(
+        "--concurrent-workers",
+        type=int,
+        default=int(os.environ.get("OLTP_CONCURRENT_WORKERS", "4")),
+    )
+    ap.add_argument(
+        "--concurrent-ops",
+        type=int,
+        default=int(os.environ.get("OLTP_CONCURRENT_OPS_PER_WORKER", "50")),
+    )
+    ap.add_argument(
         "--json-out",
         type=Path,
         default=REPO / "benchmarks" / "oltp-compare" / "results" / "latest.json",
     )
     args = ap.parse_args()
+
+    if args.scenarios.strip().lower() == "list":
+        print("Scenarios:")
+        for sid in SCENARIO_ALL:
+            print(f"  {sid:28} gate_class={SCENARIO_META[sid]}")
+        print("Presets: core =", ", ".join(SCENARIO_CORE))
+        print("         all  =", ", ".join(SCENARIO_ALL))
+        return 0
+
     try:
-        payload = run(rows=args.rows, warmup=args.warmup, measure=args.measure)
+        selected = resolve_scenarios(args.scenarios)
+        payload = run(
+            rows=args.rows,
+            warmup=args.warmup,
+            measure=args.measure,
+            mode=args.mode,
+            scenarios=selected,
+            concurrent_workers=args.concurrent_workers,
+            concurrent_ops=args.concurrent_ops,
+        )
     except Exception as exc:
         print(f"FAIL: {exc}", file=sys.stderr)
         return 1
     args.json_out.parent.mkdir(parents=True, exist_ok=True)
     args.json_out.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-    print(f"wrote {args.json_out} mode={payload['lidb_mode']}")
+    print(
+        f"wrote {args.json_out} mode={payload['mode']} pin={payload['lidb_pin']} "
+        f"index_impl={payload['index_impl']}"
+    )
     for s in payload["scenarios"]:
         print(
             f"  {s['engine']:8} {s['scenario']:28} "
-            f"p95={s.get('p95_ms')} status={s['status']} "
-            f"idx_speedup={s.get('speedup_vs_no_index_p95')} "
+            f"p95={s.get('p95_ms')} ops={s.get('ops_per_sec')} "
+            f"status={s['status']} gate={s.get('gate_class')} "
             f"vs_pg={s.get('ratio_vs_postgres_p95')}"
         )
     return 0
