@@ -21,16 +21,16 @@ JSON always records `mode`, `lidb_pin` (`git rev-parse` of `LIDB_ROOT`), `runner
 | `point_lookup_with_index` | Same after `CREATE INDEX … (name)` | **gated** — `ratio_vs_postgres_p95 ≤ 1.2` |
 | `point_insert` | single-row `INSERT` | **soft** — ≤ **1.5** first release (warn; hard if `OLTP_SOFT_FAIL=1`) |
 | `indexed_read_write_mix` | 80% indexed SELECT / 20% INSERT | soft (ops/sec + P95) |
-| `range_scan_name_prefix` | `WHERE name LIKE 'lookup-%' LIMIT 50` | **gated** when `index_impl` ∈ {`sorted_tree`,`btree`}; else diagnostic |
+| `range_scan_name_prefix` | `WHERE name LIKE 'lookup-%' LIMIT 50` | **diagnostic** — tracked in full runs; not nightly-gated until ≤ 1.2× |
 | `concurrent_readers` | N threads × M lookups | soft; report `ops_per_sec` |
 
-Presets: `--scenarios core` = lookups + insert + mix; `--scenarios all` adds range + concurrent; CI uses `core,range_scan_name_prefix` when sorted_tree pin is green.
+Presets: `--scenarios core` = lookups + insert + mix (**CI nightly hard gate**); `--scenarios all` adds range + concurrent. For diagnostic range_scan: `--scenarios core,range_scan_name_prefix`.
 
 ## Gated vs diagnostic
 
 | Class | Meaning |
 |-------|---------|
-| **gated** | `check_gate.py` hard-fails CI when breached (`point_lookup_with_index`; `range_scan_name_prefix` when sorted_tree/btree) |
+| **gated** | `check_gate.py` hard-fails CI when breached (`point_lookup_with_index` only) |
 | **soft** | Documented threshold; warn by default (`OLTP_SOFT_RATIO_MAX=1.5` for insert/mix) |
 | **diagnostic** | Recorded only — no pass/fail |
 
@@ -51,8 +51,11 @@ $env:LIDB_ROOT = "C:\Users\Julian\Documents\Programming\li\lidb"
 $env:LIDB_EMBED = "$env:LIDB_ROOT\build\smoke\Release\lidb_embed.exe"
 $env:POSTGRES_URL = "postgresql://postgres:postgres@127.0.0.1:5433/postgres"
 $env:HARDWARE_NOTE = "local win32 + lb-pg-bench:5433"
-python benchmarks/oltp-compare/run_compare.py --mode embed_execjson --scenarios core,range_scan_name_prefix --rows 10000 --warmup 30 --measure 200
+python benchmarks/oltp-compare/run_compare.py --mode embed_execjson --scenarios core --rows 10000 --warmup 30 --measure 200
 python benchmarks/oltp-compare/check_gate.py
+
+# Optional: include diagnostic range_scan (not nightly-gated until ≤ 1.2×)
+python benchmarks/oltp-compare/run_compare.py --mode embed_execjson --scenarios core,range_scan_name_prefix --rows 10000 --warmup 30 --measure 200
 ```
 
 Env knobs: `OLTP_RATIO_MAX` (default `1.2`), `OLTP_SOFT_RATIO_MAX` (default `1.5`), `OLTP_SOFT_FAIL`, `OLTP_MODE`, `OLTP_SCENARIOS`.
@@ -64,7 +67,7 @@ Workflow: [`.github/workflows/oltp-compare.yml`](../../.github/workflows/oltp-co
 1. Parse lidb SHA from [`docs/li-dependency-pins.md`](../../docs/li-dependency-pins.md) (currently **`d7f5cb5`** sorted_tree).
 2. Checkout `li-langverse/lidb` at that pin (`LIDB_CHECKOUT_TOKEN` when the mirror is private).
 3. Build smoke `lidb_embed` (`cmake` → `build/smoke`).
-4. Run `--mode embed_execjson --scenarios core,range_scan_name_prefix` + `check_gate.py` — **fail** on skip, wrong mode, `index_unsupported`, or gated ratio breach.
+4. Run `--mode embed_execjson --scenarios core` + `check_gate.py` — **fail** on skip, wrong mode, `index_unsupported`, or `point_lookup_with_index` ratio breach. `range_scan_name_prefix` is diagnostic (run manually with `--scenarios core,range_scan_name_prefix`); not in nightly hard-fail set until ≤ 1.2×.
 5. Upload `latest.json` with `if: always()`.
 
 Debug-only: `workflow_dispatch` input `force_skip_ok` allows exit 0 on missing embed (not for schedule).

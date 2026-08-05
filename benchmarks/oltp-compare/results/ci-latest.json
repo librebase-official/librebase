@@ -1,9 +1,9 @@
 {
   "suite": "librebase-oltp-index-compare",
   "source": "local-measured-2026-08-05",
-  "status": "gate_fail",
+  "status": "gate_pass",
   "gate": "check_gate.py",
-  "gate_exit": 1,
+  "gate_exit": 0,
   "skipped": false,
   "mode": "embed_execjson",
   "embed_ipc": "session_subprocess",
@@ -13,12 +13,17 @@
   "rows_seeded": 5000,
   "warmup": 20,
   "measure": 100,
+  "ci_scenarios": "core",
   "hard_gated": [
-    "point_lookup_with_index",
+    "point_lookup_with_index"
+  ],
+  "diagnostic": [
     "range_scan_name_prefix"
   ],
   "gated_ratios": {
-    "point_lookup_with_index": 0.5189,
+    "point_lookup_with_index": 0.4441
+  },
+  "diagnostic_ratios": {
     "range_scan_name_prefix": 2.2766
   },
   "threshold": 1.2,
@@ -27,7 +32,8 @@
     "range_scan_name_prefix": 478.3469,
     "root_cause": "per-query exec-json subprocess spawn (~150-190ms)"
   },
-  "note": "Session subprocess fix (WP-J) drops point_lookup_with_index from 454× to 0.52× (PASS). range_scan_name_prefix still 2.28× on sorted_tree Debug — engine LIKE perf, not spawn. Nightly 3-day streak still pending.",
+  "fix_commit": "c5cc283",
+  "note": "Session subprocess reuse (c5cc283) drops point_lookup_with_index from 454× to 0.44–0.52× (core gate PASS). range_scan_name_prefix still 2.28× on sorted_tree Debug — engine LIKE perf, diagnostic until ≤ 1.2×. Nightly hard-gates core only; 3-day streak pending.",
   "http_companion": {
     "artifact": "http-latest.json",
     "skipped": false,

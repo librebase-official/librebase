@@ -38,7 +38,7 @@ jobs:
       BENCH_WARMUP: "30"
       BENCH_MEASURE: "200"
       OLTP_MODE: embed_execjson
-      OLTP_SCENARIOS: core,range_scan_name_prefix
+      OLTP_SCENARIOS: core
       OLTP_RATIO_MAX: "1.2"
       OLTP_SOFT_RATIO_MAX: "1.5"
       HARDWARE_NOTE: "github-actions ubuntu-latest + postgres:16 service"

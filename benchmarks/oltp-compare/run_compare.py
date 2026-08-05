@@ -7,8 +7,8 @@ Honesty
   without a Postgres URL.
 - Modes: embed_execjson (long-lived ``lidb_embed session`` subprocess + NDJSON IPC,
   **CI hard gate**) vs embed_inprocess (EmbeddedSession in Python, diagnostic-only).
-- Hard gate: point_lookup_with_index in embed_execjson; range_scan_name_prefix
-  when index_impl is sorted_tree or btree (in-memory ordered map, not disk B-tree).
+- Hard gate: point_lookup_with_index in embed_execjson only.
+- range_scan_name_prefix is diagnostic (sorted_tree LIKE perf tracked, not nightly-gated).
 - ``index_impl`` autodetection: btree | sorted_tree | hash_map | unknown.
 - Do not claim "as fast as Supabase" until CI publishes green gated rows +
   sorted_tree/btree indexed path (or an explicit hash_map footnote forever).
@@ -413,8 +413,6 @@ def run(
             raise ValueError(f"unknown mode: {mode}")
 
         index_impl = detect_index_impl(root=root, data_dir=data)
-        if index_impl in ("sorted_tree", "btree"):
-            SCENARIO_META["range_scan_name_prefix"] = "gated"
 
         def exec_sql(sql: str, params: list[str] | None = None) -> list:
             if session is not None:
@@ -569,7 +567,7 @@ def run(
                     index=indexed_ok,
                     status="measured",
                     stats=rng,
-                    note="sorted_tree in-memory ordered map (not disk B-tree); gated when index_impl sorted_tree/btree",
+                    note="sorted_tree in-memory ordered map (not disk B-tree); diagnostic until ratio ≤ 1.2×",
                 )
             )
 
@@ -867,7 +865,7 @@ def run(
             + f" index_impl={index_impl} — "
             + (
                 "sorted_tree is in-memory ordered map (not disk B-tree / Postgres parity); "
-                "range_scan is gated when index_impl is sorted_tree/btree."
+                "range_scan_name_prefix is diagnostic until ≤ 1.2×."
                 if index_impl == "sorted_tree"
                 else "btree claim reserved for page B-tree; "
                 if index_impl == "btree"

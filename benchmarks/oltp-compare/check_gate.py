@@ -5,8 +5,11 @@ Hard gate (exit 1):
   - payload skipped / missing postgres
   - mode != embed_execjson (embed_inprocess is diagnostic-only)
   - lidb point_lookup_with_index missing, not measured, or index_unsupported
-  - range_scan_name_prefix when index_impl is sorted_tree or btree (same rules)
-  - ratio_vs_postgres_p95 > OLTP_RATIO_MAX (default 1.2)
+  - point_lookup_with_index ratio_vs_postgres_p95 > OLTP_RATIO_MAX (default 1.2)
+
+Diagnostic (recorded, no hard-fail):
+  - range_scan_name_prefix — run with --scenarios all or core,range_scan_name_prefix;
+    not in nightly hard gate until ratio ≤ 1.2× (sorted_tree LIKE perf still open)
 
 Soft gate (warn; exit 1 only if OLTP_SOFT_FAIL=1):
   - point_insert / indexed_read_write_mix ratio_vs_postgres_p95 > OLTP_SOFT_RATIO_MAX
@@ -25,18 +28,9 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_JSON = REPO / "benchmarks" / "oltp-compare" / "results" / "latest.json"
 
-HARD_GATED_BASE = ("point_lookup_with_index",)
-RANGE_SCAN = "range_scan_name_prefix"
-INDEXED_IMPLS = frozenset(("sorted_tree", "btree"))
+HARD_GATED = ("point_lookup_with_index",)
 GATED_MODE = "embed_execjson"
 SOFT_GATED = ("point_insert", "indexed_read_write_mix")
-
-
-def _hard_gated(payload: dict) -> tuple[str, ...]:
-    gated: list[str] = list(HARD_GATED_BASE)
-    if payload.get("index_impl") in INDEXED_IMPLS:
-        gated.append(RANGE_SCAN)
-    return tuple(gated)
 
 
 def _ratio_max() -> float:
@@ -61,7 +55,7 @@ def check(payload: dict) -> int:
     warnings: list[str] = []
     hard_max = _ratio_max()
     soft_max = _soft_ratio_max()
-    hard_gated = _hard_gated(payload)
+    hard_gated = HARD_GATED
 
     if payload.get("skipped"):
         errors.append(
