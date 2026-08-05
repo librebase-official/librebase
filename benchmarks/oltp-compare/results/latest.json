@@ -6,7 +6,7 @@
   "lidb_mode": "in_process",
   "embed": "C:\\Users\\Julian\\Documents\\Programming\\li\\lidb\\build\\smoke\\Release\\lidb_embed.exe",
   "lidb_pin": "e9f8570",
-  "postgres": false,
+  "postgres": true,
   "honesty": "Aims only until CI green. Prefer in-process EmbeddedSession so index gains are not masked by exec-json spawn. lidb index = in-memory hash/map \u2014 not B-tree / Postgres parity.",
   "scenarios": [
     {
@@ -14,21 +14,44 @@
       "scenario": "point_lookup_no_index",
       "index": false,
       "status": "measured",
-      "mean_ms": 0.2541,
-      "p50_ms": 0.2152,
-      "p95_ms": 0.3296,
-      "n": 200
+      "mean_ms": 0.2224,
+      "p50_ms": 0.2198,
+      "p95_ms": 0.2531,
+      "n": 200,
+      "ratio_vs_postgres_p95": 0.3558
     },
     {
       "engine": "lidb",
       "scenario": "point_lookup_with_index",
       "index": true,
       "status": "measured",
-      "mean_ms": 0.0309,
-      "p50_ms": 0.026,
-      "p95_ms": 0.0494,
+      "mean_ms": 0.0266,
+      "p50_ms": 0.0233,
+      "p95_ms": 0.0445,
       "n": 200,
-      "speedup_vs_no_index_p95": 6.6721
+      "speedup_vs_no_index_p95": 5.6876,
+      "ratio_vs_postgres_p95": 0.1155
+    },
+    {
+      "engine": "postgres",
+      "scenario": "point_lookup_no_index",
+      "index": false,
+      "status": "measured",
+      "mean_ms": 0.6439,
+      "p50_ms": 0.6374,
+      "p95_ms": 0.7113,
+      "n": 200
+    },
+    {
+      "engine": "postgres",
+      "scenario": "point_lookup_with_index",
+      "index": true,
+      "status": "measured",
+      "mean_ms": 0.3216,
+      "p50_ms": 0.3128,
+      "p95_ms": 0.3853,
+      "n": 200,
+      "speedup_vs_no_index_p95": 1.8461
     }
   ]
 }
