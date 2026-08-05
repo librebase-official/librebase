@@ -69,6 +69,47 @@ Workflow: [`.github/workflows/oltp-compare.yml`](../../.github/workflows/oltp-co
 
 Debug-only: `workflow_dispatch` input `force_skip_ok` allows exit 0 on missing embed (not for schedule).
 
+Optional HTTP soft job: set `workflow_dispatch` input `run_http=true` (does **not** change the SQL hard gate). Soft-skips with exit 0 when lis REST is unavailable.
+
+## HTTP REST compare (P3 soft gate)
+
+Product-path latency: **lis + lidb** `GET`/`POST /rest/v1/{table}` vs **PostgREST** against Postgres on an identical `parity_items`-shaped schema.
+
+| Scenario | Work | Gate |
+|----------|------|------|
+| `rest_get_eq_name` | `GET …?name=eq.…&limit=1` | soft ≤ **1.2×** PostgREST P95 |
+| `rest_post_insert` | `POST` single row | soft ≤ **1.2×** |
+
+Gate id: `http_rest_p95`. Soft by default (artifact + WARN). Set `HTTP_SOFT_FAIL=1` to hard-fail. Soft-skip (exit **0**, `skipped: true`) when lis or PostgREST is unreachable — SQL OLTP gate stays independent and hard.
+
+### Run HTTP compare
+
+```powershell
+# Terminal A — lean lis stack (from LIS_ROOT)
+$env:LIS_ROOT = "C:\Users\Julian\Documents\Programming\li\lis"
+$env:LIDB_ROOT = "C:\Users\Julian\Documents\Programming\li\lidb"
+$env:LI_PROFILE = "librebase"
+$env:LI_REST_BACKEND = "lidb"
+$env:LI_JWT_SECRET = "dev-secret-change-me"
+cd $env:LIS_ROOT
+python routes/registry/server.py --port 54321
+
+# Terminal B — PostgREST against local Postgres (example)
+# docker run --rm -e PGRST_DB_URI=postgres://postgres:postgres@host.docker.internal:5433/postgres `
+#   -e PGRST_DB_SCHEMAS=public -e PGRST_DB_ANON_ROLE=postgres -p 3000:3000 postgrest/postgrest:v12.2.8
+
+$env:LIS_REST_URL = "http://127.0.0.1:54321"   # or LIBREBASE_PARITY_API
+$env:POSTGREST_URL = "http://127.0.0.1:3000"
+$env:POSTGRES_URL = "postgresql://postgres:postgres@127.0.0.1:5433/postgres"
+$env:HARDWARE_NOTE = "local win32 HTTP rest vs postgrest"
+python benchmarks/oltp-compare/run_http_compare.py --rows 50 --warmup 20 --measure 100
+python benchmarks/oltp-compare/check_http_gate.py
+```
+
+Env knobs: `HTTP_RATIO_MAX` (default `1.2`), `HTTP_SOFT_FAIL`, `HTTP_TABLE` (default `parity_items` — required for lis lidb backend), `HTTP_WARMUP` / `HTTP_MEASURE` / `HTTP_ROWS`, `LIS_ROOT` (pin metadata).
+
+Artifact: [`results/http-latest.json`](results/http-latest.json).
+
 ## Latest local sample (aims only)
 
 Historical laptop sample (pre-gate harness) lives in [`results/latest.json`](results/latest.json). Re-run locally and prefer CI artifacts for claims.

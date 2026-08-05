@@ -9,6 +9,10 @@ on:
         description: "Allow skip when lidb checkout/build fails (debug only)"
         type: boolean
         default: false
+      run_http:
+        description: "Also run REST/PostgREST HTTP soft compare (does not affect SQL gate)"
+        type: boolean
+        default: false
   schedule:
     - cron: "30 6 * * *"
 
@@ -164,4 +168,81 @@ jobs:
         with:
           name: oltp-compare-latest
           path: benchmarks/oltp-compare/results/latest.json
+          if-no-files-found: ignore
+
+  # P3 soft gate — optional; never blocks the SQL hard gate above.
+  # Soft-skips (exit 0) when LIS_REST_URL is unset/unreachable.
+  oltp-http-compare:
+    name: HTTP REST soft compare
+    if: github.event_name == 'workflow_dispatch' && inputs.run_http == true
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      postgrest:
+        image: postgrest/postgrest:v12.2.8
+        env:
+          PGRST_DB_URI: postgres://postgres:postgres@postgres:5432/postgres
+          PGRST_DB_SCHEMAS: public
+          PGRST_DB_ANON_ROLE: postgres
+        ports:
+          - 3000:3000
+
+    env:
+      POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+      POSTGREST_URL: http://127.0.0.1:3000
+      # LIS_REST_URL intentionally unset unless provided as a repo variable —
+      # harness soft-skips with skipped JSON (exit 0). Set vars to measure live.
+      LIS_REST_URL: ${{ vars.LIS_REST_URL || '' }}
+      HTTP_RATIO_MAX: "1.2"
+      HTTP_ROWS: "50"
+      HTTP_WARMUP: "10"
+      HTTP_MEASURE: "50"
+      HARDWARE_NOTE: "github-actions ubuntu-latest + postgrest:v12 + postgres:16 (HTTP soft)"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install psycopg2
+        run: pip install psycopg2-binary
+
+      - name: Wait for PostgREST
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 30); do
+            if curl -sf "http://127.0.0.1:3000/" >/dev/null 2>&1; then
+              echo "PostgREST up"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "PostgREST did not become ready (harness will soft-skip if needed)"
+
+      - name: Run HTTP compare + soft gate
+        run: |
+          set -euo pipefail
+          OUT="benchmarks/oltp-compare/results/http-latest.json"
+          mkdir -p benchmarks/oltp-compare/results
+          python3 benchmarks/oltp-compare/run_http_compare.py --json-out "$OUT"
+          python3 benchmarks/oltp-compare/check_http_gate.py "$OUT"
+
+      - name: Upload http-latest.json
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oltp-http-compare-latest
+          path: benchmarks/oltp-compare/results/http-latest.json
           if-no-files-found: ignore
