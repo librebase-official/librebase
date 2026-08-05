@@ -1,0 +1,34 @@
+{
+  "generated_at": "2026-08-05T12:42:18.505665+00:00",
+  "harness": "lidb-bench",
+  "harness_version": "1",
+  "profile": "librebase-lean",
+  "git_sha": "2bfbd3c",
+  "os": "linux",
+  "runner_os": "Linux-6.12.90+deb13.1-amd64-x86_64-with-glibc2.39",
+  "gate_platform_ok": true,
+  "p95_ops_note": "Core-path P95/ops use scripts/bench/registry_oltp_compare.py (BENCH_DB_REGISTRY_THRESHOLD default 1.2) or librebase benchmarks/oltp-compare check_gate.py (OLTP_RATIO_MAX=1.2). This harness gates RSS only.",
+  "scenarios": [
+    {
+      "id": "rss_steady_librebase_lean",
+      "benchmark": "rss_steady",
+      "profile": "librebase-lean",
+      "metric": "rss_mb",
+      "unit": "mb",
+      "rss_mb": 3.797,
+      "value": 3.797,
+      "threshold_mb": 64.0,
+      "passed": true,
+      "status": "passed",
+      "rss_source": "proc_vmrss",
+      "pid": 4481,
+      "pool_warm": 4,
+      "seed_versions": 0,
+      "notes": "Empty project DB + small warm pool (PH-DB-7 lean gate)",
+      "ph_ids": [
+        "PH-DB-7"
+      ]
+    }
+  ],
+  "status": "pass"
+}
