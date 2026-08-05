@@ -8,7 +8,7 @@
 
 | # | Capability | Supabase reference | Linative home | Status | Notes |
 |---|------------|-------------------|---------------|--------|-------|
-| 1 | Postgres-shaped SQL | Postgres | **lidb** | ✅ | Wave A INSERT/SELECT (P-SQL-01). Minimal `CREATE TABLE` @ `07e816b`. Single-col `CREATE INDEX` hash/map @ `e9f8570` (not B-tree) |
+| 1 | Postgres-shaped SQL | Postgres | **lidb** | ✅ | Wave A INSERT/SELECT (P-SQL-01). Minimal `CREATE TABLE` @ `07e816b`. Single-col `CREATE INDEX` (sorted_tree / legacy hash_map — not disk B-tree; see oltp `index_impl`) |
 | 2 | REST `/rest/v1` | PostgREST | **lis** `routes/rest` | ✅ | GET/POST/PATCH/DELETE `parity_items` (lidb UPDATE/DELETE @ `9c928eb` + lis wire). Memory PATCH smoke green |
 | 3 | RLS + JWT | Postgres RLS + GoTrue | **lidb** + **lis** auth | ✅ | JWT + Python RLS default. **`LI_RLS_ENGINE=1`** → lidb embed `session` + `set_claims` (engine eval, skip Python post-filter). Allowlisted `parity_items` / owner_id |
 | 4 | WAL / durability | Postgres WAL | **lidb** | ✅ | WalReader + empty-`catalog.heap` crash-replay smoke (`test_wal_crash_replay_restores_insert`). UPDATE/DELETE WAL still stub; append follows catalog persist |
@@ -37,4 +37,4 @@
 
 ## Honest bottom line
 
-Wave A green; roadmap waves 0–10 marked done (W4 partial: full Li HTTP REST still blocked on lic P0 httpd). Waves 8–9 + phone + Deno Edge + pooler/PITR/analytics honest ❌. Deepen remainders closed (`auth_smtp`, SigV4 query, `cdn_image=oos_lean`, MCP lean). Do **not** claim Supabase replacement or “as fast as Supabase” without CI OLTP ratios.
+Wave A green; roadmap waves 0–10 marked done (W4 partial: full Li HTTP REST still blocked on lic P0 httpd). Waves 8–9 + phone + Deno Edge + pooler/PITR/analytics honest ❌. Deepen remainders closed (`auth_smtp`, SigV4 query, `cdn_image=oos_lean`, MCP lean). Do **not** claim Supabase replacement or “as fast as Supabase” without CI OLTP ratios. Footprint / speed copy stays **aim/target** (lean **64 MB**, Supabase-class latency) until [MARKETING_UNLOCK.md](../benchmarks/oltp-compare/MARKETING_UNLOCK.md) required rows are green — checklist is mostly **not** unlocked yet.

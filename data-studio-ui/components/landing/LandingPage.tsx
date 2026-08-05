@@ -63,7 +63,8 @@ export function LandingPage() {
       <section className="lb-proof" aria-label="Proof">
         <p>
           The engine is written in Li and compiles to machine code. We aim for about 64&nbsp;MB of
-          RAM and Postgres-level speed on common queries. The console shows real health.
+          RAM and Supabase-class speed on common queries&mdash;targets until published benches are
+          green. The console shows real health.
         </p>
       </section>
 
@@ -140,8 +141,9 @@ export function LandingPage() {
         <details>
           <summary>How much memory are you targeting?</summary>
           <p>
-            About 64&nbsp;MB RAM for a lean dedicated instance, with speed close to managed Postgres
-            on the same hardware. That is a target until published benches are green.
+            We aim for about 64&nbsp;MB RAM for a lean dedicated instance, with Supabase-class /
+            Postgres-class speed on the same hardware. Aim/target only until the published OLTP
+            unlock checklist is green&mdash;not a measured claim yet.
           </p>
         </details>
         <details>

@@ -1,0 +1,7 @@
+{
+  "suite": "librebase-oltp-index-compare",
+  "source": "ci-nightly-placeholder",
+  "status": "not_published",
+  "skipped": true,
+  "note": "Future nightly bot may commit a real PASS payload here after gated oltp-compare greens. Do not invent green CI rows. See ../MARKETING_UNLOCK.md."
+}

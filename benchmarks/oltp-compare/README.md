@@ -34,7 +34,7 @@ Presets: `--scenarios core` (CI) = lookups + insert + mix; `--scenarios all` add
 | **soft** | Documented threshold; warn by default (`OLTP_SOFT_RATIO_MAX=1.5` for insert/mix) |
 | **diagnostic** | Recorded only — no pass/fail |
 
-Marketing “on par / Supabase-class” still requires P1 CI green **and** P5 `sorted_tree`/`btree` (or an explicit forever `hash_map` footnote). PH-DB-7 lean RSS is a separate lidb gate.
+Marketing “on par / Supabase-class” is **locked** until the [P6 unlock checklist](MARKETING_UNLOCK.md) is green. Harness + index honesty alone are not enough: need multi-day nightly PASS, PH-DB-7 (or keep **64 MB aim**), and indexed claim gated or footnoted. PH-DB-7 lean RSS is a separate lidb gate.
 
 ### When `range_scan` can become gated
 
@@ -123,3 +123,5 @@ Artifact: [`results/http-latest.json`](results/http-latest.json).
 ## Latest local sample (aims only)
 
 Historical laptop sample (pre-gate harness) lives in [`results/latest.json`](results/latest.json). Re-run locally and prefer CI artifacts for claims.
+
+[`results/ci-latest.json`](results/ci-latest.json) is a **placeholder** for a future nightly bot commit of gated PASS rows — do not treat it as green evidence today. Unlock rules: [MARKETING_UNLOCK.md](MARKETING_UNLOCK.md).
