@@ -1,17 +1,75 @@
 {
   "suite": "librebase-http-rest-compare",
   "gate_id": "http_rest_p95",
-  "skipped": true,
-  "skip_reason": "POSTGREST_URL unset",
+  "skipped": false,
   "lis_rest": true,
-  "postgrest": false,
+  "postgrest": true,
+  "lis_url": "http://127.0.0.1:15421",
+  "postgrest_url": "http://127.0.0.1:3000",
+  "table": "parity_items",
   "lis_pin": "f94f4ce",
   "runner_os": "Windows-11-10.0.26200-SP0",
-  "hardware_note": "",
-  "honesty": "HTTP soft-skip \u2014 LIS/API or PostgREST unavailable. Does not imply SQL OLTP gate result. Not a marketing green row.",
+  "hardware_note": "local win32 lis:15421 vs postgrest:3000 lb-pg-bench:5433",
+  "rows_seeded": 50,
+  "warmup": 10,
+  "measure": 50,
+  "honesty": "lis /rest/v1 (Python MVP + lidb parity_items) vs PostgREST TCP on identical schema. Soft gate only \u2014 SQL embed green does not imply REST green.",
   "soft_gate": {
+    "id": "http_rest_p95",
     "threshold": 1.2,
-    "breached": false
+    "max_ratio_vs_postgrest_p95": 4.0692,
+    "breached": true,
+    "scenarios": [
+      "rest_get_eq_name",
+      "rest_post_insert"
+    ]
   },
-  "scenarios": []
+  "scenarios": [
+    {
+      "engine": "lis",
+      "scenario": "rest_get_eq_name",
+      "gate_class": "soft",
+      "status": "measured",
+      "surface": "rest",
+      "mean_ms": 53.2632,
+      "p50_ms": 47.4958,
+      "p95_ms": 101.5024,
+      "n": 50,
+      "ratio_vs_postgrest_p95": 3.8216
+    },
+    {
+      "engine": "postgrest",
+      "scenario": "rest_get_eq_name",
+      "gate_class": "soft",
+      "status": "measured",
+      "surface": "rest",
+      "mean_ms": 15.5613,
+      "p50_ms": 15.5255,
+      "p95_ms": 26.5605,
+      "n": 50
+    },
+    {
+      "engine": "lis",
+      "scenario": "rest_post_insert",
+      "gate_class": "soft",
+      "status": "measured",
+      "surface": "rest",
+      "mean_ms": 53.9715,
+      "p50_ms": 47.7881,
+      "p95_ms": 103.7171,
+      "n": 50,
+      "ratio_vs_postgrest_p95": 4.0692
+    },
+    {
+      "engine": "postgrest",
+      "scenario": "rest_post_insert",
+      "gate_class": "soft",
+      "status": "measured",
+      "surface": "rest",
+      "mean_ms": 15.6425,
+      "p50_ms": 15.6041,
+      "p95_ms": 25.4886,
+      "n": 50
+    }
+  ]
 }

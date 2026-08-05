@@ -1,7 +1,31 @@
 {
   "suite": "librebase-oltp-index-compare",
-  "source": "ci-nightly-placeholder",
-  "status": "not_published",
-  "skipped": true,
-  "note": "Future nightly bot may commit a real PASS payload here after gated oltp-compare greens. Do not invent green CI rows. See ../MARKETING_UNLOCK.md."
+  "source": "local-measured-2026-08-05",
+  "status": "gate_fail",
+  "gate": "check_gate.py",
+  "gate_exit": 1,
+  "skipped": false,
+  "mode": "embed_execjson",
+  "lidb_pin": "d7f5cb5",
+  "index_impl": "sorted_tree",
+  "hardware_note": "local win32 lb-pg-bench:5433 embed_execjson sorted_tree d7f5cb5 Debug",
+  "rows_seeded": 5000,
+  "warmup": 20,
+  "measure": 100,
+  "hard_gated": [
+    "point_lookup_with_index",
+    "range_scan_name_prefix"
+  ],
+  "gated_ratios": {
+    "point_lookup_with_index": 454.1969,
+    "range_scan_name_prefix": 478.3469
+  },
+  "threshold": 1.2,
+  "note": "Real local PASS artifact — gate FAIL because exec-json subprocess spawn dominates P95 vs TCP Postgres. Not a marketing unlock. Nightly 3-day streak still pending.",
+  "http_companion": {
+    "artifact": "http-latest.json",
+    "skipped": false,
+    "max_ratio_vs_postgrest_p95": 4.0692,
+    "soft_gate": "warn"
+  }
 }

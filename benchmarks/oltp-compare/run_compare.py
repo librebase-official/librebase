@@ -5,12 +5,13 @@ Honesty
 -------
 - Reports measured P50/P95 (and ops/sec where relevant) — never invents ratios
   without a Postgres URL.
-- Modes: embed_inprocess (EmbeddedSession) vs embed_execjson (subprocess spawn).
-- Gate candidate today: point_lookup_with_index in embed_inprocess.
+- Modes: embed_execjson (subprocess exec-json, **CI hard gate**) vs
+  embed_inprocess (EmbeddedSession, diagnostic-only — unfair vs TCP Postgres).
+- Hard gate: point_lookup_with_index in embed_execjson; range_scan_name_prefix
+  when index_impl is sorted_tree or btree (in-memory ordered map, not disk B-tree).
 - ``index_impl`` autodetection: btree | sorted_tree | hash_map | unknown.
 - Do not claim "as fast as Supabase" until CI publishes green gated rows +
   sorted_tree/btree indexed path (or an explicit hash_map footnote forever).
-  ``range_scan_name_prefix`` stays diagnostic until gated after sorted_tree CI green.
 
 Env
 ---
@@ -286,12 +287,24 @@ def resolve_scenarios(spec: str) -> list[str]:
         return list(SCENARIO_ALL)
     if key == "list":
         return []
-    # comma-separated custom list
-    parts = [p.strip() for p in spec.split(",") if p.strip()]
-    unknown = [p for p in parts if p not in SCENARIO_ALL]
-    if unknown:
-        raise SystemExit(f"unknown scenarios: {unknown}; known={list(SCENARIO_ALL)}")
-    return parts
+    presets = {"core": SCENARIO_CORE, "all": SCENARIO_ALL}
+    parts = [p.strip().lower() for p in spec.split(",") if p.strip()]
+    out: list[str] = []
+    for part in parts:
+        if part in presets:
+            out.extend(presets[part])
+        elif part in SCENARIO_ALL:
+            out.append(part)
+        else:
+            raise SystemExit(f"unknown scenarios: {[part]}; known={list(SCENARIO_ALL)} + presets core,all")
+    # preserve order, dedupe
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for sid in out:
+        if sid not in seen:
+            seen.add(sid)
+            ordered.append(sid)
+    return ordered
 
 
 def scenario_row(
@@ -376,6 +389,8 @@ def run(
             raise ValueError(f"unknown mode: {mode}")
 
         index_impl = detect_index_impl(root=root, data_dir=data)
+        if index_impl in ("sorted_tree", "btree"):
+            SCENARIO_META["range_scan_name_prefix"] = "gated"
 
         def exec_sql(sql: str, params: list[str] | None = None) -> list:
             if session is not None:
@@ -527,7 +542,7 @@ def run(
                     index=indexed_ok,
                     status="measured",
                     stats=rng,
-                    note="diagnostic until btree (P5); hash_map may not help LIKE",
+                    note="sorted_tree in-memory ordered map (not disk B-tree); gated when index_impl sorted_tree/btree",
                 )
             )
 
@@ -796,17 +811,22 @@ def run(
             os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL")
         ),
         "honesty": (
-            "Aims only until CI green. embed_inprocess vs TCP Postgres is a labeled "
-            f"microbench (not fair_sql). index_impl={index_impl} — "
+            f"Aims only until CI green. mode={mode} — "
+            + (
+                "embed_execjson is the CI hard-gate path (subprocess exec-json vs TCP Postgres)."
+                if mode == "embed_execjson"
+                else "embed_inprocess is diagnostic-only (unfair vs TCP Postgres)."
+            )
+            + f" index_impl={index_impl} — "
             + (
                 "sorted_tree is in-memory ordered map (not disk B-tree / Postgres parity); "
-                "range_scan stays diagnostic until CI gates it after stable green rows."
+                "range_scan is gated when index_impl is sorted_tree/btree."
                 if index_impl == "sorted_tree"
                 else "btree claim reserved for page B-tree; "
                 if index_impl == "btree"
                 else "hash_map — not B-tree / Postgres parity; "
             )
-            + "gated marketing claim needs P1 green + sorted_tree/btree (or forever footnote)."
+                + " gated marketing claim needs multi-day CI PASS + PH-DB-7 (or forever footnote)."
         ),
         "scenarios": out_scenarios,
     }
@@ -830,8 +850,8 @@ def main() -> int:
     ap.add_argument(
         "--mode",
         choices=("embed_inprocess", "embed_execjson"),
-        default=os.environ.get("OLTP_MODE", "embed_inprocess"),
-        help="Fairness mode (default: embed_inprocess)",
+        default=os.environ.get("OLTP_MODE", "embed_execjson"),
+        help="Fairness mode (default: embed_execjson — CI hard gate)",
     )
     ap.add_argument(
         "--scenarios",

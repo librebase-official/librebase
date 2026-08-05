@@ -37,8 +37,8 @@ jobs:
       BENCH_ROWS: "10000"
       BENCH_WARMUP: "30"
       BENCH_MEASURE: "200"
-      OLTP_MODE: embed_inprocess
-      OLTP_SCENARIOS: core
+      OLTP_MODE: embed_execjson
+      OLTP_SCENARIOS: core,range_scan_name_prefix
       OLTP_RATIO_MAX: "1.2"
       OLTP_SOFT_RATIO_MAX: "1.5"
       HARDWARE_NOTE: "github-actions ubuntu-latest + postgres:16 service"
@@ -131,7 +131,7 @@ jobs:
                       "skipped": True,
                       "skip_reason": os.environ.get("SKIP_REASON", "lidb_embed unavailable"),
                       "lidb_pin": os.environ.get("SKIP_PIN", "unknown"),
-                      "mode": "embed_inprocess",
+                      "mode": "embed_execjson",
                       "index_impl": "hash_map",
                       "honesty": "Intentional CI run — skip is a gate failure unless force_skip_ok.",
                       "scenarios": [],
@@ -171,10 +171,12 @@ jobs:
           if-no-files-found: ignore
 
   # P3 soft gate — optional; never blocks the SQL hard gate above.
-  # Soft-skips (exit 0) when LIS_REST_URL is unset/unreachable.
+  # Starts lean lis + PostgREST when workflow_dispatch run_http=true (or vars.LIS_REST_URL set).
   oltp-http-compare:
     name: HTTP REST soft compare
-    if: github.event_name == 'workflow_dispatch' && inputs.run_http == true
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.run_http == true) ||
+      (github.event_name == 'schedule' && vars.LIS_REST_URL != '')
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -219,6 +221,103 @@ jobs:
       - name: Install psycopg2
         run: pip install psycopg2-binary
 
+      - name: Resolve lidb pin from docs/li-dependency-pins.md
+        id: lidb_pin
+        run: |
+          set -euo pipefail
+          PIN="$(python3 - <<'PY'
+          import re
+          from pathlib import Path
+          text = Path("docs/li-dependency-pins.md").read_text(encoding="utf-8")
+          m = re.search(r"\|\s*lidb\s*\|[^|]*@\s*`([0-9a-f]{7,40})`", text, re.I)
+          if not m:
+              m = re.search(r"lidb[^\n]*@\s*`([0-9a-f]{7,40})`", text, re.I)
+          if not m:
+              raise SystemExit("could not parse lidb pin from docs/li-dependency-pins.md")
+          print(m.group(1))
+          PY
+          )"
+          echo "sha=$PIN" >> "$GITHUB_OUTPUT"
+          echo "Resolved lidb pin: $PIN"
+
+      - name: Resolve lis pin from docs/li-dependency-pins.md
+        id: lis_pin
+        run: |
+          set -euo pipefail
+          PIN="$(python3 - <<'PY'
+          import re
+          from pathlib import Path
+          text = Path("docs/li-dependency-pins.md").read_text(encoding="utf-8")
+          m = re.search(r"\|\s*lis\s*\|[^|]*@\s*`([0-9a-f]{7,40})`", text, re.I)
+          if not m:
+              m = re.search(r"lis[^\n]*@\s*`([0-9a-f]{7,40})`", text, re.I)
+          if not m:
+              raise SystemExit("could not parse lis pin from docs/li-dependency-pins.md")
+          print(m.group(1))
+          PY
+          )"
+          echo "sha=$PIN" >> "$GITHUB_OUTPUT"
+          echo "Resolved lis pin: $PIN"
+
+      - name: Checkout lidb at pin
+        id: lidb
+        uses: actions/checkout@v4
+        with:
+          repository: li-langverse/lidb
+          ref: ${{ steps.lidb_pin.outputs.sha }}
+          path: _deps/lidb
+          token: ${{ secrets.LIDB_CHECKOUT_TOKEN || github.token }}
+        continue-on-error: true
+
+      - name: Checkout lis at pin
+        id: lis
+        uses: actions/checkout@v4
+        with:
+          repository: li-langverse/lis
+          ref: ${{ steps.lis_pin.outputs.sha }}
+          path: _deps/lis
+          token: ${{ secrets.LIDB_CHECKOUT_TOKEN || github.token }}
+        continue-on-error: true
+
+      - name: Build lidb_embed (smoke)
+        id: build
+        if: steps.lidb.outcome == 'success'
+        working-directory: _deps/lidb
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq cmake g++ ninja-build
+          cmake -S . -B build/smoke -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/smoke --target lidb_embed -j"$(nproc)"
+          test -x build/smoke/lidb_embed
+
+      - name: Start lean lis registry (background)
+        id: lis_stack
+        if: steps.lis.outcome == 'success' && steps.build.outcome == 'success'
+        env:
+          LIS_ROOT: ${{ github.workspace }}/_deps/lis
+          LIDB_ROOT: ${{ github.workspace }}/_deps/lidb
+          LIDB_EMBED: ${{ github.workspace }}/_deps/lidb/build/smoke/lidb_embed
+          LI_PROFILE: librebase
+          LI_REST_BACKEND: lidb
+          LI_JWT_SECRET: ci-http-bench-secret-change-me
+        run: |
+          set -euo pipefail
+          cd "$LIS_ROOT"
+          python3 routes/registry/server.py --port 54321 > /tmp/lis-http-bench.log 2>&1 &
+          echo $! > /tmp/lis-http-bench.pid
+          for i in $(seq 1 60); do
+            if curl -sf "http://127.0.0.1:54321/rest/v1" >/dev/null 2>&1; then
+              echo "lis REST up on :54321"
+              echo "url=http://127.0.0.1:54321" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "lis REST did not become ready — harness may soft-skip"
+          cat /tmp/lis-http-bench.log || true
+
       - name: Wait for PostgREST
         run: |
           set -euo pipefail
@@ -232,6 +331,11 @@ jobs:
           echo "PostgREST did not become ready (harness will soft-skip if needed)"
 
       - name: Run HTTP compare + soft gate
+        env:
+          LIS_REST_URL: ${{ steps.lis_stack.outputs.url || vars.LIS_REST_URL || '' }}
+          LIDB_ROOT: ${{ github.workspace }}/_deps/lidb
+          LIDB_EMBED: ${{ github.workspace }}/_deps/lidb/build/smoke/lidb_embed
+          LIS_ROOT: ${{ github.workspace }}/_deps/lis
         run: |
           set -euo pipefail
           OUT="benchmarks/oltp-compare/results/http-latest.json"

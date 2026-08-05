@@ -3,7 +3,9 @@
 
 Hard gate (exit 1):
   - payload skipped / missing postgres
+  - mode != embed_execjson (embed_inprocess is diagnostic-only)
   - lidb point_lookup_with_index missing, not measured, or index_unsupported
+  - range_scan_name_prefix when index_impl is sorted_tree or btree (same rules)
   - ratio_vs_postgres_p95 > OLTP_RATIO_MAX (default 1.2)
 
 Soft gate (warn; exit 1 only if OLTP_SOFT_FAIL=1):
@@ -23,8 +25,18 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_JSON = REPO / "benchmarks" / "oltp-compare" / "results" / "latest.json"
 
-HARD_GATED = ("point_lookup_with_index",)
+HARD_GATED_BASE = ("point_lookup_with_index",)
+RANGE_SCAN = "range_scan_name_prefix"
+INDEXED_IMPLS = frozenset(("sorted_tree", "btree"))
+GATED_MODE = "embed_execjson"
 SOFT_GATED = ("point_insert", "indexed_read_write_mix")
+
+
+def _hard_gated(payload: dict) -> tuple[str, ...]:
+    gated: list[str] = list(HARD_GATED_BASE)
+    if payload.get("index_impl") in INDEXED_IMPLS:
+        gated.append(RANGE_SCAN)
+    return tuple(gated)
 
 
 def _ratio_max() -> float:
@@ -49,6 +61,7 @@ def check(payload: dict) -> int:
     warnings: list[str] = []
     hard_max = _ratio_max()
     soft_max = _soft_ratio_max()
+    hard_gated = _hard_gated(payload)
 
     if payload.get("skipped"):
         errors.append(
@@ -59,6 +72,13 @@ def check(payload: dict) -> int:
     if not payload.get("postgres"):
         errors.append("postgres=false — gate requires a Postgres head-to-head")
 
+    mode = payload.get("mode") or payload.get("lidb_mode")
+    if mode != GATED_MODE:
+        errors.append(
+            f"mode={mode!r} — CI hard gate requires {GATED_MODE!r} "
+            "(embed_inprocess is diagnostic-only; unfair vs TCP Postgres)"
+        )
+
     scenarios = payload.get("scenarios") or []
     by_id = {
         (s.get("engine"), s.get("scenario")): s
@@ -67,8 +87,8 @@ def check(payload: dict) -> int:
     }
 
     print(
-        f"gate: mode={payload.get('mode') or payload.get('lidb_mode')} "
-        f"pin={payload.get('lidb_pin')} index_impl={payload.get('index_impl')} "
+        f"gate: mode={mode} pin={payload.get('lidb_pin')} "
+        f"index_impl={payload.get('index_impl')} hard_gated={hard_gated} "
         f"hard_max={hard_max} soft_max={soft_max}"
     )
     print(
@@ -86,7 +106,7 @@ def check(payload: dict) -> int:
         ratio_s = f"{ratio:.4f}" if isinstance(ratio, (int, float)) else "-"
         print(f"{eng:8} {sid:28} {status:18} {p95_s:>10} {ratio_s:>8} {gclass:10}")
 
-    for sid in HARD_GATED:
+    for sid in hard_gated:
         row = by_id.get(("lidb", sid))
         if row is None:
             errors.append(f"missing lidb scenario {sid}")

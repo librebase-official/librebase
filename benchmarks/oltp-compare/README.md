@@ -6,12 +6,12 @@ Honest latency / throughput compare of **lidb embed** vs **Postgres** on shared 
 
 | Mode | lidb | Postgres | Use |
 |------|------|----------|-----|
-| `embed_inprocess` (default) | `EmbeddedSession` in-process | TCP | Engine microbench — **gated** path today |
-| `embed_execjson` | `lidb_embed exec-json` subprocess | TCP | Includes spawn cost (diagnostic) |
+| `embed_execjson` (default, **CI hard gate**) | `lidb_embed exec-json` subprocess | TCP | Fairer process-boundary compare (includes spawn cost) |
+| `embed_inprocess` | `EmbeddedSession` in-process | TCP | **Diagnostic only** — unfair vs TCP Postgres; not gated |
 
 JSON always records `mode`, `lidb_pin` (`git rev-parse` of `LIDB_ROOT`), `runner_os`, `hardware_note`, and detected `index_impl` (`btree` | `sorted_tree` | `hash_map` | `unknown` via `migration_intent` / session / `liorm.probe_index_impl`).
 
-In-process lidb vs TCP Postgres is **not** a fair process-boundary compare. Treat gated green rows as evidence artifacts with that label until a `fair_sql` mode exists.
+`check_gate.py` **requires** `embed_execjson`. Do not treat `embed_inprocess` green rows as marketing evidence.
 
 ## Scenarios
 
@@ -21,30 +21,20 @@ In-process lidb vs TCP Postgres is **not** a fair process-boundary compare. Trea
 | `point_lookup_with_index` | Same after `CREATE INDEX … (name)` | **gated** — `ratio_vs_postgres_p95 ≤ 1.2` |
 | `point_insert` | single-row `INSERT` | **soft** — ≤ **1.5** first release (warn; hard if `OLTP_SOFT_FAIL=1`) |
 | `indexed_read_write_mix` | 80% indexed SELECT / 20% INSERT | soft (ops/sec + P95) |
-| `range_scan_name_prefix` | `WHERE name LIKE 'lookup-%' LIMIT 50` | diagnostic until **sorted_tree/btree** CI green (P5) — then promote to gated |
+| `range_scan_name_prefix` | `WHERE name LIKE 'lookup-%' LIMIT 50` | **gated** when `index_impl` ∈ {`sorted_tree`,`btree`}; else diagnostic |
 | `concurrent_readers` | N threads × M lookups | soft; report `ops_per_sec` |
 
-Presets: `--scenarios core` (CI) = lookups + insert + mix; `--scenarios all` adds range + concurrent; `--scenarios list` prints ids.
+Presets: `--scenarios core` = lookups + insert + mix; `--scenarios all` adds range + concurrent; CI uses `core,range_scan_name_prefix` when sorted_tree pin is green.
 
 ## Gated vs diagnostic
 
 | Class | Meaning |
 |-------|---------|
-| **gated** | `check_gate.py` hard-fails CI when breached (`point_lookup_with_index`) |
+| **gated** | `check_gate.py` hard-fails CI when breached (`point_lookup_with_index`; `range_scan_name_prefix` when sorted_tree/btree) |
 | **soft** | Documented threshold; warn by default (`OLTP_SOFT_RATIO_MAX=1.5` for insert/mix) |
 | **diagnostic** | Recorded only — no pass/fail |
 
-Marketing “on par / Supabase-class” is **locked** until the [P6 unlock checklist](MARKETING_UNLOCK.md) is green. Harness + index honesty alone are not enough: need multi-day nightly PASS, PH-DB-7 (or keep **64 MB aim**), and indexed claim gated or footnoted. PH-DB-7 lean RSS is a separate lidb gate.
-
-### When `range_scan` can become gated
-
-Promote `range_scan_name_prefix` from diagnostic → gated only when **all** of:
-
-1. Payload `index_impl` is `sorted_tree` or `btree` (not `hash_map` / `unknown`)
-2. Nightly oltp-compare PASS includes the range scenario for ≥2 consecutive greens
-3. `check_gate.py` gains an explicit gated id for `range_scan_name_prefix` (not done in this harness pass)
-
-Until then, keep it diagnostic even though lidb sorted_tree can serve prefix `LIKE`.
+Marketing “on par / Supabase-class” is **locked** until the [P6 unlock checklist](MARKETING_UNLOCK.md) is green. Harness + index honesty alone are not enough: need multi-day nightly PASS, PH-DB-7 (or keep **64 MB aim**), and indexed claim gated or footnoted. PH-DB-7 lean RSS is a separate lidb gate — see [`docs/li-dependency-pins.md`](../../docs/li-dependency-pins.md).
 
 ## Honesty
 
@@ -61,7 +51,7 @@ $env:LIDB_ROOT = "C:\Users\Julian\Documents\Programming\li\lidb"
 $env:LIDB_EMBED = "$env:LIDB_ROOT\build\smoke\Release\lidb_embed.exe"
 $env:POSTGRES_URL = "postgresql://postgres:postgres@127.0.0.1:5433/postgres"
 $env:HARDWARE_NOTE = "local win32 + lb-pg-bench:5433"
-python benchmarks/oltp-compare/run_compare.py --mode embed_inprocess --scenarios core --rows 10000 --warmup 30 --measure 200
+python benchmarks/oltp-compare/run_compare.py --mode embed_execjson --scenarios core,range_scan_name_prefix --rows 10000 --warmup 30 --measure 200
 python benchmarks/oltp-compare/check_gate.py
 ```
 
@@ -71,15 +61,15 @@ Env knobs: `OLTP_RATIO_MAX` (default `1.2`), `OLTP_SOFT_RATIO_MAX` (default `1.5
 
 Workflow: [`.github/workflows/oltp-compare.yml`](../../.github/workflows/oltp-compare.yml) (`workflow_dispatch` / nightly).
 
-1. Parse lidb SHA from [`docs/li-dependency-pins.md`](../../docs/li-dependency-pins.md).
+1. Parse lidb SHA from [`docs/li-dependency-pins.md`](../../docs/li-dependency-pins.md) (currently **`d7f5cb5`** sorted_tree).
 2. Checkout `li-langverse/lidb` at that pin (`LIDB_CHECKOUT_TOKEN` when the mirror is private).
 3. Build smoke `lidb_embed` (`cmake` → `build/smoke`).
-4. Run `--scenarios core` + `check_gate.py` — **fail** on skip, `index_unsupported`, or gated ratio breach.
+4. Run `--mode embed_execjson --scenarios core,range_scan_name_prefix` + `check_gate.py` — **fail** on skip, wrong mode, `index_unsupported`, or gated ratio breach.
 5. Upload `latest.json` with `if: always()`.
 
 Debug-only: `workflow_dispatch` input `force_skip_ok` allows exit 0 on missing embed (not for schedule).
 
-Optional HTTP soft job: set `workflow_dispatch` input `run_http=true` (does **not** change the SQL hard gate). Soft-skips with exit 0 when lis REST is unavailable.
+Optional HTTP soft job: `workflow_dispatch` input `run_http=true` starts lean **lis + lidb** on the runner (or uses repo `vars.LIS_REST_URL`). Does **not** change the SQL hard gate.
 
 ## HTTP REST compare (P3 soft gate)
 
@@ -124,4 +114,4 @@ Artifact: [`results/http-latest.json`](results/http-latest.json).
 
 Historical laptop sample (pre-gate harness) lives in [`results/latest.json`](results/latest.json). Re-run locally and prefer CI artifacts for claims.
 
-[`results/ci-latest.json`](results/ci-latest.json) is a **placeholder** for a future nightly bot commit of gated PASS rows — do not treat it as green evidence today. Unlock rules: [MARKETING_UNLOCK.md](MARKETING_UNLOCK.md).
+[`results/ci-latest.json`](results/ci-latest.json) holds the latest **local or CI PASS** gated payload when published — do not treat placeholder/skipped rows as green evidence. Unlock rules: [MARKETING_UNLOCK.md](MARKETING_UNLOCK.md).
