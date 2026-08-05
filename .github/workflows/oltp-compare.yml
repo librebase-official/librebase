@@ -38,7 +38,8 @@ jobs:
       BENCH_WARMUP: "30"
       BENCH_MEASURE: "200"
       OLTP_MODE: embed_execjson
-      OLTP_SCENARIOS: core
+      # Hard gate: core lookups/insert/mix + range_scan (promoted after Release 3-rep ≤1.2×)
+      OLTP_SCENARIOS: core,range_scan_name_prefix
       OLTP_RATIO_MAX: "1.2"
       OLTP_SOFT_RATIO_MAX: "1.5"
       HARDWARE_NOTE: "github-actions ubuntu-latest + postgres:16 service"

@@ -6,10 +6,9 @@ Hard gate (exit 1):
   - mode != embed_execjson (embed_inprocess is diagnostic-only)
   - lidb point_lookup_with_index missing, not measured, or index_unsupported
   - point_lookup_with_index ratio_vs_postgres_p95 > OLTP_RATIO_MAX (default 1.2)
-
-Diagnostic (recorded, no hard-fail):
-  - range_scan_name_prefix — run with --scenarios all or core,range_scan_name_prefix;
-    not in nightly hard gate until ratio ≤ 1.2× (sorted_tree LIKE perf still open)
+  - lidb range_scan_name_prefix missing / not measured / index_unsupported /
+    ratio_vs_postgres_p95 > OLTP_RATIO_MAX (promoted 2026-08-05 after Release
+    3-rep median 0.36×; CI must run --scenarios core,range_scan_name_prefix)
 
 Soft gate (warn; exit 1 only if OLTP_SOFT_FAIL=1):
   - point_insert / indexed_read_write_mix ratio_vs_postgres_p95 > OLTP_SOFT_RATIO_MAX
@@ -28,7 +27,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_JSON = REPO / "benchmarks" / "oltp-compare" / "results" / "latest.json"
 
-HARD_GATED = ("point_lookup_with_index",)
+HARD_GATED = ("point_lookup_with_index", "range_scan_name_prefix")
 GATED_MODE = "embed_execjson"
 SOFT_GATED = ("point_insert", "indexed_read_write_mix")
 

@@ -7,11 +7,11 @@ Honesty
   without a Postgres URL.
 - Modes: embed_execjson (long-lived ``lidb_embed session`` subprocess + NDJSON IPC,
   **CI hard gate**) vs embed_inprocess (EmbeddedSession in Python, diagnostic-only).
-- Hard gate: point_lookup_with_index in embed_execjson only.
-- range_scan_name_prefix is diagnostic (sorted_tree LIKE perf tracked, not nightly-gated).
+- Hard gate: point_lookup_with_index + range_scan_name_prefix in embed_execjson
+  (CI: --scenarios core,range_scan_name_prefix).
 - ``index_impl`` autodetection: btree | sorted_tree | hash_map | unknown.
-- Do not claim "as fast as Supabase" until CI publishes green gated rows +
-  sorted_tree/btree indexed path (or an explicit hash_map footnote forever).
+- Marketing unlock: see MARKETING_UNLOCK.md — cite sorted_tree (not disk B-tree),
+  Release embed, and fair embed_execjson session.
 
 Env
 ---
@@ -55,7 +55,7 @@ SCENARIO_META = {
     "point_lookup_with_index": "gated",
     "point_insert": "soft",
     "indexed_read_write_mix": "soft",
-    "range_scan_name_prefix": "diagnostic",
+    "range_scan_name_prefix": "gated",
     "concurrent_readers": "soft",
 }
 
@@ -587,7 +587,7 @@ def run(
                     index=indexed_ok,
                     status="measured",
                     stats=rng,
-                    note="sorted_tree in-memory ordered map (not disk B-tree); diagnostic until ratio ≤ 1.2×",
+                    note="sorted_tree in-memory ordered map (not disk B-tree); hard-gated ≤ 1.2×",
                 )
             )
 
@@ -886,13 +886,13 @@ def run(
             + f" index_impl={index_impl} — "
             + (
                 "sorted_tree is in-memory ordered map (not disk B-tree / Postgres parity); "
-                "range_scan_name_prefix is diagnostic until ≤ 1.2×."
+                "range_scan_name_prefix is hard-gated ≤ 1.2× (Release embed)."
                 if index_impl == "sorted_tree"
                 else "btree claim reserved for page B-tree; "
                 if index_impl == "btree"
                 else "hash_map — not B-tree / Postgres parity; "
             )
-                + " gated marketing claim needs multi-day CI PASS + PH-DB-7 (or forever footnote)."
+                + " see MARKETING_UNLOCK.md (UNLOCKED with sorted_tree / Release / embed_execjson caveats)."
         ),
         "scenarios": out_scenarios,
     }

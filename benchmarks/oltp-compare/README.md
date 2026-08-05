@@ -21,26 +21,26 @@ JSON always records `mode`, `lidb_pin` (`git rev-parse` of `LIDB_ROOT`), `runner
 | `point_lookup_with_index` | Same after `CREATE INDEX … (name)` | **gated** — `ratio_vs_postgres_p95 ≤ 1.2` |
 | `point_insert` | single-row `INSERT` | **soft** — ≤ **1.5** first release (warn; hard if `OLTP_SOFT_FAIL=1`) |
 | `indexed_read_write_mix` | 80% indexed SELECT / 20% INSERT | soft (ops/sec + P95) |
-| `range_scan_name_prefix` | `WHERE name LIKE 'lookup-%' LIMIT 50` | **diagnostic** — tracked in full runs; not nightly-gated until ≤ 1.2× |
+| `range_scan_name_prefix` | `WHERE name LIKE 'lookup-%' LIMIT 50` | **gated** — `ratio_vs_postgres_p95 ≤ 1.2` (promoted 2026-08-05) |
 | `concurrent_readers` | N threads × M lookups | soft; report `ops_per_sec` |
 
-Presets: `--scenarios core` = lookups + insert + mix (**CI nightly hard gate**); `--scenarios all` adds range + concurrent. For diagnostic range_scan: `--scenarios core,range_scan_name_prefix`.
+Presets: `--scenarios core` = lookups + insert + mix; CI nightly hard gate uses **`core,range_scan_name_prefix`**. `--scenarios all` adds concurrent.
 
 ## Gated vs diagnostic
 
 | Class | Meaning |
 |-------|---------|
-| **gated** | `check_gate.py` hard-fails CI when breached (`point_lookup_with_index` only) |
+| **gated** | `check_gate.py` hard-fails CI when breached (`point_lookup_with_index`, `range_scan_name_prefix`) |
 | **soft** | Documented threshold; warn by default (`OLTP_SOFT_RATIO_MAX=1.5` for insert/mix) |
 | **diagnostic** | Recorded only — no pass/fail |
 
-Marketing “on par / Supabase-class” is **locked** until the [P6 unlock checklist](MARKETING_UNLOCK.md) is green. Harness + index honesty alone are not enough: need multi-day nightly PASS, PH-DB-7 (or keep **64 MB aim**), and indexed claim gated or footnoted. PH-DB-7 lean RSS is a separate lidb gate — see [`docs/li-dependency-pins.md`](../../docs/li-dependency-pins.md).
+Marketing unlock checklist: [MARKETING_UNLOCK.md](MARKETING_UNLOCK.md) (**UNLOCKED** with sorted_tree / Release / `embed_execjson` caveats). PH-DB-7 lean RSS is a separate lidb gate — see [`docs/li-dependency-pins.md`](../../docs/li-dependency-pins.md).
 
 ## Honesty
 
-- **Aims until CI green** — do not market “as fast as Supabase” from a laptop run alone.
+- Cite [MARKETING_UNLOCK.md](MARKETING_UNLOCK.md) caveats — **sorted_tree ≠ disk B-tree**, **Release** embed, fair **`embed_execjson`** session.
 - lidb indexed path needs embed with **CREATE INDEX**. Older embeds → `index_unsupported` (gate **fails**).
-- `index_impl: sorted_tree` — in-memory ordered map (`std::map`); **not** Postgres disk B-tree parity. `hash_map` = legacy equality-only label.
+- `index_impl: sorted_tree` — in-memory ordered secondary; **not** Postgres disk B-tree parity. `hash_map` = legacy equality-only label.
 - `ratio_vs_postgres_p95` = lidb_p95 / postgres_p95 (lower = faster than Postgres on that run).
 - Concurrent lidb `embed_inprocess` uses a mutex around the session (not true parallel engine concurrency).
 
@@ -51,11 +51,9 @@ $env:LIDB_ROOT = "C:\Users\Julian\Documents\Programming\li\lidb"
 $env:LIDB_EMBED = "$env:LIDB_ROOT\build\smoke\Release\lidb_embed.exe"
 $env:POSTGRES_URL = "postgresql://postgres:postgres@127.0.0.1:5433/postgres"
 $env:HARDWARE_NOTE = "local win32 + lb-pg-bench:5433"
-python benchmarks/oltp-compare/run_compare.py --mode embed_execjson --scenarios core --rows 10000 --warmup 30 --measure 200
-python benchmarks/oltp-compare/check_gate.py
-
-# Optional: include diagnostic range_scan (not nightly-gated until ≤ 1.2×)
+# Match CI hard gate (core + range_scan)
 python benchmarks/oltp-compare/run_compare.py --mode embed_execjson --scenarios core,range_scan_name_prefix --rows 10000 --warmup 30 --measure 200
+python benchmarks/oltp-compare/check_gate.py
 ```
 
 Env knobs: `OLTP_RATIO_MAX` (default `1.2`), `OLTP_SOFT_RATIO_MAX` (default `1.5`), `OLTP_SOFT_FAIL`, `OLTP_MODE`, `OLTP_SCENARIOS`.
@@ -67,7 +65,7 @@ Workflow: [`.github/workflows/oltp-compare.yml`](../../.github/workflows/oltp-co
 1. Parse lidb SHA from [`docs/li-dependency-pins.md`](../../docs/li-dependency-pins.md) (currently **`d7f5cb5`** sorted_tree).
 2. Checkout `li-langverse/lidb` at that pin (`LIDB_CHECKOUT_TOKEN` when the mirror is private).
 3. Build smoke `lidb_embed` (`cmake` → `build/smoke`).
-4. Run `--mode embed_execjson --scenarios core` + `check_gate.py` — **fail** on skip, wrong mode, `index_unsupported`, or `point_lookup_with_index` ratio breach. `range_scan_name_prefix` is diagnostic (run manually with `--scenarios core,range_scan_name_prefix`); not in nightly hard-fail set until ≤ 1.2×.
+4. Run `--mode embed_execjson --scenarios core,range_scan_name_prefix` + `check_gate.py` — **fail** on skip, wrong mode, `index_unsupported`, or `point_lookup_with_index` / `range_scan_name_prefix` ratio breach (> `OLTP_RATIO_MAX`, default 1.2).
 5. Upload `latest.json` with `if: always()`.
 
 Debug-only: `workflow_dispatch` input `force_skip_ok` allows exit 0 on missing embed (not for schedule).

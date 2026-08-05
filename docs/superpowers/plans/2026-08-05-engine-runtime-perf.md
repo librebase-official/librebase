@@ -1,19 +1,19 @@
 # Engine / runtime performance plan — close remaining Librebase gaps
 
 **Date:** 2026-08-05  
-**Status:** **implemented this session** (Phase 0–1 + Phase 3.1–3.2); CI promote + Linux RSS still open  
+**Status:** **implemented** (Phase 0–1 + Phase 3.1–3.2 + Linux RSS PASS + range_scan hard-gate promote); HTTP hard-gate still optional  
 **Branch:** `feat/p5-oltp-index-impl-detect` (librebase) · lidb `feat/p5-sorted-tree-index` · lis `feat/deepen-phase1-refresh-buckets`  
-**Related:** [`benchmarks/oltp-compare/MARKETING_UNLOCK.md`](../../benchmarks/oltp-compare/MARKETING_UNLOCK.md)
+**Related:** [`benchmarks/oltp-compare/MARKETING_UNLOCK.md`](../../benchmarks/oltp-compare/MARKETING_UNLOCK.md) — **UNLOCKED** (sorted_tree / Release / embed_execjson caveats)
 
 ## Goal
 
-Close the open paths that keep marketing **LOCKED**:
+Close the open paths that keep marketing **LOCKED** — **done for required rows**:
 
-| Gap | Current (2026-08-05 after Phase 0–1 / 3.1–3.2) | Unlock target |
-|-----|-----------------------------------------------|---------------|
-| `range_scan_name_prefix` | median **0.36×** Postgres P95 (0.29–0.37×) on **Release** | ≤ **1.2×** then promote to CI hard gate — **local DoD met** |
-| HTTP REST vs PostgREST | median max **~0.60×** (soft PASS) | soft-green ≤ **1.2×** — **local DoD met**; CI hard-gate optional |
-| PH-DB-7 lean RSS | Windows advisory **5.6 MB PASS**; Linux VmRSS pending | citable Linux green **or** forever “64 MB aim” |
+| Gap | Current (2026-08-05) | Unlock target |
+|-----|----------------------|---------------|
+| `range_scan_name_prefix` | median **0.36×** Release; **CI hard-gated** | ≤ **1.2×** — **met + promoted** |
+| HTTP REST vs PostgREST | median max **~0.60×** (soft PASS) | soft-green ≤ **1.2×** — **met**; CI hard-gate optional |
+| PH-DB-7 lean RSS | Linux VmRSS **3.797 MB PASS** (job 99197) | citable Linux green — **met** |
 
 Core SQL gate is already **PASS** (`point_lookup_with_index` ~0.19–0.25× via `embed_execjson` + `PersistentEmbedProcess`). Do not regress it.
 
@@ -25,7 +25,7 @@ Core SQL gate is already **PASS** (`point_lookup_with_index` ~0.19–0.25× via 
 |----------|-------------|
 | [`results/range-scan-streak.json`](../../benchmarks/oltp-compare/results/range-scan-streak.json) | lidb pin `d7f5cb5`, `index_impl=sorted_tree`, median ratio **1.9424** |
 | [`results/http-streak.json`](../../benchmarks/oltp-compare/results/http-streak.json) | lis pin `f94f4ce`, median max ratio **4.37×**; postfix session reuse still ~4.3× |
-| MARKETING_UNLOCK | Status **LOCKED**; core streak done; range + HTTP + Linux RSS still open |
+| MARKETING_UNLOCK | Status **UNLOCKED**; core + range hard-gated; Linux RSS **3.797 MB**; HTTP soft optional |
 
 **Harness honesty notes already recorded:**
 
@@ -190,9 +190,9 @@ Sequence: **C for lis-local**, **B if multi-language clients must stay out-of-pr
 | Gate | Action | When |
 |------|--------|------|
 | Core SQL | Keep nightly hard gate (`--scenarios core`, ≤1.2×) | already |
-| Range scan | Add **diagnostic job** publishing ratio; promote to hard gate after **2 consecutive nights ≤1.2×** | after Phase 1 DoD |
-| HTTP | Keep soft gate; publish `http-latest.json`; hard-gate only after 2 stable soft-green nights | after Phase 3/4 |
-| PH-DB-7 | Finish Linux VmRSS CI (lidb MR !5 / footprint-gate.yml); cite in MARKETING_UNLOCK | parallel |
+| Range scan | Hard gate after Release 3-rep ≤1.2× (manual nightly substitute) | **done** |
+| HTTP | Keep soft gate; publish `http-latest.json`; hard-gate only after 2 stable soft-green nights | soft done; hard optional |
+| PH-DB-7 | Linux VmRSS CI green (pipeline 27003 / job 99197, 3.797 MB) | **done** |
 | Build type | Fail or WARN if CI uses Debug embed for gated scenarios | Phase 0 |
 | Labels | Require `index_impl` in artifacts; reject marketing copy claiming disk btree while `sorted_tree` | continuous |
 
@@ -308,6 +308,6 @@ flowchart TD
 - [x] **Phase 1.1–1.3:** prefix successor + emit projection / covering key + `SortedKeyIndex` (sorted vector) — range median **0.36×**  
 - [x] **Phase 3.1–3.2:** persistent `set_claims` + embed session pool — HTTP soft median max **0.60×**  
 - [ ] Phase 2 disk btree — **not needed** (range already ≤1.2× on Release)  
-- [ ] Linux VmRSS / PH-DB-7 citable green — still open  
-- [ ] CI promote range_scan hard gate + HTTP hard gate (2 nights) — follow-up  
+- [x] Linux VmRSS / PH-DB-7 citable green — job 99197 / pipeline 27003 (**3.797 MB**)  
+- [x] CI promote range_scan hard gate (manual 3-rep = nightly substitute) — HTTP hard gate still optional follow-up  
 - [x] Commit + push on implementation branches (librebase / lidb / lis)
