@@ -6,9 +6,11 @@ Honesty
 - Reports measured P50/P95 (and ops/sec where relevant) — never invents ratios
   without a Postgres URL.
 - Modes: embed_inprocess (EmbeddedSession) vs embed_execjson (subprocess spawn).
-- Gate candidate today: point_lookup_with_index in embed_inprocess (hash_map index).
-- Do not claim "as fast as Supabase" until CI publishes green gated rows + P5 btree
-  (or an explicit hash_map footnote forever).
+- Gate candidate today: point_lookup_with_index in embed_inprocess.
+- ``index_impl`` autodetection: btree | sorted_tree | hash_map | unknown.
+- Do not claim "as fast as Supabase" until CI publishes green gated rows +
+  sorted_tree/btree indexed path (or an explicit hash_map footnote forever).
+  ``range_scan_name_prefix`` stays diagnostic until gated after sorted_tree CI green.
 
 Env
 ---
@@ -113,6 +115,79 @@ def lidb_pin(root: Path) -> str:
         )
         if proc.returncode == 0 and proc.stdout.strip():
             return proc.stdout.strip()
+    except OSError:
+        pass
+    return "unknown"
+
+
+def detect_index_impl(*, root: Path, data_dir: Path | None = None) -> str:
+    """Detect lidb index_impl (btree|sorted_tree|hash_map|unknown) for honesty JSON.
+
+    Prefer liorm.probe_index_impl when LIDB_ROOT is importable; else parse
+    ``.lidb/migration_intent.txt`` or ``lidb_embed open`` stdout.
+    """
+    known = ("btree", "sorted_tree", "hash_map")
+    if str(root) not in sys.path:
+        sys.path.insert(0, str(root))
+    try:
+        from liorm.embed_engine import probe_index_impl  # type: ignore
+
+        got = probe_index_impl(data_dir)
+        if got in known:
+            return got
+        if got and got != "unknown":
+            return got
+    except Exception:
+        pass
+
+    if data_dir is not None:
+        intent = data_dir / ".lidb" / "migration_intent.txt"
+        if intent.is_file():
+            for line in intent.read_text(encoding="utf-8", errors="replace").splitlines():
+                if line.startswith("index_impl="):
+                    val = line.split("=", 1)[1].strip()
+                    if val.startswith("hash_map"):
+                        return "hash_map"
+                    if val in known:
+                        return val
+                    if "sorted_tree" in val:
+                        return "sorted_tree"
+                    if "btree" in val:
+                        return "btree"
+
+    embed = find_embed()
+    if embed is None:
+        return "unknown"
+    try:
+        with tempfile.TemporaryDirectory(prefix="lb-oltp-idx-") as tmp:
+            proc = subprocess.run(
+                [str(embed), "open", tmp],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            for token in (proc.stdout or "").split():
+                if token.startswith("index_impl="):
+                    val = token.split("=", 1)[1].strip()
+                    if val.startswith("hash_map"):
+                        return "hash_map"
+                    if val in known:
+                        return val
+            subprocess.run(
+                [str(embed), "migrate", tmp],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            intent = Path(tmp) / ".lidb" / "migration_intent.txt"
+            if intent.is_file():
+                for line in intent.read_text(encoding="utf-8", errors="replace").splitlines():
+                    if line.startswith("index_impl="):
+                        val = line.split("=", 1)[1].strip()
+                        if val.startswith("hash_map"):
+                            return "hash_map"
+                        if val in known:
+                            return val
     except OSError:
         pass
     return "unknown"
@@ -265,6 +340,7 @@ def run(
     pin = lidb_pin(root)
     want = set(scenarios)
     out_scenarios: list[dict] = []
+    index_impl = "unknown"
 
     with tempfile.TemporaryDirectory(prefix="lb-oltp-") as tmp:
         data = Path(tmp) / "lidb"
@@ -298,6 +374,8 @@ def run(
             )
         else:
             raise ValueError(f"unknown mode: {mode}")
+
+        index_impl = detect_index_impl(root=root, data_dir=data)
 
         def exec_sql(sql: str, params: list[str] | None = None) -> list:
             if session is not None:
@@ -713,14 +791,22 @@ def run(
         "lidb_root": str(root),
         "runner_os": platform.platform(),
         "hardware_note": hardware_note,
-        "index_impl": "hash_map",
+        "index_impl": index_impl,
         "postgres": bool(
             os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL")
         ),
         "honesty": (
             "Aims only until CI green. embed_inprocess vs TCP Postgres is a labeled "
-            "microbench (not fair_sql). index_impl=hash_map — not B-tree / Postgres "
-            "parity; gated marketing claim needs P1 green + P5 btree (or forever footnote)."
+            f"microbench (not fair_sql). index_impl={index_impl} — "
+            + (
+                "sorted_tree is in-memory ordered map (not disk B-tree / Postgres parity); "
+                "range_scan stays diagnostic until CI gates it after stable green rows."
+                if index_impl == "sorted_tree"
+                else "btree claim reserved for page B-tree; "
+                if index_impl == "btree"
+                else "hash_map — not B-tree / Postgres parity; "
+            )
+            + "gated marketing claim needs P1 green + sorted_tree/btree (or forever footnote)."
         ),
         "scenarios": out_scenarios,
     }

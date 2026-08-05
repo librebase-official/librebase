@@ -9,7 +9,7 @@ Honest latency / throughput compare of **lidb embed** vs **Postgres** on shared 
 | `embed_inprocess` (default) | `EmbeddedSession` in-process | TCP | Engine microbench — **gated** path today |
 | `embed_execjson` | `lidb_embed exec-json` subprocess | TCP | Includes spawn cost (diagnostic) |
 
-JSON always records `mode`, `lidb_pin` (`git rev-parse` of `LIDB_ROOT`), `runner_os`, `hardware_note`, and `index_impl: hash_map`.
+JSON always records `mode`, `lidb_pin` (`git rev-parse` of `LIDB_ROOT`), `runner_os`, `hardware_note`, and detected `index_impl` (`btree` | `sorted_tree` | `hash_map` | `unknown` via `migration_intent` / session / `liorm.probe_index_impl`).
 
 In-process lidb vs TCP Postgres is **not** a fair process-boundary compare. Treat gated green rows as evidence artifacts with that label until a `fair_sql` mode exists.
 
@@ -21,7 +21,7 @@ In-process lidb vs TCP Postgres is **not** a fair process-boundary compare. Trea
 | `point_lookup_with_index` | Same after `CREATE INDEX … (name)` | **gated** — `ratio_vs_postgres_p95 ≤ 1.2` |
 | `point_insert` | single-row `INSERT` | **soft** — ≤ **1.5** first release (warn; hard if `OLTP_SOFT_FAIL=1`) |
 | `indexed_read_write_mix` | 80% indexed SELECT / 20% INSERT | soft (ops/sec + P95) |
-| `range_scan_name_prefix` | `WHERE name LIKE 'lookup-%' LIMIT 50` | diagnostic until btree (P5) |
+| `range_scan_name_prefix` | `WHERE name LIKE 'lookup-%' LIMIT 50` | diagnostic until **sorted_tree/btree** CI green (P5) — then promote to gated |
 | `concurrent_readers` | N threads × M lookups | soft; report `ops_per_sec` |
 
 Presets: `--scenarios core` (CI) = lookups + insert + mix; `--scenarios all` adds range + concurrent; `--scenarios list` prints ids.
@@ -34,13 +34,23 @@ Presets: `--scenarios core` (CI) = lookups + insert + mix; `--scenarios all` add
 | **soft** | Documented threshold; warn by default (`OLTP_SOFT_RATIO_MAX=1.5` for insert/mix) |
 | **diagnostic** | Recorded only — no pass/fail |
 
-Marketing “on par / Supabase-class” still requires P1 CI green **and** P5 btree (or an explicit forever `hash_map` footnote). PH-DB-7 lean RSS is a separate lidb gate.
+Marketing “on par / Supabase-class” still requires P1 CI green **and** P5 `sorted_tree`/`btree` (or an explicit forever `hash_map` footnote). PH-DB-7 lean RSS is a separate lidb gate.
+
+### When `range_scan` can become gated
+
+Promote `range_scan_name_prefix` from diagnostic → gated only when **all** of:
+
+1. Payload `index_impl` is `sorted_tree` or `btree` (not `hash_map` / `unknown`)
+2. Nightly oltp-compare PASS includes the range scenario for ≥2 consecutive greens
+3. `check_gate.py` gains an explicit gated id for `range_scan_name_prefix` (not done in this harness pass)
+
+Until then, keep it diagnostic even though lidb sorted_tree can serve prefix `LIKE`.
 
 ## Honesty
 
 - **Aims until CI green** — do not market “as fast as Supabase” from a laptop run alone.
 - lidb indexed path needs embed with **CREATE INDEX**. Older embeds → `index_unsupported` (gate **fails**).
-- `index_impl: hash_map` — **not** Postgres B-tree parity.
+- `index_impl: sorted_tree` — in-memory ordered map (`std::map`); **not** Postgres disk B-tree parity. `hash_map` = legacy equality-only label.
 - `ratio_vs_postgres_p95` = lidb_p95 / postgres_p95 (lower = faster than Postgres on that run).
 - Concurrent lidb `embed_inprocess` uses a mutex around the session (not true parallel engine concurrency).
 
