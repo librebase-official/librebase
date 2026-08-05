@@ -301,7 +301,7 @@ def soft_gate_report(payload: dict) -> int:
         )
         return 0
     if not breached:
-        print(f"HTTP GATE: PASS (soft ≤ {threshold})")
+        print(f"HTTP GATE: PASS (soft <= {threshold})")
         return 0
     msg = (
         f"HTTP soft gate breached: ratio > {threshold} "

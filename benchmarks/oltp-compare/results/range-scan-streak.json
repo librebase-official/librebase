@@ -2,51 +2,53 @@
   "suite": "librebase-oltp-index-compare",
   "streak_type": "manual_3_rep_diagnostic",
   "date": "2026-08-05",
-  "status": "diagnostic_breach",
+  "status": "diagnostic_pass",
   "librebase_branch": "feat/p5-oltp-index-impl-detect",
-  "librebase_sha": "8ea71d7",
-  "lidb_pin": "d7f5cb5",
+  "lidb_pin": "041b9a2",
+  "lidb_branch": "feat/p5-sorted-tree-index",
   "mode": "embed_execjson",
   "embed_ipc": "session_subprocess",
+  "build_type": "Release",
   "index_impl": "sorted_tree",
   "scenario": "range_scan_name_prefix",
   "threshold": 1.2,
   "gate_class": "diagnostic",
-  "hardware_note": "local win32 + lb-pg-bench:5433 manual 3-rep range_scan 2026-08-05 (Debug lidb_embed)",
+  "hardware_note": "local win32 Release clang (smoke-release) + lb-pg-bench:5433",
+  "engine_changes": "Phase 1: prefix_successor bounds + SortedKeyIndex (sorted vector) + emit projection / covering indexed key; prior Debug median 1.94x",
   "reps": [
     {
       "rep": 1,
-      "artifact": "range-scan-rep-1.json",
-      "ratio_vs_postgres_p95": 1.9424,
-      "lidb_p95_ms": 0.7583,
-      "postgres_p95_ms": 0.3904,
-      "gate": "BREACH"
+      "artifact": "range-scan-release-rep-1.json",
+      "ratio_vs_postgres_p95": 0.2863,
+      "lidb_p95_ms": 0.1088,
+      "postgres_p95_ms": 0.38,
+      "gate": "PASS"
     },
     {
       "rep": 2,
-      "artifact": "range-scan-rep-2.json",
-      "ratio_vs_postgres_p95": 1.8902,
-      "lidb_p95_ms": 0.9328,
-      "postgres_p95_ms": 0.4935,
-      "gate": "BREACH"
+      "artifact": "range-scan-release-rep-2.json",
+      "ratio_vs_postgres_p95": 0.3657,
+      "lidb_p95_ms": 0.1301,
+      "postgres_p95_ms": 0.3558,
+      "gate": "PASS"
     },
     {
       "rep": 3,
-      "artifact": "range-scan-rep-3.json",
-      "ratio_vs_postgres_p95": 1.9593,
-      "lidb_p95_ms": 0.8084,
-      "postgres_p95_ms": 0.4126,
-      "gate": "BREACH"
+      "artifact": "range-scan-release-rep-3.json",
+      "ratio_vs_postgres_p95": 0.3577,
+      "lidb_p95_ms": 0.1286,
+      "postgres_p95_ms": 0.3595,
+      "gate": "PASS"
     }
   ],
   "summary": {
-    "all_pass": false,
-    "best_ratio": 1.8902,
-    "best_rep": 2,
-    "median_ratio": 1.9424,
-    "median_rep": 1,
-    "worst_ratio": 1.9593,
-    "worst_rep": 3,
-    "note": "Improved from prior ~2.28× diagnostic sample; sorted_tree prefix scan uses lower_bound + early LIMIT exit. Still ~1.9× vs Postgres B-tree — not promoted to CI hard gate."
+    "all_pass": true,
+    "best_ratio": 0.2863,
+    "best_rep": 1,
+    "median_ratio": 0.3577,
+    "median_rep": 3,
+    "worst_ratio": 0.3657,
+    "worst_rep": 2,
+    "note": "Release + Phase 1 hot path: median 0.36x (was Debug 1.94x). Core point_lookup still PASS ~0.20x. Promote range_scan to CI hard gate after 2 consecutive nightly greens."
   }
 }

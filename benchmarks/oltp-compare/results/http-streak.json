@@ -2,49 +2,45 @@
   "suite": "librebase-http-rest-compare",
   "streak_type": "manual_3_rep",
   "date": "2026-08-05",
-  "status": "soft_breach",
-  "lis_pin": "f94f4ce",
+  "status": "soft_pass",
+  "lis_pin": "2d4055b",
+  "lidb_pin": "041b9a2",
   "lis_url": "http://127.0.0.1:15421",
   "postgrest_url": "http://127.0.0.1:3000",
   "threshold": 1.2,
-  "hardware_note": "local win32 lis:15421 vs lb-pgrst-bench:3000 lb-pg-bench:5433",
+  "hardware_note": "local win32 lis:15421 embed pool + Release lidb_embed vs lb-pgrst-bench:3000 lb-pg-bench:5433",
+  "engine_changes": "lis Phase 3.1-3.2: PersistentEmbedProcess set_claims/clear_claims; LI_EMBED_POOL_SIZE session pool; lidb Release embed; prior median max 4.37x",
   "reps": [
     {
       "rep": 1,
-      "artifact": "http-rep-1.json",
-      "max_ratio_vs_postgrest_p95": 4.3703,
-      "rest_get_eq_name_ratio": 3.6896,
-      "rest_post_insert_ratio": 4.3703,
-      "gate": "SOFT_BREACH"
+      "artifact": "http-pool-rep-1.json",
+      "max_ratio_vs_postgrest_p95": 0.5879,
+      "rest_get_eq_name_ratio": 0.5839,
+      "rest_post_insert_ratio": 0.5879,
+      "gate": "SOFT_PASS"
     },
     {
       "rep": 2,
-      "artifact": "http-rep-2.json",
-      "max_ratio_vs_postgrest_p95": 4.1426,
-      "rest_get_eq_name_ratio": 3.7249,
-      "rest_post_insert_ratio": 4.1426,
-      "gate": "SOFT_BREACH"
+      "artifact": "http-pool-rep-2.json",
+      "max_ratio_vs_postgrest_p95": 0.7522,
+      "rest_get_eq_name_ratio": 0.5953,
+      "rest_post_insert_ratio": 0.7522,
+      "gate": "SOFT_PASS"
     },
     {
       "rep": 3,
-      "artifact": "http-rep-3.json",
-      "max_ratio_vs_postgrest_p95": 5.8522,
-      "rest_get_eq_name_ratio": 3.1526,
-      "rest_post_insert_ratio": 5.8522,
-      "gate": "SOFT_BREACH"
+      "artifact": "http-pool-rep-3.json",
+      "max_ratio_vs_postgrest_p95": 0.5979,
+      "rest_get_eq_name_ratio": 0.5708,
+      "rest_post_insert_ratio": 0.5979,
+      "gate": "SOFT_PASS"
     }
   ],
   "summary": {
-    "all_soft_pass": false,
-    "median_max_ratio": 4.3703,
-    "best_max_ratio": 4.1426,
-    "worst_max_ratio": 5.8522,
-    "root_cause": "lis Python MVP HTTP stack (stdlib server + auth/JWT + handler) vs PostgREST; lidb_store exec-json per-request spawn was fixed in lis (session reuse) — DB layer ~0.2ms/query but REST path still ~4×."
-  },
-  "postfix_note": {
-    "lis_fix": "PersistentEmbedProcess in lidb_store._exec_json (uncommitted lis patch)",
-    "postfix_rep": "http-rep-postfix-1.json",
-    "postfix_max_ratio": 4.2786,
-    "note": "Session reuse did not close soft gate — remaining gap is Python REST surface, not embed spawn."
+    "all_soft_pass": true,
+    "median_max_ratio": 0.5979,
+    "best_max_ratio": 0.5879,
+    "worst_max_ratio": 0.7522,
+    "root_cause_closed": "Per-request spawn + single-session lock + Debug embed inflated prior ~4x; pool + Release closes soft gate. Still Python MVP surface — do not hard-gate until 2 stable CI nights."
   }
 }

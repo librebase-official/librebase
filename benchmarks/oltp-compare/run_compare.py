@@ -200,16 +200,36 @@ def find_embed() -> Path | None:
         return Path(override)
     root = find_lidb_root()
     for cand in (
+        root / "build" / "smoke-release" / "lidb_embed.exe",
+        root / "build" / "smoke-release" / "lidb_embed",
         root / "build" / "smoke" / "Release" / "lidb_embed.exe",
+        root / "build" / "smoke" / "Release" / "lidb_embed",
         root / "build" / "smoke" / "lidb_embed.exe",
         root / "build" / "smoke" / "lidb_embed",
         root / "build" / "Release" / "lidb_embed.exe",
         root / "build" / "lidb_embed.exe",
         root / "build" / "lidb_embed",
+        root / "build" / "smoke" / "Debug" / "lidb_embed.exe",
+        root / "build" / "smoke" / "Debug" / "lidb_embed",
     ):
         if cand.is_file():
             return cand
     return None
+
+
+def detect_build_type(embed: Path | None) -> str:
+    """Best-effort Debug/Release label from binary path or OLTP_BUILD_TYPE override."""
+    override = os.environ.get("OLTP_BUILD_TYPE", "").strip()
+    if override:
+        return override
+    if embed is None:
+        return "unknown"
+    parts = {p.lower() for p in embed.parts}
+    if "smoke-release" in parts or "release" in parts or "relwithdebinfo" in parts:
+        return "Release"
+    if "debug" in parts:
+        return "Debug"
+    return "unknown"
 
 
 def _configure_lidb_import(root: Path, embed: Path | None) -> None:
@@ -847,6 +867,7 @@ def run(
         "embed_ipc": embed_ipc,
         "scenarios_selected": scenarios,
         "embed": str(embed),
+        "build_type": detect_build_type(embed),
         "lidb_pin": pin,
         "lidb_root": str(root),
         "runner_os": platform.platform(),

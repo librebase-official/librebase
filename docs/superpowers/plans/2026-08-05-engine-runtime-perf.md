@@ -1,18 +1,18 @@
 # Engine / runtime performance plan — close remaining Librebase gaps
 
 **Date:** 2026-08-05  
-**Status:** research + plan only (no engine implementation in this doc’s landing PR)  
-**Branch:** `feat/p5-oltp-index-impl-detect`  
+**Status:** **implemented this session** (Phase 0–1 + Phase 3.1–3.2); CI promote + Linux RSS still open  
+**Branch:** `feat/p5-oltp-index-impl-detect` (librebase) · lidb `feat/p5-sorted-tree-index` · lis `feat/deepen-phase1-refresh-buckets`  
 **Related:** [`benchmarks/oltp-compare/MARKETING_UNLOCK.md`](../../benchmarks/oltp-compare/MARKETING_UNLOCK.md)
 
 ## Goal
 
 Close the open paths that keep marketing **LOCKED**:
 
-| Gap | Current (2026-08-05 evidence) | Unlock target |
-|-----|-------------------------------|---------------|
-| `range_scan_name_prefix` | median **1.94×** Postgres P95 (1.89–1.96×), diagnostic | ≤ **1.2×** then promote to CI hard gate |
-| HTTP REST vs PostgREST | median max **~4.4×** (soft WARN) | soft-green ≤ **1.2×** (optional product claim) |
+| Gap | Current (2026-08-05 after Phase 0–1 / 3.1–3.2) | Unlock target |
+|-----|-----------------------------------------------|---------------|
+| `range_scan_name_prefix` | median **0.36×** Postgres P95 (0.29–0.37×) on **Release** | ≤ **1.2×** then promote to CI hard gate — **local DoD met** |
+| HTTP REST vs PostgREST | median max **~0.60×** (soft PASS) | soft-green ≤ **1.2×** — **local DoD met**; CI hard-gate optional |
 | PH-DB-7 lean RSS | Windows advisory **5.6 MB PASS**; Linux VmRSS pending | citable Linux green **or** forever “64 MB aim” |
 
 Core SQL gate is already **PASS** (`point_lookup_with_index` ~0.19–0.25× via `embed_execjson` + `PersistentEmbedProcess`). Do not regress it.
@@ -304,5 +304,10 @@ flowchart TD
 - [x] Research (web + academic) captured above  
 - [x] Concrete phased plan with estimates + sequencing  
 - [x] File under `docs/superpowers/plans/`  
-- [ ] Engine work **not** implemented here  
-- [ ] Commit + push on `feat/p5-oltp-index-impl-detect`
+- [x] **Phase 0:** Release re-baseline (`build_type` in harness; Debug was the 1.94× artifact)  
+- [x] **Phase 1.1–1.3:** prefix successor + emit projection / covering key + `SortedKeyIndex` (sorted vector) — range median **0.36×**  
+- [x] **Phase 3.1–3.2:** persistent `set_claims` + embed session pool — HTTP soft median max **0.60×**  
+- [ ] Phase 2 disk btree — **not needed** (range already ≤1.2× on Release)  
+- [ ] Linux VmRSS / PH-DB-7 citable green — still open  
+- [ ] CI promote range_scan hard gate + HTTP hard gate (2 nights) — follow-up  
+- [x] Commit + push on implementation branches (librebase / lidb / lis)

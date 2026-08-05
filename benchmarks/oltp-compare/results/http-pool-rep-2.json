@@ -17,7 +17,7 @@
   "soft_gate": {
     "id": "http_rest_p95",
     "threshold": 1.2,
-    "max_ratio_vs_postgrest_p95": 0.5979,
+    "max_ratio_vs_postgrest_p95": 0.7522,
     "breached": false,
     "scenarios": [
       "rest_get_eq_name",
@@ -31,11 +31,11 @@
       "gate_class": "soft",
       "status": "measured",
       "surface": "rest",
-      "mean_ms": 12.8412,
-      "p50_ms": 15.4076,
-      "p95_ms": 16.201,
+      "mean_ms": 12.8513,
+      "p50_ms": 15.3719,
+      "p95_ms": 16.2014,
       "n": 100,
-      "ratio_vs_postgrest_p95": 0.5708
+      "ratio_vs_postgrest_p95": 0.5953
     },
     {
       "engine": "postgrest",
@@ -43,9 +43,9 @@
       "gate_class": "soft",
       "status": "measured",
       "surface": "rest",
-      "mean_ms": 17.4972,
-      "p50_ms": 15.7072,
-      "p95_ms": 28.3821,
+      "mean_ms": 15.1037,
+      "p50_ms": 15.5316,
+      "p95_ms": 27.2158,
       "n": 100
     },
     {
@@ -54,11 +54,11 @@
       "gate_class": "soft",
       "status": "measured",
       "surface": "rest",
-      "mean_ms": 7.7655,
-      "p50_ms": 1.9162,
-      "p95_ms": 16.3063,
+      "mean_ms": 7.6242,
+      "p50_ms": 1.9343,
+      "p95_ms": 22.0936,
       "n": 100,
-      "ratio_vs_postgrest_p95": 0.5979
+      "ratio_vs_postgrest_p95": 0.7522
     },
     {
       "engine": "postgrest",
@@ -66,9 +66,9 @@
       "gate_class": "soft",
       "status": "measured",
       "surface": "rest",
-      "mean_ms": 15.4447,
-      "p50_ms": 15.6505,
-      "p95_ms": 27.2713,
+      "mean_ms": 16.4811,
+      "p50_ms": 15.5502,
+      "p95_ms": 29.3728,
       "n": 100
     }
   ]
