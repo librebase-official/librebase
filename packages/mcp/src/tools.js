@@ -288,6 +288,23 @@ export const tools = [
     description: "Return anon/publishable keys from env (honest stub — fail closed if unset)",
     inputSchema: { type: "object", properties: {} },
   },
+  {
+    name: "get_project",
+    description: "GET /org/v1/orgs/{orgId}/projects/{projectId} (fail closed)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        orgId: { type: "string" },
+        projectId: { type: "string" },
+      },
+      required: ["orgId", "projectId"],
+    },
+  },
+  {
+    name: "deepen_status",
+    description: "Read DEEPEN.json deepen-remainders tracker",
+    inputSchema: { type: "object", properties: {} },
+  },
 ];
 
 

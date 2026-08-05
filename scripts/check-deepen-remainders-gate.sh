@@ -45,6 +45,7 @@ test -f "$ROOT/data/goal-directed-sprints/wp-supabase-parity-deepen-remainders.m
 if [[ -f "$ROOT/scripts/e2e_deepen_phase1.py" ]]; then
   if [[ -z "${LIS_ROOT:-}" ]]; then
     if [[ -d /workspace/lis ]]; then export LIS_ROOT=/workspace/lis;
+    elif [[ -d "$ROOT/../li/lis" ]]; then export LIS_ROOT="$ROOT/../li/lis";
     elif [[ -d "$ROOT/../lis" ]]; then export LIS_ROOT="$ROOT/../lis"; fi
   fi
   python3 "$ROOT/scripts/e2e_deepen_phase1.py" || {

@@ -519,6 +519,64 @@ def p_rt_01() -> Result:
     return asyncio.run(_probe())
 
 
+def p_rt_02() -> Result:
+    """Row-shaped changefeed `record` → postgres_changes payload (in-process P-RT-02).
+
+    Does not require a live WS stack — imports lis ChangefeedSource (same as lean e2e).
+    Live REST→WS remains covered when P-RT-01 stack is up.
+    """
+    import sys
+    import tempfile
+
+    lis_root = Path(os.environ.get("LIS_ROOT", Path(__file__).resolve().parents[2] / ".." / "li" / "lis")).resolve()
+    if not lis_root.is_dir():
+        lis_root = Path(r"C:\Users\Julian\Documents\Programming\li\lis")
+    if not lis_root.is_dir():
+        return Result("P-RT-02", "fail", f"lis checkout missing at {lis_root}")
+    sys.path.insert(0, str(lis_root))
+    os.environ["LI_CHANGEFEED_NATIVE"] = "0"
+    tmp = Path(tempfile.mkdtemp(prefix="parity-rt02-"))
+    os.environ["LI_DATA_DIR"] = str(tmp)
+    try:
+        from routes.realtime.changefeed import ChangefeedSource
+        from routes.realtime.protocol import postgres_changes_payload
+
+        src = ChangefeedSource(data_dir=tmp)
+        src.push_mock(
+            table="parity_items",
+            op="insert",
+            record={"id": "rt02-1", "name": "parity-rt02", "owner_id": "u-rt"},
+        )
+        events = list(src.poll_once())
+        # push_mock already dispatched; poll may be empty if offset advanced — re-parse file
+        if not events:
+            line = (tmp / "wal.changefeed.mock.jsonl").read_text(encoding="utf-8").strip().splitlines()[-1]
+            parsed = ChangefeedSource._parse_line(line)
+            events = [parsed] if parsed else []
+        if not events:
+            return Result("P-RT-02", "fail", "no changefeed event with record")
+        ev = events[0]
+        if ev.record.get("name") != "parity-rt02":
+            return Result("P-RT-02", "fail", "record missing row fields", {"record": ev.record})
+        payload = postgres_changes_payload(
+            subscription_id=1,
+            schema=ev.schema,
+            table=ev.table,
+            event_type="INSERT",
+            record=ev.record,
+            old_record=ev.old_record,
+        )
+        if (payload.get("data") or {}).get("record", {}).get("name") != "parity-rt02":
+            return Result("P-RT-02", "fail", "postgres_changes payload missing record", {"payload": payload})
+        return Result("P-RT-02", "pass", "record fanout OK (in-process)", {"record": ev.record})
+    except Exception as exc:  # noqa: BLE001
+        return Result("P-RT-02", "fail", f"P-RT-02 error: {exc}")
+    finally:
+        import shutil
+
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 CONTRACTS = [
     p_sql_01,
     p_rest_01,
@@ -532,6 +590,7 @@ CONTRACTS = [
     p_rls_01,
     p_io_01,
     p_rt_01,
+    p_rt_02,
 ]
 
 

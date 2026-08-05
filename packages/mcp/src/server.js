@@ -521,6 +521,47 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         ],
       };
     }
+    if (name === "get_project") {
+      const r = await adminFetch(
+        `/org/v1/orgs/${args.orgId}/projects/${args.projectId}`,
+      );
+      return {
+        content: [{ type: "text", text: JSON.stringify(r, null, 2) }],
+        isError: !r.ok,
+      };
+    }
+    if (name === "deepen_status") {
+      const p = path.join(
+        REPO,
+        "docs",
+        "sdd",
+        "specs",
+        "parity-roadmap-v2",
+        "DEEPEN.json",
+      );
+      if (!existsSync(p)) {
+        return {
+          content: [{ type: "text", text: "DEEPEN.json missing" }],
+          isError: true,
+        };
+      }
+      try {
+        const data = JSON.parse(readFileSync(p, "utf8"));
+        return {
+          content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+        };
+      } catch (e) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: e instanceof Error ? e.message : String(e),
+            },
+          ],
+          isError: true,
+        };
+      }
+    }
     return {
       content: [{ type: "text", text: `Unknown tool: ${name}` }],
       isError: true,

@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 /**
  * MCP tool-surface smoke (no live Admin required).
- * Verifies server module loads and ListTools exposes DoD tools.
+ * Verifies tools.js exposes DoD tools and handlers exist in server.js.
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const src = readFileSync(path.join(root, "src", "server.js"), "utf8");
+const toolsSrc = readFileSync(path.join(root, "src", "tools.js"), "utf8");
+const serverSrc = readFileSync(path.join(root, "src", "server.js"), "utf8");
 
 const required = [
   "admin_health",
@@ -21,9 +22,15 @@ const required = [
   "matrix_status",
 ];
 
-const missing = required.filter((name) => !src.includes(`name: "${name}"`));
+const missing = required.filter((name) => !toolsSrc.includes(`name: "${name}"`));
 if (missing.length) {
   console.error("FAIL: missing tools", missing);
+  process.exit(1);
+}
+
+const missingHandlers = required.filter((name) => !serverSrc.includes(`name === "${name}"`));
+if (missingHandlers.length) {
+  console.error("FAIL: missing handlers", missingHandlers);
   process.exit(1);
 }
 

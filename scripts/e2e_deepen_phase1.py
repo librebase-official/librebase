@@ -14,14 +14,17 @@ import tempfile
 from pathlib import Path
 
 _default_candidates = [
-    Path(__file__).resolve().parents[2] / ".." / "lis",
-    Path(__file__).resolve().parents[2] / ".." / "li" / "lis",
+    Path(__file__).resolve().parents[1] / ".." / "li" / "lis",
+    Path(__file__).resolve().parents[1] / ".." / "lis",
     Path("/workspace/lis"),
     Path(r"C:\Users\Julian\Documents\Programming\li\lis"),
+    Path("/mnt/c/Users/Julian/Documents/Programming/li/lis"),
 ]
 _LIS = Path(os.environ["LIS_ROOT"]).resolve() if os.environ.get("LIS_ROOT") else None
 if _LIS is None or not _LIS.is_dir():
-    _LIS = next((p.resolve() for p in _default_candidates if p.is_dir()), _default_candidates[0].resolve())
+    _LIS = next((p.resolve() for p in _default_candidates if p.is_dir()), None)
+if _LIS is None or not _LIS.is_dir():
+    raise SystemExit("e2e deepen: lis checkout not found — set LIS_ROOT")
 sys.path.insert(0, str(_LIS))
 
 os.environ.setdefault("LI_JWT_SECRET", "e2e-deepen-secret")
@@ -29,6 +32,8 @@ os.environ.setdefault("LI_REGISTRY_MOCK", "1")
 os.environ.setdefault("LI_AUTH_BACKEND", "mock")
 os.environ["LI_OAUTH_ENABLED"] = "1"
 os.environ["LI_OAUTH_MOCK"] = "1"
+os.environ["LI_OTP_MOCK"] = "1"
+os.environ["LI_SMTP_MOCK"] = "1"
 os.environ["LI_SMTP_MOCK"] = "1"
 os.environ["LI_OTP_MOCK"] = "1"
 
