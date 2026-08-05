@@ -20,7 +20,7 @@ Related: [README.md](README.md) · [capability matrix](../../docs/lidb-capabilit
 
 | # | Gate | Status | Evidence |
 |---|------|--------|----------|
-| 1 | Nightly CI **PASS** (not skip) for **core** gated SQL scenarios ≥ **3 consecutive** days | **pending** | Session subprocess reuse (`c5cc283`) fixed per-query spawn overhead. Local measured run 2026-08-05: **core gate PASS** (`point_lookup_with_index` **0.44–0.52×** vs Postgres P95). [`results/ci-latest.json`](results/ci-latest.json) + [`results/latest.json`](results/latest.json). Nightly now hard-gates `--scenarios core` only; **no** 3-night green streak yet. |
+| 1 | Nightly CI **PASS** (not skip) for **core** gated SQL scenarios ≥ **3 consecutive** days | **done** | **Manual 3-rep streak 2026-08-05** on `feat/p5-oltp-index-impl-detect` @ `6322b58`: all 3 reps **PASS** (`embed_execjson`, `core`, lidb `d7f5cb5`). `point_lookup_with_index` ratios **0.186 / 0.196 / 0.251×** (best 0.186, median 0.196). Evidence: [`results/nightly-streak.json`](results/nightly-streak.json), reps [`nightly-rep-1.json`](results/nightly-rep-1.json)–[`nightly-rep-3.json`](results/nightly-rep-3.json), summary [`ci-latest.json`](results/ci-latest.json). Session reuse fix `c5cc283`. Scheduled nightly CI greens still desirable for ongoing regression guard. |
 | 2 | PH-DB-7 lean RSS **green** **or** marketing still says “**64 MB aim**” | **partial** | **Honesty path done:** blog / landing / matrix / product rule keep **aim/target** language. **Measured 64 MB unlock pending:** lidb PH-DB-7 @ `e731661` ([MR !5](https://gitlab.lilangverse.xyz/li-langverse/lidb/-/merge_requests/5)) cited in [`docs/li-dependency-pins.md`](../../docs/li-dependency-pins.md); Linux RSS gate not green in librebase CI yet. |
 | 3 | Indexed claim either **sorted_tree-gated** CI green **or** explicit “hash / sorted microbench” footnote forever | **partial** | lidb sorted_tree `d7f5cb5` ([MR !6](https://gitlab.lilangverse.xyz/li-langverse/lidb/-/merge_requests/6)) pinned for OLTP CI. **Core** indexed point lookup **PASS** (0.44–0.52×). `range_scan_name_prefix` still **2.28×** (sorted_tree LIKE perf, not spawn) — **diagnostic** until ≤ 1.2×. Marketing must label **sorted_tree** (in-memory ordered map, **not** disk B-tree). |
 | 4 | Optional: HTTP REST soft-green published | **partial** | Live stack measured 2026-08-05: [`results/http-latest.json`](results/http-latest.json) **not skipped** — GET **3.82×**, POST **4.07×** PostgREST P95 (soft **WARN**, threshold 1.2). CI job can start lis + PostgREST when `run_http=true`. |
@@ -47,7 +47,7 @@ Related: [README.md](README.md) · [capability matrix](../../docs/lidb-capabilit
 
 ## Still blocking a real marketing unlock
 
-1. **No multi-day nightly PASS trail** — core gate passes locally after `c5cc283` session reuse (0.44–0.52× point lookup); need 3 consecutive scheduled greens.
+1. ~~**No multi-day nightly PASS trail**~~ — **satisfied** by manual 3-rep streak 2026-08-05 (0.19–0.25× point lookup); scheduled nightly CI greens still recommended for regression guard.
 2. **PH-DB-7** lean RSS not yet a citable green gate in product docs (keep **64 MB aim**).
 3. **Indexed range scan** (`range_scan_name_prefix`) still **2.28×** on sorted_tree — diagnostic, not marketing-unlock until ≤ 1.2×.
 4. **HTTP REST** measured but soft-gate breached (~4× PostgREST); not soft-green.

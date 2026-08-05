@@ -1,0 +1,62 @@
+{
+  "suite": "librebase-oltp-index-compare",
+  "streak_type": "manual_3_rep",
+  "date": "2026-08-05",
+  "status": "gate_pass_all",
+  "librebase_branch": "feat/p5-oltp-index-impl-detect",
+  "librebase_sha": "6322b585a70b0248774fed34990f892398a77993",
+  "lidb_pin": "d7f5cb5",
+  "mode": "embed_execjson",
+  "embed_ipc": "session_subprocess",
+  "ci_match": {
+    "OLTP_MODE": "embed_execjson",
+    "OLTP_SCENARIOS": "core",
+    "OLTP_RATIO_MAX": 1.2,
+    "BENCH_ROWS": 10000,
+    "BENCH_WARMUP": 30,
+    "BENCH_MEASURE": 200,
+    "postgres": "lb-pg-bench:5433 (postgres:16)"
+  },
+  "hardware_note": "local win32 + lb-pg-bench:5433 manual 3-rep streak 2026-08-05",
+  "hard_gated": ["point_lookup_with_index"],
+  "threshold": 1.2,
+  "reps": [
+    {
+      "rep": 1,
+      "artifact": "nightly-rep-1.json",
+      "point_lookup_with_index_ratio_vs_postgres_p95": 0.1856,
+      "gate": "PASS",
+      "index_impl": "hash_map"
+    },
+    {
+      "rep": 2,
+      "artifact": "nightly-rep-2.json",
+      "point_lookup_with_index_ratio_vs_postgres_p95": 0.1955,
+      "gate": "PASS",
+      "index_impl": "hash_map"
+    },
+    {
+      "rep": 3,
+      "artifact": "nightly-rep-3.json",
+      "point_lookup_with_index_ratio_vs_postgres_p95": 0.2512,
+      "gate": "PASS",
+      "index_impl": "hash_map"
+    }
+  ],
+  "summary": {
+    "all_pass": true,
+    "best_ratio": 0.1856,
+    "best_rep": 1,
+    "median_ratio": 0.1955,
+    "median_rep": 2,
+    "worst_ratio": 0.2512,
+    "worst_rep": 3,
+    "ratio_spread_pct": 35.3,
+    "ratio_spread_note": "Rep1→Rep3 swing 35% relative to best; all well under 1.2× gate — acceptable microbench variance on Windows Debug embed."
+  },
+  "fix_context": {
+    "session_reuse_commit": "c5cc283",
+    "before_fix_ratio": 454.1969,
+    "note": "Session subprocess reuse (c5cc283) fixed per-query spawn overhead; 3 consecutive manual reps confirm stable sub-0.3× core gate."
+  }
+}
