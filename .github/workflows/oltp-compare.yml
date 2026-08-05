@@ -1,0 +1,101 @@
+name: OLTP compare (record-only)
+
+# Optional: Postgres 16 + lidb embed head-to-head. Does not gate default Test CI.
+# No fail on ratio — PH-DB-7 owns pass/fail later. Skips honestly without embed.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 6 * * *"
+
+jobs:
+  oltp-compare:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install psycopg2
+        run: pip install psycopg2-binary
+
+      - name: Run oltp-compare (or skip honestly)
+        env:
+          LIDB_ROOT: ${{ secrets.LIDB_ROOT_PATH }}
+          LIDB_EMBED: ${{ secrets.LIDB_EMBED_PATH }}
+          POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+          BENCH_ROWS: "10000"
+          BENCH_WARMUP: "30"
+          BENCH_MEASURE: "200"
+        run: |
+          set -euo pipefail
+          OUT="benchmarks/oltp-compare/results/latest.json"
+          mkdir -p benchmarks/oltp-compare/results
+
+          embed=""
+          if [ -n "${LIDB_EMBED:-}" ] && [ -f "$LIDB_EMBED" ]; then
+            embed="$LIDB_EMBED"
+          elif [ -n "${LIDB_ROOT:-}" ]; then
+            for cand in \
+              "$LIDB_ROOT/build/smoke/lidb_embed" \
+              "$LIDB_ROOT/build/smoke/Release/lidb_embed.exe" \
+              "$LIDB_ROOT/build/lidb_embed"; do
+              if [ -f "$cand" ]; then
+                embed="$cand"
+                break
+              fi
+            done
+          fi
+
+          if [ -z "$embed" ]; then
+            echo "SKIP: lidb_embed not found (set LIDB_EMBED_PATH / LIDB_ROOT_PATH secrets). Record-only — not a Test CI failure."
+            python - <<'PY'
+          import json
+          from pathlib import Path
+          Path("benchmarks/oltp-compare/results/latest.json").write_text(
+              json.dumps(
+                  {
+                      "suite": "librebase-oltp-index-compare",
+                      "postgres": True,
+                      "skipped": True,
+                      "skip_reason": "lidb_embed unavailable in this runner",
+                      "honesty": "Aims only until CI green. Record-only skip — no ratio gate.",
+                      "scenarios": [],
+                  },
+                  indent=2,
+              )
+              + "\n",
+              encoding="utf-8",
+          )
+          PY
+            exit 0
+          fi
+
+          export LIDB_EMBED="$embed"
+          python benchmarks/oltp-compare/run_compare.py \
+            --rows "${BENCH_ROWS}" \
+            --warmup "${BENCH_WARMUP}" \
+            --measure "${BENCH_MEASURE}" \
+            --json-out "$OUT"
+
+      - name: Upload latest.json
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oltp-compare-latest
+          path: benchmarks/oltp-compare/results/latest.json
+          if-no-files-found: ignore
