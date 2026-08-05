@@ -6,7 +6,7 @@ Honest latency / throughput compare of **lidb embed** vs **Postgres** on shared 
 
 | Mode | lidb | Postgres | Use |
 |------|------|----------|-----|
-| `embed_execjson` (default, **CI hard gate**) | `lidb_embed exec-json` subprocess | TCP | Fairer process-boundary compare (includes spawn cost) |
+| `embed_execjson` (default, **CI hard gate**) | `lidb_embed session` subprocess (NDJSON IPC; spawn amortized) | TCP | Fair process-boundary compare vs persistent PG connection |
 | `embed_inprocess` | `EmbeddedSession` in-process | TCP | **Diagnostic only** — unfair vs TCP Postgres; not gated |
 
 JSON always records `mode`, `lidb_pin` (`git rev-parse` of `LIDB_ROOT`), `runner_os`, `hardware_note`, and detected `index_impl` (`btree` | `sorted_tree` | `hash_map` | `unknown` via `migration_intent` / session / `liorm.probe_index_impl`).

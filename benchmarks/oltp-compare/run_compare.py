@@ -5,8 +5,8 @@ Honesty
 -------
 - Reports measured P50/P95 (and ops/sec where relevant) — never invents ratios
   without a Postgres URL.
-- Modes: embed_execjson (subprocess exec-json, **CI hard gate**) vs
-  embed_inprocess (EmbeddedSession, diagnostic-only — unfair vs TCP Postgres).
+- Modes: embed_execjson (long-lived ``lidb_embed session`` subprocess + NDJSON IPC,
+  **CI hard gate**) vs embed_inprocess (EmbeddedSession in Python, diagnostic-only).
 - Hard gate: point_lookup_with_index in embed_execjson; range_scan_name_prefix
   when index_impl is sorted_tree or btree (in-memory ordered map, not disk B-tree).
 - ``index_impl`` autodetection: btree | sorted_tree | hash_map | unknown.
@@ -212,6 +212,12 @@ def find_embed() -> Path | None:
     return None
 
 
+def _configure_lidb_import(root: Path, embed: Path | None) -> None:
+    os.environ.setdefault("LIDB_ROOT", str(root))
+    if embed:
+        os.environ["LIDB_EMBED"] = str(embed)
+
+
 def try_session(data: Path):
     root = find_lidb_root()
     if str(root) not in sys.path:
@@ -221,17 +227,31 @@ def try_session(data: Path):
     except Exception:
         return None
     reset_session_for_tests()
-    os.environ.setdefault("LIDB_ROOT", str(root))
-    embed = find_embed()
-    if embed:
-        os.environ["LIDB_EMBED"] = str(embed)
+    _configure_lidb_import(root, find_embed())
     session = EmbeddedSession(data)
     if not session.open_and_migrate():
         return None
     return session
 
 
-def embed_exec(embed: Path, data: Path, sql: str, params: list[str] | None = None) -> list:
+def try_persistent_embed(data: Path):
+    """Long-lived lidb_embed session subprocess (WP-J NDJSON protocol)."""
+    root = find_lidb_root()
+    if str(root) not in sys.path:
+        sys.path.insert(0, str(root))
+    try:
+        from liorm.embed_engine import PersistentEmbedProcess  # type: ignore
+    except Exception:
+        return None
+    _configure_lidb_import(root, find_embed())
+    try:
+        return PersistentEmbedProcess(data)
+    except Exception:
+        return None
+
+
+def embed_exec_oneshot(embed: Path, data: Path, sql: str, params: list[str] | None = None) -> list:
+    """One-shot exec-json — diagnostic only; spawn cost dominates P95."""
     proc = subprocess.run(
         [str(embed), "exec-json", str(data), sql],
         input=json.dumps(params or []),
@@ -360,8 +380,10 @@ def run(
         data.mkdir(parents=True, exist_ok=True)
 
         session = None
+        persistent = None
         lock = threading.Lock()
         concurrent_note = None
+        embed_ipc = "unknown"
 
         if mode == "embed_inprocess":
             session = try_session(data)
@@ -370,20 +392,22 @@ def run(
                     "embed_inprocess requested but EmbeddedSession unavailable "
                     "(liorm/embed_engine + migrate). Use --mode embed_execjson or fix LIDB_ROOT."
                 )
+            embed_ipc = "python_embedded_session"
             concurrent_note = (
                 "lidb concurrent_readers uses a mutex around EmbeddedSession "
                 "(embed not assumed thread-safe) — soft/diagnostic throughput"
             )
         elif mode == "embed_execjson":
-            subprocess.run(
-                [str(embed), "migrate", str(data)],
-                check=True,
-                capture_output=True,
-                text=True,
-            )
+            persistent = try_persistent_embed(data)
+            if persistent is None:
+                raise RuntimeError(
+                    "embed_execjson requires lidb_embed session mode (WP-J NDJSON). "
+                    "Rebuild lidb_embed with session support or set LIDB_EMBED."
+                )
+            embed_ipc = "session_subprocess"
             concurrent_note = (
-                "lidb concurrent_readers uses parallel exec-json subprocesses "
-                "(includes spawn cost)"
+                "lidb concurrent_readers uses one lidb_embed session subprocess per worker "
+                "(NDJSON IPC; process spawn amortized across warmup+measure)"
             )
         else:
             raise ValueError(f"unknown mode: {mode}")
@@ -396,7 +420,10 @@ def run(
             if session is not None:
                 with lock:
                     return session.exec_parameterized(sql, params or [])
-            return embed_exec(embed, data, sql, params)
+            if persistent is not None:
+                with lock:
+                    return persistent.exec_parameterized(sql, params or [])
+            return embed_exec_oneshot(embed, data, sql, params)
 
         exec_sql(
             "CREATE TABLE IF NOT EXISTS bench_items (id uuid, name text, owner_id uuid)"
@@ -561,11 +588,28 @@ def run(
                 total_ops = concurrent_workers * concurrent_ops
 
                 def worker_ops(_: int) -> list[float]:
+                    worker_sess = None
+                    if persistent is not None:
+                        worker_sess = try_persistent_embed(data)
+                        if worker_sess is None:
+                            raise RuntimeError("concurrent worker session failed")
                     samples: list[float] = []
-                    for _j in range(concurrent_ops):
-                        t0 = time.perf_counter()
-                        lidb_lookup()
-                        samples.append((time.perf_counter() - t0) * 1000.0)
+                    try:
+                        for _j in range(concurrent_ops):
+                            t0 = time.perf_counter()
+                            if worker_sess is not None:
+                                out = worker_sess.exec_parameterized(
+                                    "SELECT id, name FROM bench_items WHERE name = ?",
+                                    [target],
+                                )
+                                if not out:
+                                    raise RuntimeError("lidb lookup miss")
+                            else:
+                                lidb_lookup()
+                            samples.append((time.perf_counter() - t0) * 1000.0)
+                    finally:
+                        if worker_sess is not None:
+                            worker_sess.close()
                     return samples
 
                 t0 = time.perf_counter()
@@ -593,6 +637,8 @@ def run(
 
         if session is not None:
             session.close()
+        if persistent is not None:
+            persistent.close()
 
         pg = pg_connect()
         if pg:
@@ -800,6 +846,7 @@ def run(
         "measure": measure,
         "mode": mode,
         "lidb_mode": mode,  # back-compat alias
+        "embed_ipc": embed_ipc,
         "scenarios_selected": scenarios,
         "embed": str(embed),
         "lidb_pin": pin,
@@ -813,7 +860,7 @@ def run(
         "honesty": (
             f"Aims only until CI green. mode={mode} — "
             + (
-                "embed_execjson is the CI hard-gate path (subprocess exec-json vs TCP Postgres)."
+                "embed_execjson is the CI hard-gate path (lidb_embed session subprocess vs TCP Postgres)."
                 if mode == "embed_execjson"
                 else "embed_inprocess is diagnostic-only (unfair vs TCP Postgres)."
             )
