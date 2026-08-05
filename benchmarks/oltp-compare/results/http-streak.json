@@ -1,0 +1,50 @@
+{
+  "suite": "librebase-http-rest-compare",
+  "streak_type": "manual_3_rep",
+  "date": "2026-08-05",
+  "status": "soft_breach",
+  "lis_pin": "f94f4ce",
+  "lis_url": "http://127.0.0.1:15421",
+  "postgrest_url": "http://127.0.0.1:3000",
+  "threshold": 1.2,
+  "hardware_note": "local win32 lis:15421 vs lb-pgrst-bench:3000 lb-pg-bench:5433",
+  "reps": [
+    {
+      "rep": 1,
+      "artifact": "http-rep-1.json",
+      "max_ratio_vs_postgrest_p95": 4.3703,
+      "rest_get_eq_name_ratio": 3.6896,
+      "rest_post_insert_ratio": 4.3703,
+      "gate": "SOFT_BREACH"
+    },
+    {
+      "rep": 2,
+      "artifact": "http-rep-2.json",
+      "max_ratio_vs_postgrest_p95": 4.1426,
+      "rest_get_eq_name_ratio": 3.7249,
+      "rest_post_insert_ratio": 4.1426,
+      "gate": "SOFT_BREACH"
+    },
+    {
+      "rep": 3,
+      "artifact": "http-rep-3.json",
+      "max_ratio_vs_postgrest_p95": 5.8522,
+      "rest_get_eq_name_ratio": 3.1526,
+      "rest_post_insert_ratio": 5.8522,
+      "gate": "SOFT_BREACH"
+    }
+  ],
+  "summary": {
+    "all_soft_pass": false,
+    "median_max_ratio": 4.3703,
+    "best_max_ratio": 4.1426,
+    "worst_max_ratio": 5.8522,
+    "root_cause": "lis Python MVP HTTP stack (stdlib server + auth/JWT + handler) vs PostgREST; lidb_store exec-json per-request spawn was fixed in lis (session reuse) — DB layer ~0.2ms/query but REST path still ~4×."
+  },
+  "postfix_note": {
+    "lis_fix": "PersistentEmbedProcess in lidb_store._exec_json (uncommitted lis patch)",
+    "postfix_rep": "http-rep-postfix-1.json",
+    "postfix_max_ratio": 4.2786,
+    "note": "Session reuse did not close soft gate — remaining gap is Python REST surface, not embed spawn."
+  }
+}

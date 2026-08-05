@@ -1,0 +1,51 @@
+{
+  "suite": "librebase-oltp-index-compare",
+  "rows_seeded": 10000,
+  "warmup": 30,
+  "measure": 200,
+  "mode": "embed_execjson",
+  "lidb_mode": "embed_execjson",
+  "embed_ipc": "session_subprocess",
+  "scenarios_selected": [
+    "range_scan_name_prefix"
+  ],
+  "embed": "C:\\Users\\Julian\\Documents\\Programming\\li\\lidb\\build\\smoke\\Debug\\lidb_embed.exe",
+  "lidb_pin": "d7f5cb5",
+  "lidb_root": "C:\\Users\\Julian\\Documents\\Programming\\li\\lidb",
+  "runner_os": "Windows-11-10.0.26200-SP0",
+  "hardware_note": "local win32 range_scan rep2",
+  "index_impl": "sorted_tree",
+  "postgres": true,
+  "honesty": "Aims only until CI green. mode=embed_execjson \u2014 embed_execjson is the CI hard-gate path (lidb_embed session subprocess vs TCP Postgres). index_impl=sorted_tree \u2014 sorted_tree is in-memory ordered map (not disk B-tree / Postgres parity); range_scan_name_prefix is diagnostic until \u2264 1.2\u00d7. gated marketing claim needs multi-day CI PASS + PH-DB-7 (or forever footnote).",
+  "scenarios": [
+    {
+      "engine": "lidb",
+      "scenario": "range_scan_name_prefix",
+      "gate_class": "diagnostic",
+      "index": true,
+      "status": "measured",
+      "mean_ms": 0.7564,
+      "p50_ms": 0.7345,
+      "p95_ms": 0.9328,
+      "n": 200,
+      "ops_per_sec": 1321.26,
+      "wall_s": 0.1514,
+      "note": "sorted_tree in-memory ordered map (not disk B-tree); diagnostic until ratio \u2264 1.2\u00d7",
+      "ratio_vs_postgres_p95": 1.8902,
+      "ratio_vs_postgres_ops": 1.7691
+    },
+    {
+      "engine": "postgres",
+      "scenario": "range_scan_name_prefix",
+      "gate_class": "diagnostic",
+      "index": true,
+      "status": "measured",
+      "mean_ms": 0.4272,
+      "p50_ms": 0.4229,
+      "p95_ms": 0.4935,
+      "n": 200,
+      "ops_per_sec": 2337.41,
+      "wall_s": 0.0856
+    }
+  ]
+}

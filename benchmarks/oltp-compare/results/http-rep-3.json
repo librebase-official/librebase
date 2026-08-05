@@ -1,0 +1,75 @@
+{
+  "suite": "librebase-http-rest-compare",
+  "gate_id": "http_rest_p95",
+  "skipped": false,
+  "lis_rest": true,
+  "postgrest": true,
+  "lis_url": "http://127.0.0.1:15421",
+  "postgrest_url": "http://127.0.0.1:3000",
+  "table": "parity_items",
+  "lis_pin": "f94f4ce",
+  "runner_os": "Windows-11-10.0.26200-SP0",
+  "hardware_note": "local win32 HTTP rep3",
+  "rows_seeded": 50,
+  "warmup": 20,
+  "measure": 100,
+  "honesty": "lis /rest/v1 (Python MVP + lidb parity_items) vs PostgREST TCP on identical schema. Soft gate only \u2014 SQL embed green does not imply REST green.",
+  "soft_gate": {
+    "id": "http_rest_p95",
+    "threshold": 1.2,
+    "max_ratio_vs_postgrest_p95": 5.8522,
+    "breached": true,
+    "scenarios": [
+      "rest_get_eq_name",
+      "rest_post_insert"
+    ]
+  },
+  "scenarios": [
+    {
+      "engine": "lis",
+      "scenario": "rest_get_eq_name",
+      "gate_class": "soft",
+      "status": "measured",
+      "surface": "rest",
+      "mean_ms": 68.7924,
+      "p50_ms": 61.67,
+      "p95_ms": 87.9123,
+      "n": 100,
+      "ratio_vs_postgrest_p95": 3.1526
+    },
+    {
+      "engine": "postgrest",
+      "scenario": "rest_get_eq_name",
+      "gate_class": "soft",
+      "status": "measured",
+      "surface": "rest",
+      "mean_ms": 15.9899,
+      "p50_ms": 15.7042,
+      "p95_ms": 27.8856,
+      "n": 100
+    },
+    {
+      "engine": "lis",
+      "scenario": "rest_post_insert",
+      "gate_class": "soft",
+      "status": "measured",
+      "surface": "rest",
+      "mean_ms": 77.76,
+      "p50_ms": 69.8102,
+      "p95_ms": 96.4232,
+      "n": 100,
+      "ratio_vs_postgrest_p95": 5.8522
+    },
+    {
+      "engine": "postgrest",
+      "scenario": "rest_post_insert",
+      "gate_class": "soft",
+      "status": "measured",
+      "surface": "rest",
+      "mean_ms": 15.436,
+      "p50_ms": 15.5529,
+      "p95_ms": 16.4763,
+      "n": 100
+    }
+  ]
+}

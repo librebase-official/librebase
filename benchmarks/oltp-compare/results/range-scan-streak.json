@@ -1,0 +1,52 @@
+{
+  "suite": "librebase-oltp-index-compare",
+  "streak_type": "manual_3_rep_diagnostic",
+  "date": "2026-08-05",
+  "status": "diagnostic_breach",
+  "librebase_branch": "feat/p5-oltp-index-impl-detect",
+  "librebase_sha": "8ea71d7",
+  "lidb_pin": "d7f5cb5",
+  "mode": "embed_execjson",
+  "embed_ipc": "session_subprocess",
+  "index_impl": "sorted_tree",
+  "scenario": "range_scan_name_prefix",
+  "threshold": 1.2,
+  "gate_class": "diagnostic",
+  "hardware_note": "local win32 + lb-pg-bench:5433 manual 3-rep range_scan 2026-08-05 (Debug lidb_embed)",
+  "reps": [
+    {
+      "rep": 1,
+      "artifact": "range-scan-rep-1.json",
+      "ratio_vs_postgres_p95": 1.9424,
+      "lidb_p95_ms": 0.7583,
+      "postgres_p95_ms": 0.3904,
+      "gate": "BREACH"
+    },
+    {
+      "rep": 2,
+      "artifact": "range-scan-rep-2.json",
+      "ratio_vs_postgres_p95": 1.8902,
+      "lidb_p95_ms": 0.9328,
+      "postgres_p95_ms": 0.4935,
+      "gate": "BREACH"
+    },
+    {
+      "rep": 3,
+      "artifact": "range-scan-rep-3.json",
+      "ratio_vs_postgres_p95": 1.9593,
+      "lidb_p95_ms": 0.8084,
+      "postgres_p95_ms": 0.4126,
+      "gate": "BREACH"
+    }
+  ],
+  "summary": {
+    "all_pass": false,
+    "best_ratio": 1.8902,
+    "best_rep": 2,
+    "median_ratio": 1.9424,
+    "median_rep": 1,
+    "worst_ratio": 1.9593,
+    "worst_rep": 3,
+    "note": "Improved from prior ~2.28× diagnostic sample; sorted_tree prefix scan uses lower_bound + early LIMIT exit. Still ~1.9× vs Postgres B-tree — not promoted to CI hard gate."
+  }
+}
