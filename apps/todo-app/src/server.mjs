@@ -16,7 +16,14 @@
  *   DELETE /todos/:id   (Bearer)
  */
 
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { createTodoApp } from "./app.mjs";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const PUBLIC_DIR = path.resolve(__dirname, "..", "public");
+const INDEX_HTML = path.join(PUBLIC_DIR, "index.html");
 
 const PORT = Number(process.env.PORT ?? 8787);
 const API = process.env.LIBREBASE_API ?? "http://127.0.0.1:54321";
@@ -28,6 +35,11 @@ function json(res, status, body) {
   const payload = JSON.stringify(body);
   res.writeHead(status, { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(payload) });
   res.end(payload);
+}
+
+function html(res, status, content) {
+  res.writeHead(status, { "Content-Type": "text/html; charset=utf-8", "Content-Length": Buffer.byteLength(content) });
+  res.end(content);
 }
 
 function readBody(req) {
@@ -54,6 +66,9 @@ async function handler(req, res) {
   try {
     if (route === "/health") {
       return json(res, 200, { ok: true, service: "todo-app" });
+    }
+    if (route === "/" || route === "/index.html") {
+      return html(res, 200, readFileSync(INDEX_HTML, "utf8"));
     }
     if (method === "POST" && route === "/auth/signup") {
       const { email, password } = await readBody(req);
