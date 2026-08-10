@@ -22,7 +22,7 @@
 | **lic** | `C:\Users\Julian\Documents\Programming\li\lic-parity-w0` | `main` @ `1a466a6` | Fresh GitLab clone (replaces broken `lic` junction/worktrees). Wave 0 gate: stage0 build + `li-tests/self_host_parity/run_token_parity.sh` |
 | lidb | `C:\Users\Julian\Documents\Programming\li\lidb` | `feat/p5-sorted-tree-index` @ `d7f5cb5` | P5 sorted_tree CREATE INDEX + prefix range ([MR !6](https://gitlab.lilangverse.xyz/li-langverse/lidb/-/merge_requests/6)); OLTP CI hard gate pin |
 | lidb (PH-DB-7 footprint) | same checkout, branch switch | `feat/ph-db-7-librebase-lean-rss` @ `e731661` | Lean RSS gate + `lidb-bench --profile librebase-lean` ([MR !5](https://gitlab.lilangverse.xyz/li-langverse/lidb/-/merge_requests/5)); **not** the OLTP pin until merged |
-| lis | `C:\Users\Julian\Documents\Programming\li\lis` | `feat/deepen-phase1-refresh-buckets` @ `e4f92dc` | Deepen: refresh + buckets + GitHub OAuth (MR !161). Includes W7 edge |
+| lis | `C:\Users\Julian\Documents\Programming\li\lis` | `feat/deepen-phase1-refresh-buckets` @ `2d4055b` | Deepen: refresh + buckets + GitHub OAuth (MR !161) + embed session pool / persistent `set_claims` for RLS. Includes W7 edge |
 | li-oauth | `C:\Users\Julian\Documents\Programming\li-oauth` | `main` @ `92501c6` | OAuth scaffold |
 | li-edge | `C:\Users\Julian\Documents\Programming\li-edge` | `feat/wave-7-invoke` @ `708a6fa` | `scripts/invoke.py` real runtime (MR !1); set `LI_EDGE_ROOT` or sibling auto-discover |
 | li-httpd | `C:\Users\Julian\Documents\Programming\li\li-httpd` | `main` @ `3b7472e` | Compose stub: `deploy/edge/librebase.httpd.toml` |
