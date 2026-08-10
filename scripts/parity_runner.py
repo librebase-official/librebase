@@ -58,7 +58,9 @@ def main() -> int:
     results: list[Result] = run_all()
     required_fail = [r for r in results if r.status == "fail"]
     # Any skip while Li is present is a harness bug — treat as failure.
-    unexpected_skip = [r for r in results if r.status == "skip"]
+    # Environment-gated skips (honest_skip=True, e.g. P-AUTH-04 without live OAuth)
+    # are intentional and do not fail the run.
+    unexpected_skip = [r for r in results if r.status == "skip" and not r.honest_skip]
     failed = required_fail + unexpected_skip
     payload = {
         "status": "failed" if failed else "passed",

@@ -21,6 +21,7 @@ class Result:
     status: str  # pass | fail | skip
     detail: str = ""
     evidence: dict[str, Any] = field(default_factory=dict)
+    honest_skip: bool = False  # environment-gated skip, not a harness bug
 
 
 def _api_base() -> str:
@@ -179,7 +180,7 @@ def p_auth_03() -> Result:
 def p_auth_04() -> Result:
     """GitHub OAuth mock authorize→callback session — deepen Phase 1."""
     if os.environ.get("PARITY_OAUTH", "").strip().lower() not in ("1", "true", "yes"):
-        return Result("P-AUTH-04", "skip", "set PARITY_OAUTH=1 (+ LI_OAUTH_*) to exercise")
+        return Result("P-AUTH-04", "skip", "set PARITY_OAUTH=1 (+ LI_OAUTH_*) to exercise", honest_skip=True)
     status, start = _http(
         "GET",
         "/auth/v1/authorize?provider=github&format=json",

@@ -1,0 +1,165 @@
+{
+  "status": "passed",
+  "passed": 12,
+  "failed": 0,
+  "skipped": 1,
+  "results": [
+    {
+      "id": "P-SQL-01",
+      "status": "pass",
+      "detail": "fixture table readable via rest",
+      "evidence": {
+        "body": []
+      }
+    },
+    {
+      "id": "P-REST-01",
+      "status": "pass",
+      "detail": "POST+GET OK",
+      "evidence": {
+        "get": [
+          {
+            "id": "f5d53470-45a3-41c1-a4ce-ff90b27fb8fc",
+            "name": "wave-a",
+            "owner_id": "155c2804-7c9c-4100-9282-67e3859c885b",
+            "secret": ""
+          },
+          {
+            "id": "ef63cf04-f260-491e-8253-9099f8566450",
+            "name": "wave-a",
+            "owner_id": "155c2804-7c9c-4100-9282-67e3859c885b",
+            "secret": ""
+          },
+          {
+            "id": "58822f5c-bce0-4b0e-add2-aee19cd9126d",
+            "name": "wave-a",
+            "owner_id": "155c2804-7c9c-4100-9282-67e3859c885b",
+            "secret": ""
+          },
+          {
+            "id": "bb29f32d-1420-42f3-8456-f8eb8d514861",
+            "name": "wave-a",
+            "owner_id": "155c2804-7c9c-4100-9282-67e3859c885b",
+            "secret": ""
+          },
+          {
+            "id": "c943ba9f-e5bc-40aa-9065-b8d4612a41c2",
+            "name": "wave-a",
+            "owner_id": "155c2804-7c9c-4100-9282-67e3859c885b",
+            "secret": ""
+          },
+          {
+            "id": "726084c0-f3da-4f78-ac1e-6d1e826f4a94",
+            "name": "wave-a",
+            "owner_id": "155c2804-7c9c-4100-9282-67e3859c885b",
+            "secret": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": "P-AUTH-01",
+      "status": "pass",
+      "detail": "signup/login/whoami OK",
+      "evidence": {
+        "token_prefix": "eyJhbGciOiJI"
+      }
+    },
+    {
+      "id": "P-AUTH-02",
+      "status": "pass",
+      "detail": "GoTrue alias signup/token/user OK",
+      "evidence": {
+        "token_prefix": "eyJhbGciOiJI"
+      }
+    },
+    {
+      "id": "P-AUTH-03",
+      "status": "pass",
+      "detail": "refresh rotate + revoke OK",
+      "evidence": {}
+    },
+    {
+      "id": "P-AUTH-04",
+      "status": "skip",
+      "detail": "set PARITY_OAUTH=1 (+ LI_OAUTH_*) to exercise",
+      "evidence": {}
+    },
+    {
+      "id": "P-STO-01",
+      "status": "pass",
+      "detail": "PUT+list OK",
+      "evidence": {
+        "list": {
+          "bucket": "parity",
+          "objects": [
+            {
+              "Key": "wave6.txt",
+              "size": 13
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "P-STO-02",
+      "status": "pass",
+      "detail": "bucket create+list OK",
+      "evidence": {
+        "buckets": [
+          "parity",
+          "parity-bucket"
+        ]
+      }
+    },
+    {
+      "id": "P-FN-01",
+      "status": "pass",
+      "detail": "li-edge invoke OK",
+      "evidence": {
+        "body": {
+          "ok": true,
+          "name": "hello",
+          "runtime": "li-edge",
+          "greeted": {
+            "ping": true
+          }
+        }
+      }
+    },
+    {
+      "id": "P-RLS-01",
+      "status": "pass",
+      "detail": "B cannot see A's row",
+      "evidence": {}
+    },
+    {
+      "id": "P-IO-01",
+      "status": "pass",
+      "detail": "export/import SQL round-trip OK",
+      "evidence": {
+        "dump_bytes": 161
+      }
+    },
+    {
+      "id": "P-RT-01",
+      "status": "pass",
+      "detail": "phx_join ok",
+      "evidence": {
+        "ws": "ws://127.0.0.1:54323/realtime/v1/websocket"
+      }
+    },
+    {
+      "id": "P-RT-02",
+      "status": "pass",
+      "detail": "record fanout OK (in-process)",
+      "evidence": {
+        "record": {
+          "id": "rt02-1",
+          "name": "parity-rt02",
+          "owner_id": "u-rt"
+        }
+      }
+    }
+  ]
+}
