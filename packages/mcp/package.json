@@ -7,7 +7,7 @@
     "librebase-mcp": "./src/server.js"
   },
   "scripts": {
-    "test": "node test/smoke.mjs && node test/e2e.mjs",
+    "test": "node test/session.unit.mjs && node test/smoke.mjs && node test/e2e.mjs",
     "smoke": "node test/smoke.mjs"
   },
   "dependencies": {

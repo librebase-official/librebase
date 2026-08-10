@@ -59,6 +59,23 @@ class QueryBuilder {
     return this;
   }
 
+  /**
+   * PATCH /rest/v1/{table}/{id} — the last `eq` filter selects the row id.
+   * @param {Record<string, unknown>} patch
+   */
+  update(patch) {
+    this._method = "PATCH";
+    this._body = patch;
+    return this;
+  }
+
+  /** DELETE /rest/v1/{table}/{id} — the last `eq` filter selects the row id. */
+  delete() {
+    this._method = "DELETE";
+    this._body = undefined;
+    return this;
+  }
+
   eq(column, value) {
     this._filters.push(`${encodeURIComponent(column)}=eq.${encodeURIComponent(String(value))}`);
     return this;
@@ -83,12 +100,22 @@ class QueryBuilder {
     if (this._limit != null && Number.isFinite(this._limit)) {
       qs.push(`limit=${this._limit}`);
     }
-    const path = `/rest/v1/${encodeURIComponent(this._table)}${qs.length ? `?${qs.join("&")}` : ""}`;
+    let path = `/rest/v1/${encodeURIComponent(this._table)}${qs.length ? `?${qs.join("&")}` : ""}`;
     const init = {
       method: this._method,
       headers: { ...this._headers },
     };
-    if (this._body !== undefined) {
+    if (this._method === "PATCH" || this._method === "DELETE") {
+      const id = this._idFilter();
+      if (id == null) {
+        return { data: null, error: { message: `${this._method}: an id filter (.eq("id", ...)) is required`, status: 400 } };
+      }
+      path = `/rest/v1/${encodeURIComponent(this._table)}/${encodeURIComponent(String(id))}`;
+      if (this._method === "PATCH" && this._body !== undefined) {
+        init.body = JSON.stringify(this._body);
+        init.headers.Prefer = init.headers.Prefer ?? "return=representation";
+      }
+    } else if (this._body !== undefined) {
       init.body = JSON.stringify(this._body);
       init.headers.Prefer = init.headers.Prefer ?? "return=representation";
     }
@@ -96,6 +123,15 @@ class QueryBuilder {
     const data = await parseBody(res);
     if (!res.ok) return errorResult(res, data);
     return okResult(data);
+  }
+
+  _idFilter() {
+    for (let i = this._filters.length - 1; i >= 0; i--) {
+      const raw = this._filters[i];
+      const m = /^id=eq\.(.+)$/.exec(decodeURIComponent(raw));
+      if (m) return decodeURIComponent(m[1]);
+    }
+    return null;
   }
 }
 
