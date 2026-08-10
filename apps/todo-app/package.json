@@ -6,7 +6,7 @@
   "private": true,
   "scripts": {
     "start": "node src/server.mjs",
-    "test": "node test/unit.mjs && node test/live.mjs"
+    "test": "node test/unit.mjs && node test/e2e.mjs && node test/live.mjs"
   },
   "dependencies": {
     "@librebase/librebase": "file:../../packages/sdk"

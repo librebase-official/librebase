@@ -24,8 +24,8 @@ echo "==> MCP unit + smoke + live e2e"
 echo "==> Studio unit tests + typecheck"
 (cd data-studio-ui && npm install --no-audit --no-fund >/dev/null 2>&1 && npx tsc --noEmit && npm test)
 
-echo "==> Todo app unit tests"
-(cd apps/todo-app && npm install --no-audit --no-fund >/dev/null 2>&1 && node test/unit.mjs)
+echo "==> Todo app unit + E2E (spawns lis backend)"
+(cd apps/todo-app && npm install --no-audit --no-fund >/dev/null 2>&1 && node test/unit.mjs && LIS_ROOT="${LIS_ROOT:-$REPO/../lis}" node test/e2e.mjs)
 
 if [[ "${1:-}" == "--e2e" ]]; then
   echo "==> Big E2E: MCP provision → migration → todo app (SDK + HTTP)"

@@ -73,7 +73,7 @@ async function handler(req, res) {
     if (method === "POST" && route === "/auth/signup") {
       const { email, password } = await readBody(req);
       const out = await app.auth.signUp(email, password);
-      return json(res, 201, { user: out.user });
+      return json(res, 201, { user: out.user, access_token: out.session?.access_token });
     }
     if (method === "POST" && route === "/auth/signin") {
       const { email, password } = await readBody(req);
