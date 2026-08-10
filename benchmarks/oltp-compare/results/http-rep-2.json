@@ -7,9 +7,9 @@
   "lis_url": "http://127.0.0.1:15421",
   "postgrest_url": "http://127.0.0.1:3000",
   "table": "parity_items",
-  "lis_pin": "68f1553",
+  "lis_pin": "f94f4ce",
   "runner_os": "Windows-11-10.0.26200-SP0",
-  "hardware_note": "local win32 lis:15421 pool+Release vs lb-pgrst-bench:3000",
+  "hardware_note": "local win32 HTTP rep2",
   "rows_seeded": 50,
   "warmup": 20,
   "measure": 100,
@@ -17,8 +17,8 @@
   "soft_gate": {
     "id": "http_rest_p95",
     "threshold": 1.2,
-    "max_ratio_vs_postgrest_p95": 0.5979,
-    "breached": false,
+    "max_ratio_vs_postgrest_p95": 4.1426,
+    "breached": true,
     "scenarios": [
       "rest_get_eq_name",
       "rest_post_insert"
@@ -31,11 +31,11 @@
       "gate_class": "soft",
       "status": "measured",
       "surface": "rest",
-      "mean_ms": 12.8412,
-      "p50_ms": 15.4076,
-      "p95_ms": 16.201,
+      "mean_ms": 71.3926,
+      "p50_ms": 63.7604,
+      "p95_ms": 113.3635,
       "n": 100,
-      "ratio_vs_postgrest_p95": 0.5708
+      "ratio_vs_postgrest_p95": 4.1426
     },
     {
       "engine": "postgrest",
@@ -43,9 +43,9 @@
       "gate_class": "soft",
       "status": "measured",
       "surface": "rest",
-      "mean_ms": 17.4972,
-      "p50_ms": 15.7072,
-      "p95_ms": 28.3821,
+      "mean_ms": 15.3655,
+      "p50_ms": 15.5188,
+      "p95_ms": 27.3655,
       "n": 100
     },
     {
@@ -54,11 +54,11 @@
       "gate_class": "soft",
       "status": "measured",
       "surface": "rest",
-      "mean_ms": 7.7655,
-      "p50_ms": 1.9162,
-      "p95_ms": 16.3063,
+      "mean_ms": 76.1671,
+      "p50_ms": 76.3094,
+      "p95_ms": 114.4847,
       "n": 100,
-      "ratio_vs_postgrest_p95": 0.5979
+      "ratio_vs_postgrest_p95": 3.7249
     },
     {
       "engine": "postgrest",
@@ -66,9 +66,9 @@
       "gate_class": "soft",
       "status": "measured",
       "surface": "rest",
-      "mean_ms": 15.4447,
-      "p50_ms": 15.6505,
-      "p95_ms": 27.2713,
+      "mean_ms": 17.8659,
+      "p50_ms": 15.8564,
+      "p95_ms": 30.7351,
       "n": 100
     }
   ]

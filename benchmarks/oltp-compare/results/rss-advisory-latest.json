@@ -1,0 +1,20 @@
+{
+  "suite": "lidb-bench",
+  "harness": "lidb-bench",
+  "profile": "librebase-lean",
+  "date": "2026-08-05",
+  "status": "advisory_pass",
+  "lidb_pin": "d7f5cb5",
+  "ph_db7_ref": "e731661",
+  "ph_db7_mr": "https://gitlab.lilangverse.xyz/li-langverse/lidb/-/merge_requests/5",
+  "gate_platform_ok": false,
+  "rss_mb": 5.621,
+  "threshold_mb": 64.0,
+  "rss_source": "windows_working_set",
+  "check_rss_gate": "PASS with --allow-advisory",
+  "runner_os": "Windows-11-10.0.26200-SP0",
+  "hardware_note": "PH-DB-7 lean RSS manual run; Windows WorkingSet advisory only — Linux VmRSS CI gate pending",
+  "artifact_source": "../../li/lidb/scripts/bench/results/librebase-lean.json",
+  "ci_trigger": "lidb feat/ph-db-7-librebase-lean-rss → .github/workflows/footprint-gate.yml (workflow_dispatch or push to main/dev)",
+  "honesty": "Do not claim measured 64 MB until footprint-gate.yml green on Linux proc_vmrss."
+}

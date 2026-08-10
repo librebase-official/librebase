@@ -5,10 +5,13 @@ Honesty
 -------
 - Reports measured P50/P95 (and ops/sec where relevant) — never invents ratios
   without a Postgres URL.
-- Modes: embed_inprocess (EmbeddedSession) vs embed_execjson (subprocess spawn).
-- Gate candidate today: point_lookup_with_index in embed_inprocess (hash_map index).
-- Do not claim "as fast as Supabase" until CI publishes green gated rows + P5 btree
-  (or an explicit hash_map footnote forever).
+- Modes: embed_execjson (long-lived ``lidb_embed session`` subprocess + NDJSON IPC,
+  **CI hard gate**) vs embed_inprocess (EmbeddedSession in Python, diagnostic-only).
+- Hard gate: point_lookup_with_index + range_scan_name_prefix in embed_execjson
+  (CI: --scenarios core,range_scan_name_prefix).
+- ``index_impl`` autodetection: btree | sorted_tree | hash_map | unknown.
+- Marketing unlock: see MARKETING_UNLOCK.md — cite sorted_tree (not disk B-tree),
+  Release embed, and fair embed_execjson session.
 
 Env
 ---
@@ -52,7 +55,7 @@ SCENARIO_META = {
     "point_lookup_with_index": "gated",
     "point_insert": "soft",
     "indexed_read_write_mix": "soft",
-    "range_scan_name_prefix": "diagnostic",
+    "range_scan_name_prefix": "gated",
     "concurrent_readers": "soft",
 }
 
@@ -118,22 +121,121 @@ def lidb_pin(root: Path) -> str:
     return "unknown"
 
 
+def detect_index_impl(*, root: Path, data_dir: Path | None = None) -> str:
+    """Detect lidb index_impl (btree|sorted_tree|hash_map|unknown) for honesty JSON.
+
+    Prefer liorm.probe_index_impl when LIDB_ROOT is importable; else parse
+    ``.lidb/migration_intent.txt`` or ``lidb_embed open`` stdout.
+    """
+    known = ("btree", "sorted_tree", "hash_map")
+    if str(root) not in sys.path:
+        sys.path.insert(0, str(root))
+    try:
+        from liorm.embed_engine import probe_index_impl  # type: ignore
+
+        got = probe_index_impl(data_dir)
+        if got in known:
+            return got
+        if got and got != "unknown":
+            return got
+    except Exception:
+        pass
+
+    if data_dir is not None:
+        intent = data_dir / ".lidb" / "migration_intent.txt"
+        if intent.is_file():
+            for line in intent.read_text(encoding="utf-8", errors="replace").splitlines():
+                if line.startswith("index_impl="):
+                    val = line.split("=", 1)[1].strip()
+                    if val.startswith("hash_map"):
+                        return "hash_map"
+                    if val in known:
+                        return val
+                    if "sorted_tree" in val:
+                        return "sorted_tree"
+                    if "btree" in val:
+                        return "btree"
+
+    embed = find_embed()
+    if embed is None:
+        return "unknown"
+    try:
+        with tempfile.TemporaryDirectory(prefix="lb-oltp-idx-") as tmp:
+            proc = subprocess.run(
+                [str(embed), "open", tmp],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            for token in (proc.stdout or "").split():
+                if token.startswith("index_impl="):
+                    val = token.split("=", 1)[1].strip()
+                    if val.startswith("hash_map"):
+                        return "hash_map"
+                    if val in known:
+                        return val
+            subprocess.run(
+                [str(embed), "migrate", tmp],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            intent = Path(tmp) / ".lidb" / "migration_intent.txt"
+            if intent.is_file():
+                for line in intent.read_text(encoding="utf-8", errors="replace").splitlines():
+                    if line.startswith("index_impl="):
+                        val = line.split("=", 1)[1].strip()
+                        if val.startswith("hash_map"):
+                            return "hash_map"
+                        if val in known:
+                            return val
+    except OSError:
+        pass
+    return "unknown"
+
+
 def find_embed() -> Path | None:
     override = os.environ.get("LIDB_EMBED", "").strip()
     if override and Path(override).is_file():
         return Path(override)
     root = find_lidb_root()
     for cand in (
+        root / "build" / "smoke-release" / "lidb_embed.exe",
+        root / "build" / "smoke-release" / "lidb_embed",
         root / "build" / "smoke" / "Release" / "lidb_embed.exe",
+        root / "build" / "smoke" / "Release" / "lidb_embed",
         root / "build" / "smoke" / "lidb_embed.exe",
         root / "build" / "smoke" / "lidb_embed",
         root / "build" / "Release" / "lidb_embed.exe",
         root / "build" / "lidb_embed.exe",
         root / "build" / "lidb_embed",
+        root / "build" / "smoke" / "Debug" / "lidb_embed.exe",
+        root / "build" / "smoke" / "Debug" / "lidb_embed",
     ):
         if cand.is_file():
             return cand
     return None
+
+
+def detect_build_type(embed: Path | None) -> str:
+    """Best-effort Debug/Release label from binary path or OLTP_BUILD_TYPE override."""
+    override = os.environ.get("OLTP_BUILD_TYPE", "").strip()
+    if override:
+        return override
+    if embed is None:
+        return "unknown"
+    parts = {p.lower() for p in embed.parts}
+    if "smoke-release" in parts or "release" in parts or "relwithdebinfo" in parts:
+        return "Release"
+    if "debug" in parts:
+        return "Debug"
+    return "unknown"
+
+
+def _configure_lidb_import(root: Path, embed: Path | None) -> None:
+    os.environ.setdefault("LIDB_ROOT", str(root))
+    if embed:
+        os.environ["LIDB_EMBED"] = str(embed)
 
 
 def try_session(data: Path):
@@ -145,17 +247,31 @@ def try_session(data: Path):
     except Exception:
         return None
     reset_session_for_tests()
-    os.environ.setdefault("LIDB_ROOT", str(root))
-    embed = find_embed()
-    if embed:
-        os.environ["LIDB_EMBED"] = str(embed)
+    _configure_lidb_import(root, find_embed())
     session = EmbeddedSession(data)
     if not session.open_and_migrate():
         return None
     return session
 
 
-def embed_exec(embed: Path, data: Path, sql: str, params: list[str] | None = None) -> list:
+def try_persistent_embed(data: Path):
+    """Long-lived lidb_embed session subprocess (WP-J NDJSON protocol)."""
+    root = find_lidb_root()
+    if str(root) not in sys.path:
+        sys.path.insert(0, str(root))
+    try:
+        from liorm.embed_engine import PersistentEmbedProcess  # type: ignore
+    except Exception:
+        return None
+    _configure_lidb_import(root, find_embed())
+    try:
+        return PersistentEmbedProcess(data)
+    except Exception:
+        return None
+
+
+def embed_exec_oneshot(embed: Path, data: Path, sql: str, params: list[str] | None = None) -> list:
+    """One-shot exec-json — diagnostic only; spawn cost dominates P95."""
     proc = subprocess.run(
         [str(embed), "exec-json", str(data), sql],
         input=json.dumps(params or []),
@@ -211,12 +327,24 @@ def resolve_scenarios(spec: str) -> list[str]:
         return list(SCENARIO_ALL)
     if key == "list":
         return []
-    # comma-separated custom list
-    parts = [p.strip() for p in spec.split(",") if p.strip()]
-    unknown = [p for p in parts if p not in SCENARIO_ALL]
-    if unknown:
-        raise SystemExit(f"unknown scenarios: {unknown}; known={list(SCENARIO_ALL)}")
-    return parts
+    presets = {"core": SCENARIO_CORE, "all": SCENARIO_ALL}
+    parts = [p.strip().lower() for p in spec.split(",") if p.strip()]
+    out: list[str] = []
+    for part in parts:
+        if part in presets:
+            out.extend(presets[part])
+        elif part in SCENARIO_ALL:
+            out.append(part)
+        else:
+            raise SystemExit(f"unknown scenarios: {[part]}; known={list(SCENARIO_ALL)} + presets core,all")
+    # preserve order, dedupe
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for sid in out:
+        if sid not in seen:
+            seen.add(sid)
+            ordered.append(sid)
+    return ordered
 
 
 def scenario_row(
@@ -265,14 +393,17 @@ def run(
     pin = lidb_pin(root)
     want = set(scenarios)
     out_scenarios: list[dict] = []
+    index_impl = "unknown"
 
     with tempfile.TemporaryDirectory(prefix="lb-oltp-") as tmp:
         data = Path(tmp) / "lidb"
         data.mkdir(parents=True, exist_ok=True)
 
         session = None
+        persistent = None
         lock = threading.Lock()
         concurrent_note = None
+        embed_ipc = "unknown"
 
         if mode == "embed_inprocess":
             session = try_session(data)
@@ -281,29 +412,36 @@ def run(
                     "embed_inprocess requested but EmbeddedSession unavailable "
                     "(liorm/embed_engine + migrate). Use --mode embed_execjson or fix LIDB_ROOT."
                 )
+            embed_ipc = "python_embedded_session"
             concurrent_note = (
                 "lidb concurrent_readers uses a mutex around EmbeddedSession "
                 "(embed not assumed thread-safe) — soft/diagnostic throughput"
             )
         elif mode == "embed_execjson":
-            subprocess.run(
-                [str(embed), "migrate", str(data)],
-                check=True,
-                capture_output=True,
-                text=True,
-            )
+            persistent = try_persistent_embed(data)
+            if persistent is None:
+                raise RuntimeError(
+                    "embed_execjson requires lidb_embed session mode (WP-J NDJSON). "
+                    "Rebuild lidb_embed with session support or set LIDB_EMBED."
+                )
+            embed_ipc = "session_subprocess"
             concurrent_note = (
-                "lidb concurrent_readers uses parallel exec-json subprocesses "
-                "(includes spawn cost)"
+                "lidb concurrent_readers uses one lidb_embed session subprocess per worker "
+                "(NDJSON IPC; process spawn amortized across warmup+measure)"
             )
         else:
             raise ValueError(f"unknown mode: {mode}")
+
+        index_impl = detect_index_impl(root=root, data_dir=data)
 
         def exec_sql(sql: str, params: list[str] | None = None) -> list:
             if session is not None:
                 with lock:
                     return session.exec_parameterized(sql, params or [])
-            return embed_exec(embed, data, sql, params)
+            if persistent is not None:
+                with lock:
+                    return persistent.exec_parameterized(sql, params or [])
+            return embed_exec_oneshot(embed, data, sql, params)
 
         exec_sql(
             "CREATE TABLE IF NOT EXISTS bench_items (id uuid, name text, owner_id uuid)"
@@ -449,7 +587,7 @@ def run(
                     index=indexed_ok,
                     status="measured",
                     stats=rng,
-                    note="diagnostic until btree (P5); hash_map may not help LIKE",
+                    note="sorted_tree in-memory ordered map (not disk B-tree); hard-gated ≤ 1.2×",
                 )
             )
 
@@ -468,11 +606,28 @@ def run(
                 total_ops = concurrent_workers * concurrent_ops
 
                 def worker_ops(_: int) -> list[float]:
+                    worker_sess = None
+                    if persistent is not None:
+                        worker_sess = try_persistent_embed(data)
+                        if worker_sess is None:
+                            raise RuntimeError("concurrent worker session failed")
                     samples: list[float] = []
-                    for _j in range(concurrent_ops):
-                        t0 = time.perf_counter()
-                        lidb_lookup()
-                        samples.append((time.perf_counter() - t0) * 1000.0)
+                    try:
+                        for _j in range(concurrent_ops):
+                            t0 = time.perf_counter()
+                            if worker_sess is not None:
+                                out = worker_sess.exec_parameterized(
+                                    "SELECT id, name FROM bench_items WHERE name = ?",
+                                    [target],
+                                )
+                                if not out:
+                                    raise RuntimeError("lidb lookup miss")
+                            else:
+                                lidb_lookup()
+                            samples.append((time.perf_counter() - t0) * 1000.0)
+                    finally:
+                        if worker_sess is not None:
+                            worker_sess.close()
                     return samples
 
                 t0 = time.perf_counter()
@@ -500,6 +655,8 @@ def run(
 
         if session is not None:
             session.close()
+        if persistent is not None:
+            persistent.close()
 
         pg = pg_connect()
         if pg:
@@ -707,20 +864,35 @@ def run(
         "measure": measure,
         "mode": mode,
         "lidb_mode": mode,  # back-compat alias
+        "embed_ipc": embed_ipc,
         "scenarios_selected": scenarios,
         "embed": str(embed),
+        "build_type": detect_build_type(embed),
         "lidb_pin": pin,
         "lidb_root": str(root),
         "runner_os": platform.platform(),
         "hardware_note": hardware_note,
-        "index_impl": "hash_map",
+        "index_impl": index_impl,
         "postgres": bool(
             os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL")
         ),
         "honesty": (
-            "Aims only until CI green. embed_inprocess vs TCP Postgres is a labeled "
-            "microbench (not fair_sql). index_impl=hash_map — not B-tree / Postgres "
-            "parity; gated marketing claim needs P1 green + P5 btree (or forever footnote)."
+            f"Aims only until CI green. mode={mode} — "
+            + (
+                "embed_execjson is the CI hard-gate path (lidb_embed session subprocess vs TCP Postgres)."
+                if mode == "embed_execjson"
+                else "embed_inprocess is diagnostic-only (unfair vs TCP Postgres)."
+            )
+            + f" index_impl={index_impl} — "
+            + (
+                "sorted_tree is in-memory ordered map (not disk B-tree / Postgres parity); "
+                "range_scan_name_prefix is hard-gated ≤ 1.2× (Release embed)."
+                if index_impl == "sorted_tree"
+                else "btree claim reserved for page B-tree; "
+                if index_impl == "btree"
+                else "hash_map — not B-tree / Postgres parity; "
+            )
+                + " see MARKETING_UNLOCK.md (UNLOCKED with sorted_tree / Release / embed_execjson caveats)."
         ),
         "scenarios": out_scenarios,
     }
@@ -744,8 +916,8 @@ def main() -> int:
     ap.add_argument(
         "--mode",
         choices=("embed_inprocess", "embed_execjson"),
-        default=os.environ.get("OLTP_MODE", "embed_inprocess"),
-        help="Fairness mode (default: embed_inprocess)",
+        default=os.environ.get("OLTP_MODE", "embed_execjson"),
+        help="Fairness mode (default: embed_execjson — CI hard gate)",
     )
     ap.add_argument(
         "--scenarios",

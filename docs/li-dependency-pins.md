@@ -1,6 +1,6 @@
 # Li dependency pins (Librebase — lidb / lis)
 
-**Last audit:** 2026-08-03  
+**Last audit:** 2026-08-05  
 **Rule:** Edit Li packages in sibling checkouts; bump pins here; flip matrix ✅ only after Wave A harness green. Do not vendor forks into librebase.  
 **Post–Wave-A:** [parity-roadmap-v2](sdd/specs/parity-roadmap-v2/design.md) — new surface requires **self-hosted `lic` ≥ pin** ([wave-0](sdd/specs/parity-roadmap-v2/wave-0-lic-spine.md)).
 
@@ -20,13 +20,25 @@
 | Dep | Absolute path | Git (branch @ SHA) | Notes |
 |-----|---------------|--------------------|-------|
 | **lic** | `C:\Users\Julian\Documents\Programming\li\lic-parity-w0` | `main` @ `1a466a6` | Fresh GitLab clone (replaces broken `lic` junction/worktrees). Wave 0 gate: stage0 build + `li-tests/self_host_parity/run_token_parity.sh` |
-| lidb | `C:\Users\Julian\Documents\Programming\li\lidb` | `feat/wave-3-migrate-depth` @ `e9abac6` | Wave 3 UNIQUE/multi-col INDEX + POLICY metadata (MR !4). Includes W2 `23f93ca` + W1 RLS |
+| lidb | `C:\Users\Julian\Documents\Programming\li\lidb` | `feat/p5-sorted-tree-index` @ `d7f5cb5` | P5 sorted_tree CREATE INDEX + prefix range ([MR !6](https://gitlab.lilangverse.xyz/li-langverse/lidb/-/merge_requests/6)); OLTP CI hard gate pin |
+| lidb (PH-DB-7 footprint) | same checkout, branch switch | `feat/ph-db-7-librebase-lean-rss` @ `e731661` | Lean RSS gate + `lidb-bench --profile librebase-lean` ([MR !5](https://gitlab.lilangverse.xyz/li-langverse/lidb/-/merge_requests/5)); **not** the OLTP pin until merged |
 | lis | `C:\Users\Julian\Documents\Programming\li\lis` | `feat/deepen-phase1-refresh-buckets` @ `e4f92dc` | Deepen: refresh + buckets + GitHub OAuth (MR !161). Includes W7 edge |
 | li-oauth | `C:\Users\Julian\Documents\Programming\li-oauth` | `main` @ `92501c6` | OAuth scaffold |
 | li-edge | `C:\Users\Julian\Documents\Programming\li-edge` | `feat/wave-7-invoke` @ `708a6fa` | `scripts/invoke.py` real runtime (MR !1); set `LI_EDGE_ROOT` or sibling auto-discover |
 | li-httpd | `C:\Users\Julian\Documents\Programming\li\li-httpd` | `main` @ `3b7472e` | Compose stub: `deploy/edge/librebase.httpd.toml` |
 
 **lis tip note:** Prefer merging `feat/realtime-changefeed` (`36eef49`) into the functions-echo line so one pin carries both notify + echo.
+
+## Footprint / PH-DB-7 (64 MB aim)
+
+| Check | Where | Pin / gate |
+|-------|-------|------------|
+| OLTP SQL hard gate | [`.github/workflows/oltp-compare.yml`](../.github/workflows/oltp-compare.yml) | lidb @ **`d7f5cb5`** (`embed_execjson`, `check_gate.py`) |
+| Lean RSS ≤ 64 MB steady | lidb `scripts/smoke.sh` + `lidb-bench --profile librebase-lean` | lidb PH-DB-7 @ **`e731661`** ([MR !5](https://gitlab.lilangverse.xyz/li-langverse/lidb/-/merge_requests/5)) |
+| Honesty doc | [lidb `docs/footprint.md`](https://gitlab.lilangverse.xyz/li-langverse/lidb/-/blob/feat/ph-db-7-librebase-lean-rss/docs/footprint.md) | Targets are **aims** until PH-DB-7 CI publishes green RSS rows |
+| Marketing unlock | [`benchmarks/oltp-compare/MARKETING_UNLOCK.md`](../benchmarks/oltp-compare/MARKETING_UNLOCK.md) | Requires measured RSS **or** keep “64 MB aim” copy forever |
+
+**Linux-only:** PH-DB-7 RSS sampling uses `/proc` (or macOS `ps`) inside lidb — run on Ubuntu CI or Linux VM; Windows dev can document pin + workflow path without local green RSS. Registry-min **256 MB** gate remains the interim engineering ceiling per [product rules](../.cursor/rules/librebase-product.mdc).
 
 ## Harness requires ≥
 
