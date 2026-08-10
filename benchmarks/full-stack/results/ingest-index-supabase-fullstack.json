@@ -1,0 +1,29 @@
+{
+  "stack": "supabase-pg-btree",
+  "rows": 50000,
+  "ingest_rows_per_sec": 1124,
+  "ingest_total_ms": 44471,
+  "query_ms": {
+    "lookup": {
+      "n": 60,
+      "min": 2.17,
+      "p50": 3.41,
+      "p95": 7.09,
+      "max": 14.81
+    },
+    "range": {
+      "n": 60,
+      "min": 7.31,
+      "p50": 15.78,
+      "p95": 23.42,
+      "max": 25.53
+    },
+    "page": {
+      "n": 60,
+      "min": 2.42,
+      "p50": 3.6,
+      "p95": 7.03,
+      "max": 7.96
+    }
+  }
+}

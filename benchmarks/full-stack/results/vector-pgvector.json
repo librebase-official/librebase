@@ -1,0 +1,23 @@
+{
+  "stack": "supabase-pgvector",
+  "dim": 128,
+  "rows": 20000,
+  "k": 10,
+  "ingest_rows_per_sec": 2683,
+  "ingest_total_ms": 7455,
+  "exact_search_ms": {
+    "n": 60,
+    "min": 3.16,
+    "p50": 5.18,
+    "p95": 10.29,
+    "max": 16.72
+  },
+  "hnsw_approx_ms": {
+    "n": 60,
+    "min": 2.92,
+    "p50": 4.81,
+    "p95": 9.79,
+    "max": 11.74
+  },
+  "honesty": "pgvector baseline; lidb has no vector engine yet — sets a target"
+}
