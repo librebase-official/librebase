@@ -52,6 +52,9 @@ async function handler(req, res) {
   const method = req.method;
 
   try {
+    if (route === "/health") {
+      return json(res, 200, { ok: true, service: "todo-app" });
+    }
     if (method === "POST" && route === "/auth/signup") {
       const { email, password } = await readBody(req);
       const out = await app.auth.signUp(email, password);
