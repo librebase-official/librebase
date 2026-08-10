@@ -1,54 +1,52 @@
-# Todo app CRUD benchmark — Supabase vs Librebase/lis
+# Todo app CRUD benchmark — Supabase vs Librebase/lis (both REMOTE)
 
-Same todo app (auth + todos CRUD) measured head-to-head on two backends.
-Both runs: **60 rounds × 4 ops (create / list / update / delete) = 240 HTTP responses**.
+Same todo app (auth + todos CRUD), measured head-to-head. Both backends run on the
+**same homelab k3s cluster** and are reached over the **same public HTTPS path**
+(FritzBox → nginx → NodePort), so the network is apples-to-apples.
 
-## Results
+Each run: **60 rounds × 4 ops (create / list / update / delete) = 240 HTTP responses**,
+after a warmup cycle (TLS + connection pooling to steady state).
 
-| Backend | Total | Ops/sec | create p50 | list p50 | update p50 | delete p50 | p95 (all) |
-|---------|-------|---------|-----------|----------|------------|-----------|-----------|
-| **Supabase** (`supabase.obsevia.com`, remote HTTPS) | 74.8 s | **3** | 239 ms | 246 ms | 245 ms | 257 ms | ~1.0 s |
-| **Librebase lis** (local, in-process) | 0.36 s | **677** | 1.6 ms | 1.3 ms | 1.4 ms | 1.2 ms | ~4 ms |
+## Results (3 runs each)
 
-**~225× more ops/sec on lis than the remote Supabase** in this run.
+| Backend | ops/s | create p50 | list p50 | update p50 | delete p50 |
+|---------|-------|-----------|----------|------------|-----------|
+| **Librebase lis** (`todo.librebase.xyz`) | 33–38 | 23–30 ms | 22–27 ms | 23–28 ms | 25–27 ms |
+| **Supabase** (`supabase.obsevia.com`) | 38–42 | 21–22 ms | 19–22 ms | 21–22 ms | 21 ms |
 
-## Caveats (honest)
+**Statistically equivalent.** Both sustain ~35–42 ops/s over public HTTPS with
+~20–27 ms p50 per operation. Supabase is marginally faster per-op in these runs
+(within noise).
 
-- **Not apples-to-apples on transport:** Supabase runs on a remote host over public
-  HTTPS (TLS + Kong proxy + PostgREST + Postgres on one VPS/cluster, WAN round-trips);
-  lis runs locally in-process with mock auth + in-memory store. The lis number is a
-  **local** upper bound, not a same-host comparison.
-- Supabase per-op p50 ≈ 240 ms is dominated by network RTT + Kong proxy latency
-  (`x-kong-proxy-latency` ~2.2 s was seen on first signin; steady-state lower).
-- The lis backend stores todos in-memory (non-durable); Supabase persists to Postgres
-  with RLS. Durability ≠ speed.
-- To do a fair same-host comparison, deploy Supabase on the same machine/LAN and run
-  the same harness against `http://<host>:8000` (Kong) instead of the public URL.
+## Why the earlier "225×" was wrong
+
+An earlier local-vs-remote comparison showed lis at 677 ops/s vs Supabase at 3 ops/s.
+That was **not a real difference**:
+- lis ran **locally in-process** (no network); Supabase was **remote over public HTTPS**.
+- Supabase's first run was **cold**: admin user creation + TLS handshake + Kong
+  warmup inflated p50 to ~240 ms and the total to 75 s.
+- After adding a warmup cycle and measuring **both over the same remote path**, the
+  gap vanished (both ~35–42 ops/s).
+
+Lesson: benchmark the same transport. The lis number from a local in-process run is
+a local upper bound, not a head-to-head figure.
+
+## Raw numbers (run averages)
+
+- lis remote: total ≈ 6.3–7.4 s / 240 responses, p50 ≈ 25 ms, p95 ≈ 0.3–1.7 s
+- supabase remote: total ≈ 5.7–6.2 s / 240 responses, p50 ≈ 21 ms, p95 ≈ 40–90 ms
 
 ## How to run
 
-### Supabase
 ```bash
+# lis backend (remote)
+cd apps/todo-app
+node test/bench-crud-remote.mjs                 # -> https://todo.librebase.xyz
+
+# supabase backend (remote)
 cd apps/todo-app-supabase
 LIBREBASE_ANON=<anon> LIBREBASE_SERVICE_ROLE=<service_role> \
-  node test/e2e-supabase.mjs        # functional e2e
-LIBREBASE_ANON=<anon> LIBREBASE_SERVICE_ROLE=<service_role> \
-  BENCH_ROUNDS=60 node test/bench-crud.mjs   # 240-response latency
+  node test/bench-crud.mjs                      # -> https://supabase.obsevia.com
 ```
 
-Requires a `todos` table with RLS:
-```sql
-CREATE TABLE IF NOT EXISTS todos (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null, title text not null,
-  done boolean default false, created_at timestamptz default now());
-ALTER TABLE todos ENABLE ROW LEVEL SECURITY;
-CREATE POLICY todos_owner ON todos FOR ALL
-  USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-```
-
-### Librebase lis
-```bash
-cd apps/todo-app
-LIS_ROOT=<lis> node test/bench-crud.mjs   # same 60×4 measurement, local stack
-```
+Both scripts take `BENCH_ROUNDS` (default 60) and warm up before timing.

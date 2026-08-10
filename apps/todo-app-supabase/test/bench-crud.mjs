@@ -76,6 +76,17 @@ export async function run() {
   const token = signinRes.out.access_token;
   const sub = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString()).sub;
 
+  // Warmup: one full CRUD cycle so TLS + connection pooling reach steady state.
+  {
+    const w = await fetch(`${API}/rest/v1/todos`, {
+      method: "POST", headers: { ...h(token), Prefer: "return=representation" },
+      body: JSON.stringify({ title: "warmup", done: false, user_id: sub }),
+    });
+    const wid = (await w.json())[0].id;
+    await fetch(`${API}/rest/v1/todos?id=eq.${wid}`, { method: "PATCH", headers: { ...h(token), Prefer: "return=representation" }, body: JSON.stringify({ done: true }) });
+    await fetch(`${API}/rest/v1/todos?id=eq.${wid}`, { method: "DELETE", headers: h(token) });
+  }
+
   const latencies = {
     create: [],
     list: [],
