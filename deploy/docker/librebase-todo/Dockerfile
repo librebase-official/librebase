@@ -13,6 +13,7 @@ WORKDIR /opt
 COPY packages/sdk /opt/packages/sdk
 COPY apps/todo-app/package.json /opt/todo/package.json
 COPY apps/todo-app/src /opt/todo/src
+COPY apps/todo-app/public /opt/todo/public
 
 WORKDIR /opt/todo
 RUN npm install --omit=dev --no-audit --no-fund
