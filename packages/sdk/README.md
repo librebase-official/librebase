@@ -7,7 +7,7 @@ Calls:
 | Surface | Path |
 |---------|------|
 | REST | `/rest/v1/{table}` |
-| Auth | `/v1/auth/signup`, `/v1/auth/login` |
+| Auth | `/v1/auth/*` or `/auth/v1/*` (set `LIBREBASE_AUTH_GOTRUE=1`) |
 | Storage (stub) | `/storage/v1/object/...` |
 
 ## Install

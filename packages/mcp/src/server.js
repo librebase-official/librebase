@@ -32,6 +32,46 @@ const ADMIN_URL = (
   process.env.LIBREBASE_ADMIN_URL ?? "http://127.0.0.1:54330"
 ).replace(/\/$/, "");
 
+function projectApiBase(override) {
+  return (
+    override ||
+    process.env.LIBREBASE_PARITY_API ||
+    process.env.LIBREBASE_PROJECT_API ||
+    "http://127.0.0.1:54321"
+  ).replace(/\/$/, "");
+}
+
+async function projectFetch(pathname, { apiBase, bearer, method = "GET", body } = {}) {
+  const base = projectApiBase(apiBase);
+  const headers = { "Content-Type": "application/json" };
+  const token =
+    bearer ||
+    process.env.LIBREBASE_PROJECT_SESSION ||
+    process.env.LIBREBASE_ADMIN_SESSION;
+  if (token) headers.Authorization = `Bearer ${token}`;
+  let res;
+  try {
+    res = await fetch(`${base}${pathname}`, {
+      method,
+      headers,
+      body: body != null ? JSON.stringify(body) : undefined,
+    });
+  } catch (e) {
+    return {
+      ok: false,
+      status: 0,
+      body: { error: "unreachable", message: e instanceof Error ? e.message : String(e) },
+    };
+  }
+  const text = await res.text();
+  let json;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    json = { raw: text };
+  }
+  return { ok: res.ok, status: res.status, body: json, apiBase: base };
+}
 function sessionHeaders() {
   const token =
     process.env.LIBREBASE_ADMIN_SESSION ?? process.env.LIBREBASE_ORG_SESSION;
@@ -251,6 +291,276 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           },
         ],
       };
+    }
+    if (name === "execute_sql") {
+      const r = await projectFetch("/rest/v1/rpc/exec", {
+        apiBase: args.apiBase,
+        bearer: args.bearer,
+        method: "POST",
+        body: { sql: args.sql },
+      });
+      // Prefer PostgREST-shaped; if 404 try thin /v1/sql
+      let out = r;
+      if (r.status === 404 || r.status === 0) {
+        out = await projectFetch("/v1/sql", {
+          apiBase: args.apiBase,
+          bearer: args.bearer,
+          method: "POST",
+          body: { sql: args.sql },
+        });
+      }
+      return {
+        content: [{ type: "text", text: JSON.stringify(out, null, 2) }],
+        isError: !out.ok || out.status === 0,
+      };
+    }
+    if (name === "list_tables") {
+      const schema = args.schema || "public";
+      const r = await projectFetch(
+        `/rest/v1/?select=*&limit=0`,
+        { apiBase: args.apiBase, bearer: args.bearer },
+      );
+      // Honest: if OpenAPI root unavailable, return fail-closed probe
+      if (!r.ok || r.status === 0) {
+        const probe = await projectFetch(`/storage/v1`, {
+          apiBase: args.apiBase,
+          bearer: args.bearer,
+        });
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  ok: false,
+                  schema,
+                  error: "list_tables_unavailable",
+                  rest: r,
+                  storage_probe: probe,
+                  honesty: "Wire OpenAPI / information_schema when REST exposes it",
+                },
+                null,
+                2,
+              ),
+            },
+          ],
+          isError: true,
+        };
+      }
+      return { content: [{ type: "text", text: JSON.stringify(r, null, 2) }] };
+    }
+    if (name === "list_storage_buckets") {
+      const r = await projectFetch("/storage/v1/bucket", {
+        apiBase: args.apiBase,
+        bearer: args.bearer,
+      });
+      return {
+        content: [{ type: "text", text: JSON.stringify(r, null, 2) }],
+        isError: !r.ok || r.status === 0,
+      };
+    }
+    if (name === "list_edge_functions") {
+      const r = await projectFetch("/functions/v1", {
+        apiBase: args.apiBase,
+        bearer: args.bearer,
+      });
+      return {
+        content: [{ type: "text", text: JSON.stringify(r, null, 2) }],
+        isError: r.status === 0,
+      };
+    }
+    if (name === "get_auth_mfa_status") {
+      const r = await projectFetch("/v1/auth/mfa", {
+        apiBase: args.apiBase,
+        bearer: args.bearer,
+      });
+      return {
+        content: [{ type: "text", text: JSON.stringify(r, null, 2) }],
+        isError: !r.ok || r.status === 0,
+      };
+    }
+    if (name === "list_auth_users") {
+      const q = new URLSearchParams();
+      if (args.page != null) q.set("page", String(args.page));
+      if (args.perPage != null) q.set("per_page", String(args.perPage));
+      const qs = q.toString();
+      const r = await projectFetch(`/auth/v1/admin/users${qs ? `?${qs}` : ""}`, {
+        apiBase: args.apiBase,
+        bearer: args.bearer,
+      });
+      return {
+        content: [{ type: "text", text: JSON.stringify(r, null, 2) }],
+        isError: !r.ok || r.status === 0,
+      };
+    }
+    if (name === "create_auth_user") {
+      const r = await projectFetch("/auth/v1/admin/users", {
+        apiBase: args.apiBase,
+        bearer: args.bearer,
+        method: "POST",
+        body: { email: args.email, password: args.password },
+      });
+      return {
+        content: [{ type: "text", text: JSON.stringify(r, null, 2) }],
+        isError: !r.ok || r.status === 0,
+      };
+    }
+    if (name === "delete_auth_user") {
+      const r = await projectFetch(`/auth/v1/admin/users/${encodeURIComponent(args.userId)}`, {
+        apiBase: args.apiBase,
+        bearer: args.bearer,
+        method: "DELETE",
+      });
+      return {
+        content: [{ type: "text", text: JSON.stringify(r, null, 2) }],
+        isError: !r.ok || r.status === 0,
+      };
+    }
+    if (name === "apply_migration") {
+      let out = await projectFetch("/v1/sql", {
+        apiBase: args.apiBase,
+        bearer: args.bearer,
+        method: "POST",
+        body: { sql: args.sql, name: args.name },
+      });
+      if (out.status === 404 || out.status === 0) {
+        out = await projectFetch("/rest/v1/rpc/exec", {
+          apiBase: args.apiBase,
+          bearer: args.bearer,
+          method: "POST",
+          body: { sql: args.sql },
+        });
+      }
+      return {
+        content: [{ type: "text", text: JSON.stringify(out, null, 2) }],
+        isError: !out.ok || out.status === 0,
+      };
+    }
+    if (name === "get_logs") {
+      const limit = args.limit ?? 50;
+      const r = await projectFetch(`/logs?limit=${limit}`, {
+        apiBase: args.apiBase,
+        bearer: args.bearer,
+      });
+      return {
+        content: [{ type: "text", text: JSON.stringify(r, null, 2) }],
+        isError: r.status === 0,
+      };
+    }
+    if (name === "sign_storage_url") {
+      const bucket = encodeURIComponent(String(args.bucket));
+      const objectPath = String(args.path || "").replace(/^\/+/, "");
+      const r = await projectFetch(`/storage/v1/object/sign/${bucket}/${objectPath}`, {
+        apiBase: args.apiBase,
+        bearer: args.bearer,
+        method: "POST",
+        body: {
+          expiresIn: args.expiresIn ?? 60,
+          sigv4: Boolean(args.sigv4),
+        },
+      });
+      return {
+        content: [{ type: "text", text: JSON.stringify(r, null, 2) }],
+        isError: !r.ok || r.status === 0,
+      };
+    }
+    if (name === "auth_otp") {
+      const r = await projectFetch("/auth/v1/otp", {
+        apiBase: args.apiBase,
+        bearer: args.bearer,
+        method: "POST",
+        body: { email: args.email, type: args.type || "magiclink" },
+      });
+      return {
+        content: [{ type: "text", text: JSON.stringify(r, null, 2) }],
+        isError: !r.ok || r.status === 0,
+      };
+    }
+    if (name === "get_project_url") {
+      const base = projectApiBase(args.apiBase);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              { ok: true, project_url: base, honesty: "from env / override — not Supabase management API" },
+              null,
+              2,
+            ),
+          },
+        ],
+      };
+    }
+    if (name === "get_publishable_keys") {
+      const anon =
+        process.env.LIBREBASE_ANON_KEY ||
+        process.env.LI_ANON_KEY ||
+        process.env.SUPABASE_ANON_KEY ||
+        "";
+      if (!anon) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                ok: false,
+                error: "publishable_keys_unset",
+                honesty: "Set LIBREBASE_ANON_KEY — fail closed (no invented keys)",
+              }),
+            },
+          ],
+          isError: true,
+        };
+      }
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({ ok: true, anon_key: anon, publishable: [anon] }, null, 2),
+          },
+        ],
+      };
+    }
+    if (name === "get_project") {
+      const r = await adminFetch(
+        `/org/v1/orgs/${args.orgId}/projects/${args.projectId}`,
+      );
+      return {
+        content: [{ type: "text", text: JSON.stringify(r, null, 2) }],
+        isError: !r.ok,
+      };
+    }
+    if (name === "deepen_status") {
+      const p = path.join(
+        REPO,
+        "docs",
+        "sdd",
+        "specs",
+        "parity-roadmap-v2",
+        "DEEPEN.json",
+      );
+      if (!existsSync(p)) {
+        return {
+          content: [{ type: "text", text: "DEEPEN.json missing" }],
+          isError: true,
+        };
+      }
+      try {
+        const data = JSON.parse(readFileSync(p, "utf8"));
+        return {
+          content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+        };
+      } catch (e) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: e instanceof Error ? e.message : String(e),
+            },
+          ],
+          isError: true,
+        };
+      }
     }
     return {
       content: [{ type: "text", text: `Unknown tool: ${name}` }],

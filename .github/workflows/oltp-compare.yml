@@ -1,0 +1,248 @@
+name: OLTP compare (gated)
+
+# Postgres 16 + lidb_embed head-to-head. Fails on intentional runs when embed
+# cannot be built, Postgres is unhealthy, or gated ratio breaches OLTP_RATIO_MAX.
+on:
+  workflow_dispatch:
+    inputs:
+      force_skip_ok:
+        description: "Allow skip when lidb checkout/build fails (debug only)"
+        type: boolean
+        default: false
+      run_http:
+        description: "Also run REST/PostgREST HTTP soft compare (does not affect SQL gate)"
+        type: boolean
+        default: false
+  schedule:
+    - cron: "30 6 * * *"
+
+jobs:
+  oltp-compare:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+      BENCH_ROWS: "10000"
+      BENCH_WARMUP: "30"
+      BENCH_MEASURE: "200"
+      OLTP_MODE: embed_inprocess
+      OLTP_SCENARIOS: core
+      OLTP_RATIO_MAX: "1.2"
+      OLTP_SOFT_RATIO_MAX: "1.5"
+      HARDWARE_NOTE: "github-actions ubuntu-latest + postgres:16 service"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install psycopg2
+        run: pip install psycopg2-binary
+
+      - name: Resolve lidb pin from docs/li-dependency-pins.md
+        id: pin
+        run: |
+          set -euo pipefail
+          # Prefer table row: lidb | ... @ `SHA`
+          PIN="$(python3 - <<'PY'
+          import re
+          from pathlib import Path
+          text = Path("docs/li-dependency-pins.md").read_text(encoding="utf-8")
+          # Match "| lidb | ... @ `abcdef1` |"
+          m = re.search(r"\|\s*lidb\s*\|[^|]*@\s*`([0-9a-f]{7,40})`", text, re.I)
+          if not m:
+              # Fallback: any `lidb` line with @ `sha`
+              m = re.search(r"lidb[^\n]*@\s*`([0-9a-f]{7,40})`", text, re.I)
+          if not m:
+              raise SystemExit("could not parse lidb pin from docs/li-dependency-pins.md")
+          print(m.group(1))
+          PY
+          )"
+          echo "sha=$PIN" >> "$GITHUB_OUTPUT"
+          echo "Resolved lidb pin: $PIN"
+
+      - name: Checkout lidb at pin
+        id: lidb
+        uses: actions/checkout@v4
+        with:
+          repository: li-langverse/lidb
+          ref: ${{ steps.pin.outputs.sha }}
+          path: _deps/lidb
+          token: ${{ secrets.LIDB_CHECKOUT_TOKEN || github.token }}
+        continue-on-error: true
+
+      - name: Build lidb_embed (smoke)
+        id: build
+        if: steps.lidb.outcome == 'success'
+        working-directory: _deps/lidb
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq cmake g++ ninja-build
+          cmake -S . -B build/smoke -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/smoke --target lidb_embed -j"$(nproc)"
+          test -x build/smoke/lidb_embed
+          echo "embed=${{ github.workspace }}/_deps/lidb/build/smoke/lidb_embed" >> "$GITHUB_OUTPUT"
+
+      - name: Run oltp-compare + gate
+        env:
+          LIDB_ROOT: ${{ github.workspace }}/_deps/lidb
+          LIDB_EMBED: ${{ steps.build.outputs.embed }}
+          FORCE_SKIP_OK: ${{ github.event.inputs.force_skip_ok || 'false' }}
+          LIDB_CHECKOUT_OK: ${{ steps.lidb.outcome }}
+          LIDB_BUILD_OK: ${{ steps.build.outcome }}
+        run: |
+          set -euo pipefail
+          OUT="benchmarks/oltp-compare/results/latest.json"
+          mkdir -p benchmarks/oltp-compare/results
+
+          allow_skip=false
+          if [ "${FORCE_SKIP_OK}" = "true" ]; then
+            allow_skip=true
+          fi
+
+          if [ "${LIDB_CHECKOUT_OK}" != "success" ] || [ "${LIDB_BUILD_OK}" != "success" ] || [ ! -f "${LIDB_EMBED:-}" ]; then
+            export SKIP_REASON="lidb checkout/build failed or lidb_embed missing (set LIDB_CHECKOUT_TOKEN if private; pin=${{ steps.pin.outputs.sha }})"
+            export SKIP_PIN="${{ steps.pin.outputs.sha }}"
+            echo "ERROR: $SKIP_REASON"
+            python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          Path("benchmarks/oltp-compare/results/latest.json").write_text(
+              json.dumps(
+                  {
+                      "suite": "librebase-oltp-index-compare",
+                      "postgres": True,
+                      "skipped": True,
+                      "skip_reason": os.environ.get("SKIP_REASON", "lidb_embed unavailable"),
+                      "lidb_pin": os.environ.get("SKIP_PIN", "unknown"),
+                      "mode": "embed_inprocess",
+                      "index_impl": "hash_map",
+                      "honesty": "Intentional CI run — skip is a gate failure unless force_skip_ok.",
+                      "scenarios": [],
+                  },
+                  indent=2,
+              )
+              + "\n",
+              encoding="utf-8",
+          )
+          PY
+            if [ "$allow_skip" = "true" ]; then
+              echo "force_skip_ok=true — writing skip artifact and exiting 0"
+              exit 0
+            fi
+            python3 benchmarks/oltp-compare/check_gate.py "$OUT" || true
+            exit 1
+          fi
+
+          export LIDB_EMBED
+          export LIDB_ROOT
+          python3 benchmarks/oltp-compare/run_compare.py \
+            --mode "$OLTP_MODE" \
+            --scenarios "$OLTP_SCENARIOS" \
+            --rows "${BENCH_ROWS}" \
+            --warmup "${BENCH_WARMUP}" \
+            --measure "${BENCH_MEASURE}" \
+            --json-out "$OUT"
+
+          python3 benchmarks/oltp-compare/check_gate.py "$OUT"
+
+      - name: Upload latest.json
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oltp-compare-latest
+          path: benchmarks/oltp-compare/results/latest.json
+          if-no-files-found: ignore
+
+  # P3 soft gate — optional; never blocks the SQL hard gate above.
+  # Soft-skips (exit 0) when LIS_REST_URL is unset/unreachable.
+  oltp-http-compare:
+    name: HTTP REST soft compare
+    if: github.event_name == 'workflow_dispatch' && inputs.run_http == true
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      postgrest:
+        image: postgrest/postgrest:v12.2.8
+        env:
+          PGRST_DB_URI: postgres://postgres:postgres@postgres:5432/postgres
+          PGRST_DB_SCHEMAS: public
+          PGRST_DB_ANON_ROLE: postgres
+        ports:
+          - 3000:3000
+
+    env:
+      POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+      POSTGREST_URL: http://127.0.0.1:3000
+      # LIS_REST_URL intentionally unset unless provided as a repo variable —
+      # harness soft-skips with skipped JSON (exit 0). Set vars to measure live.
+      LIS_REST_URL: ${{ vars.LIS_REST_URL || '' }}
+      HTTP_RATIO_MAX: "1.2"
+      HTTP_ROWS: "50"
+      HTTP_WARMUP: "10"
+      HTTP_MEASURE: "50"
+      HARDWARE_NOTE: "github-actions ubuntu-latest + postgrest:v12 + postgres:16 (HTTP soft)"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install psycopg2
+        run: pip install psycopg2-binary
+
+      - name: Wait for PostgREST
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 30); do
+            if curl -sf "http://127.0.0.1:3000/" >/dev/null 2>&1; then
+              echo "PostgREST up"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "PostgREST did not become ready (harness will soft-skip if needed)"
+
+      - name: Run HTTP compare + soft gate
+        run: |
+          set -euo pipefail
+          OUT="benchmarks/oltp-compare/results/http-latest.json"
+          mkdir -p benchmarks/oltp-compare/results
+          python3 benchmarks/oltp-compare/run_http_compare.py --json-out "$OUT"
+          python3 benchmarks/oltp-compare/check_http_gate.py "$OUT"
+
+      - name: Upload http-latest.json
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oltp-http-compare-latest
+          path: benchmarks/oltp-compare/results/http-latest.json
+          if-no-files-found: ignore

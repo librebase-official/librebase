@@ -1,0 +1,17 @@
+{
+  "suite": "librebase-http-rest-compare",
+  "gate_id": "http_rest_p95",
+  "skipped": true,
+  "skip_reason": "POSTGREST_URL unset",
+  "lis_rest": true,
+  "postgrest": false,
+  "lis_pin": "f94f4ce",
+  "runner_os": "Windows-11-10.0.26200-SP0",
+  "hardware_note": "",
+  "honesty": "HTTP soft-skip \u2014 LIS/API or PostgREST unavailable. Does not imply SQL OLTP gate result. Not a marketing green row.",
+  "soft_gate": {
+    "threshold": 1.2,
+    "breached": false
+  },
+  "scenarios": []
+}

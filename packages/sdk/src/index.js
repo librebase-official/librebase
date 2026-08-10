@@ -107,7 +107,6 @@ class StorageBucket {
     this._fetch = fetchImpl;
   }
 
-  /** Stub: POST /storage/v1/object/{bucket}/{path} */
   async upload(objectPath, body, options = {}) {
     const path = `/storage/v1/object/${encodeURIComponent(this._bucket)}/${String(objectPath).replace(/^\//, "")}`;
     const headers = { ...this._headers };
@@ -122,7 +121,6 @@ class StorageBucket {
     return okResult(data);
   }
 
-  /** Stub: GET /storage/v1/object/list/{bucket} */
   async list(prefix = "", options = {}) {
     const q = new URLSearchParams();
     if (prefix) q.set("prefix", prefix);
@@ -138,7 +136,6 @@ class StorageBucket {
     return okResult(data);
   }
 
-  /** Stub: GET /storage/v1/object/{bucket}/{path} */
   async download(objectPath) {
     const path = `/storage/v1/object/${encodeURIComponent(this._bucket)}/${String(objectPath).replace(/^\//, "")}`;
     const res = await this._fetch(`${this._base}${path}`, {
@@ -151,6 +148,44 @@ class StorageBucket {
     }
     const buf = await res.arrayBuffer();
     return okResult(buf);
+  }
+
+  async remove(paths) {
+    const list = Array.isArray(paths) ? paths : [paths];
+    const results = [];
+    for (const objectPath of list) {
+      const path = `/storage/v1/object/${encodeURIComponent(this._bucket)}/${String(objectPath).replace(/^\//, "")}`;
+      const res = await this._fetch(`${this._base}${path}`, {
+        method: "DELETE",
+        headers: { ...this._headers },
+      });
+      const data = await parseBody(res);
+      if (!res.ok) return errorResult(res, data);
+      results.push(data);
+    }
+    return okResult(results);
+  }
+
+  async createSignedUrl(objectPath, expiresIn = 300) {
+    const path = `/storage/v1/object/sign/${encodeURIComponent(this._bucket)}/${String(objectPath).replace(/^\//, "")}`;
+    const res = await this._fetch(`${this._base}${path}`, {
+      method: "POST",
+      headers: { ...this._headers },
+      body: JSON.stringify({ expiresIn }),
+    });
+    const data = await parseBody(res);
+    if (!res.ok) return errorResult(res, data);
+    const signedURL =
+      data && typeof data === "object" && data.signedURL
+        ? `${this._base}${data.signedURL}`
+        : null;
+    return okResult({ ...data, signedUrl: signedURL, signedURL });
+  }
+
+  getPublicUrl(objectPath) {
+    const key = String(objectPath).replace(/^\//, "");
+    const publicUrl = `${this._base}/storage/v1/object/${encodeURIComponent(this._bucket)}/${key}`;
+    return { data: { publicUrl }, error: null };
   }
 }
 
@@ -170,12 +205,21 @@ export function createClient(url, key, options = {}) {
   }
 
   let authToken = key;
+  let refreshToken = null;
   const headers = () => ({
     apikey: key,
     Authorization: `Bearer ${authToken}`,
     "Content-Type": "application/json",
     ...(options.headers ?? {}),
   });
+
+  function applySession(data) {
+    if (data && typeof data === "object") {
+      const token = data.access_token || data.token || null;
+      if (token) authToken = token;
+      if (data.refresh_token) refreshToken = data.refresh_token;
+    }
+  }
 
   async function authPost(pathname, body) {
     const res = await fetchImpl(`${base}${pathname}`, {
@@ -185,11 +229,7 @@ export function createClient(url, key, options = {}) {
     });
     const data = await parseBody(res);
     if (!res.ok) return errorResult(res, data);
-    const token =
-      data && typeof data === "object"
-        ? data.access_token || data.token || null
-        : null;
-    if (token) authToken = token;
+    applySession(data);
     return okResult(data);
   }
 
@@ -199,19 +239,67 @@ export function createClient(url, key, options = {}) {
     },
     auth: {
       async signUp({ email, password }) {
-        return authPost("/v1/auth/signup", { email, password });
+        const path = process.env.LIBREBASE_AUTH_GOTRUE === "1" ? "/auth/v1/signup" : "/v1/auth/signup";
+        return authPost(path, { email, password });
       },
-      /** Alias for supabase-js familiarity */
       async signIn({ email, password }) {
-        return authPost("/v1/auth/login", { email, password });
+        return this.signInWithPassword({ email, password });
       },
       async signInWithPassword({ email, password }) {
+        if (process.env.LIBREBASE_AUTH_GOTRUE === "1") {
+          return authPost("/auth/v1/token?grant_type=password", { email, password });
+        }
         return authPost("/v1/auth/login", { email, password });
+      },
+      async refreshSession(refresh) {
+        const rt = refresh?.refresh_token || refresh || refreshToken;
+        if (!rt) return { data: null, error: { message: "refresh_token required", status: 400 } };
+        return authPost("/auth/v1/token?grant_type=refresh_token", { refresh_token: rt });
+      },
+      async signOut() {
+        authToken = key;
+        refreshToken = null;
+        return okResult({ signedOut: true });
+      },
+      async getSession() {
+        return okResult({
+          access_token: authToken === key ? null : authToken,
+          refresh_token: refreshToken,
+        });
       },
     },
     storage: {
       from(bucket) {
         return new StorageBucket(base, bucket, headers(), fetchImpl);
+      },
+      async listBuckets() {
+        const res = await fetchImpl(`${base}/storage/v1/bucket`, {
+          method: "GET",
+          headers: headers(),
+        });
+        const data = await parseBody(res);
+        if (!res.ok) return errorResult(res, data);
+        return okResult(data?.buckets ?? data);
+      },
+      async createBucket(name, options = {}) {
+        const res = await fetchImpl(`${base}/storage/v1/bucket`, {
+          method: "POST",
+          headers: headers(),
+          body: JSON.stringify({ name, public: Boolean(options.public) }),
+        });
+        const data = await parseBody(res);
+        if (!res.ok) return errorResult(res, data);
+        return okResult(data);
+      },
+      async removeBucket(name, options = {}) {
+        const qs = options.force ? "?force=true" : "";
+        const res = await fetchImpl(`${base}/storage/v1/bucket/${encodeURIComponent(name)}${qs}`, {
+          method: "DELETE",
+          headers: headers(),
+        });
+        const data = await parseBody(res);
+        if (!res.ok) return errorResult(res, data);
+        return okResult(data);
       },
     },
   };

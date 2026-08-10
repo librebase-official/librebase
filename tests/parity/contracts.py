@@ -32,11 +32,17 @@ def _http(
     path: str,
     *,
     body: dict[str, Any] | None = None,
+    raw_body: bytes | None = None,
     headers: dict[str, str] | None = None,
     timeout: float = 5.0,
 ) -> tuple[int, Any]:
-    data = None if body is None else json.dumps(body).encode("utf-8")
-    hdrs = {"Content-Type": "application/json", **(headers or {})}
+    if raw_body is not None:
+        data = raw_body
+        hdrs = {**(headers or {})}
+        hdrs.setdefault("Content-Type", "application/octet-stream")
+    else:
+        data = None if body is None else json.dumps(body).encode("utf-8")
+        hdrs = {"Content-Type": "application/json", **(headers or {})}
     req = urllib.request.Request(_api_base() + path, data=data, headers=hdrs, method=method)
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -72,6 +78,193 @@ def p_auth_01() -> Result:
     if status2 != 200:
         return Result("P-AUTH-01", "fail", f"whoami status={status2}", {"body": body2})
     return Result("P-AUTH-01", "pass", "signup/login/whoami OK", {"token_prefix": str(token)[:12]})
+
+
+def p_auth_02() -> Result:
+    """GoTrue-shaped /auth/v1 alias: signup + password token + user."""
+    email = os.environ.get("PARITY_EMAIL_GOTRUE", "parity-gotrue@example.com")
+    password = os.environ.get("PARITY_PASSWORD", "parity-secret-change-me")
+    status, body = _http("POST", "/auth/v1/signup", body={"email": email, "password": password})
+    if status not in (200, 201, 409):
+        return Result("P-AUTH-02", "fail", f"/auth/v1/signup status={status}", {"body": body})
+    status, body = _http(
+        "POST",
+        "/auth/v1/token?grant_type=password",
+        body={"email": email, "password": password},
+    )
+    token = None
+    if isinstance(body, dict):
+        token = body.get("access_token") or body.get("token")
+    if status != 200 or not token:
+        return Result("P-AUTH-02", "fail", f"/auth/v1/token status={status}", {"body": body})
+    status2, body2 = _http("GET", "/auth/v1/user", headers={"Authorization": f"Bearer {token}"})
+    if status2 != 200:
+        return Result("P-AUTH-02", "fail", f"/auth/v1/user status={status2}", {"body": body2})
+    return Result("P-AUTH-02", "pass", "GoTrue alias signup/token/user OK", {"token_prefix": str(token)[:12]})
+
+
+def p_sto_01() -> Result:
+    """S3-shaped storage: PUT object + list prefix (Wave 6)."""
+    email = os.environ.get("PARITY_EMAIL_STO", "parity-sto@example.com")
+    password = os.environ.get("PARITY_PASSWORD", "parity-secret-change-me")
+    _http("POST", "/v1/auth/signup", body={"email": email, "password": password})
+    status_l, login = _http("POST", "/v1/auth/login", body={"email": email, "password": password})
+    token = None
+    if isinstance(login, dict):
+        token = login.get("access_token") or login.get("token")
+    if status_l != 200 or not token:
+        return Result("P-STO-01", "fail", "need auth for storage write", {"login": login})
+    hdrs = {"Authorization": f"Bearer {token}", "Content-Type": "text/plain"}
+    status, body = _http(
+        "PUT",
+        "/storage/v1/object/parity/wave6.txt",
+        raw_body=b"wave6-storage",
+        headers=hdrs,
+    )
+    if status in (0,):
+        return Result("P-STO-01", "fail", "API unreachable", {"body": body})
+    if status in (404, 501, 405):
+        return Result("P-STO-01", "fail", f"storage not implemented (status={status})", {"body": body})
+    if status not in (200, 201):
+        return Result("P-STO-01", "fail", f"PUT status={status}", {"body": body})
+    status_g, body_g = _http(
+        "GET",
+        "/storage/v1/object/list/parity?prefix=wave6",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    if status_g != 200:
+        return Result("P-STO-01", "fail", f"list status={status_g}", {"body": body_g})
+    if not isinstance(body_g, dict) or not body_g.get("objects"):
+        return Result("P-STO-01", "fail", "list returned no objects", {"body": body_g})
+    return Result("P-STO-01", "pass", "PUT+list OK", {"list": body_g})
+
+
+def p_auth_03() -> Result:
+    """Refresh token grant rotates and yields usable session — deepen Phase 1."""
+    email = os.environ.get("PARITY_EMAIL_REFRESH", "parity-refresh@example.com")
+    password = os.environ.get("PARITY_PASSWORD", "parity-secret-change-me")
+    status, body = _http("POST", "/v1/auth/signup", body={"email": email, "password": password})
+    if status not in (200, 201, 409):
+        return Result("P-AUTH-03", "fail", f"signup status={status}", {"body": body})
+    status, login = _http("POST", "/v1/auth/login", body={"email": email, "password": password})
+    if status != 200 or not isinstance(login, dict) or not login.get("refresh_token"):
+        return Result("P-AUTH-03", "fail", f"login missing refresh status={status}", {"body": login})
+    old = login["refresh_token"]
+    status2, refreshed = _http(
+        "POST",
+        "/auth/v1/token?grant_type=refresh_token",
+        body={"refresh_token": old},
+    )
+    if status2 != 200 or not isinstance(refreshed, dict) or not refreshed.get("access_token"):
+        return Result("P-AUTH-03", "fail", f"refresh status={status2}", {"body": refreshed})
+    if refreshed.get("refresh_token") == old:
+        return Result("P-AUTH-03", "fail", "refresh_token not rotated", {"body": refreshed})
+    status3, who = _http(
+        "GET",
+        "/auth/v1/user",
+        headers={"Authorization": f"Bearer {refreshed['access_token']}"},
+    )
+    if status3 != 200:
+        return Result("P-AUTH-03", "fail", f"user after refresh status={status3}", {"body": who})
+    status4, again = _http(
+        "POST",
+        "/auth/v1/token?grant_type=refresh_token",
+        body={"refresh_token": old},
+    )
+    if status4 != 401:
+        return Result("P-AUTH-03", "fail", f"old refresh should 401 got {status4}", {"body": again})
+    return Result("P-AUTH-03", "pass", "refresh rotate + revoke OK")
+
+
+def p_auth_04() -> Result:
+    """GitHub OAuth mock authorize→callback session — deepen Phase 1."""
+    if os.environ.get("PARITY_OAUTH", "").strip().lower() not in ("1", "true", "yes"):
+        return Result("P-AUTH-04", "skip", "set PARITY_OAUTH=1 (+ LI_OAUTH_*) to exercise")
+    status, start = _http(
+        "GET",
+        "/auth/v1/authorize?provider=github&format=json",
+        headers={"Accept": "application/json"},
+    )
+    if status == 0:
+        return Result("P-AUTH-04", "fail", "API unreachable", {"body": start})
+    if status == 501:
+        return Result("P-AUTH-04", "fail", "oauth not enabled on API", {"body": start})
+    if status != 200 or not isinstance(start, dict) or not start.get("state"):
+        return Result("P-AUTH-04", "fail", f"authorize status={status}", {"body": start})
+    if os.environ.get("LI_OAUTH_MOCK", "").strip().lower() not in ("1", "true", "yes"):
+        return Result(
+            "P-AUTH-04",
+            "pass",
+            "authorize URL minted (live GitHub — callback not exercised without secrets)",
+            {"url_prefix": str(start.get("url", ""))[:48]},
+        )
+    state = start["state"]
+    status2, session = _http(
+        "GET",
+        f"/auth/v1/callback?provider=github&code=mock_parity-oauth@example.com&state={state}",
+    )
+    if status2 != 200 or not isinstance(session, dict) or not session.get("access_token"):
+        return Result("P-AUTH-04", "fail", f"callback status={status2}", {"body": session})
+    return Result("P-AUTH-04", "pass", "mock OAuth session OK", {"provider": session.get("provider")})
+
+
+def p_sto_02() -> Result:
+    """Bucket create + list — deepen Phase 1."""
+    email = os.environ.get("PARITY_EMAIL", "parity-user@example.com")
+    password = os.environ.get("PARITY_PASSWORD", "parity-secret-change-me")
+    _http("POST", "/v1/auth/signup", body={"email": email, "password": password})
+    status_l, login = _http("POST", "/v1/auth/login", body={"email": email, "password": password})
+    token = None
+    if isinstance(login, dict):
+        token = login.get("access_token") or login.get("token")
+    if status_l != 200 or not token:
+        return Result("P-STO-02", "fail", "need auth for buckets", {"login": login})
+    name = os.environ.get("PARITY_BUCKET", "parity-bucket")
+    status, body = _http(
+        "POST",
+        "/storage/v1/bucket",
+        body={"name": name, "public": False},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    if status not in (200, 409):
+        return Result("P-STO-02", "fail", f"create bucket status={status}", {"body": body})
+    status2, listed = _http(
+        "GET",
+        "/storage/v1/bucket",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    if status2 != 200 or not isinstance(listed, dict):
+        return Result("P-STO-02", "fail", f"list buckets status={status2}", {"body": listed})
+    names = [b.get("name") for b in (listed.get("buckets") or [])]
+    if name not in names:
+        return Result("P-STO-02", "fail", "created bucket missing from list", {"listed": listed})
+    return Result("P-STO-02", "pass", "bucket create+list OK", {"buckets": names})
+
+
+def p_fn_01() -> Result:
+    """Edge invoke returns runtime li-edge (not echo) — Wave 7."""
+    status, body = _http(
+        "POST",
+        "/functions/v1/hello",
+        raw_body=b'{"ping":true}',
+        headers={"Content-Type": "application/json"},
+    )
+    if status in (0,):
+        return Result("P-FN-01", "fail", "API unreachable", {"body": body})
+    if status == 501:
+        return Result(
+            "P-FN-01",
+            "fail",
+            "edge unavailable — set LI_EDGE_ROOT to li-edge with scripts/invoke.py",
+            {"body": body},
+        )
+    if status != 200 or not isinstance(body, dict):
+        return Result("P-FN-01", "fail", f"invoke status={status}", {"body": body})
+    if body.get("runtime") == "echo":
+        return Result("P-FN-01", "fail", "got echo runtime — Wave 7 requires li-edge", {"body": body})
+    if body.get("runtime") != "li-edge":
+        return Result("P-FN-01", "fail", f"unexpected runtime={body.get('runtime')}", {"body": body})
+    return Result("P-FN-01", "pass", "li-edge invoke OK", {"body": body})
 
 
 def p_rest_01() -> Result:
@@ -326,7 +519,79 @@ def p_rt_01() -> Result:
     return asyncio.run(_probe())
 
 
-CONTRACTS = [p_sql_01, p_rest_01, p_auth_01, p_rls_01, p_io_01, p_rt_01]
+def p_rt_02() -> Result:
+    """Row-shaped changefeed `record` → postgres_changes payload (in-process P-RT-02).
+
+    Does not require a live WS stack — imports lis ChangefeedSource (same as lean e2e).
+    Live REST→WS remains covered when P-RT-01 stack is up.
+    """
+    import sys
+    import tempfile
+
+    lis_root = Path(os.environ.get("LIS_ROOT", Path(__file__).resolve().parents[2] / ".." / "li" / "lis")).resolve()
+    if not lis_root.is_dir():
+        lis_root = Path(r"C:\Users\Julian\Documents\Programming\li\lis")
+    if not lis_root.is_dir():
+        return Result("P-RT-02", "fail", f"lis checkout missing at {lis_root}")
+    sys.path.insert(0, str(lis_root))
+    os.environ["LI_CHANGEFEED_NATIVE"] = "0"
+    tmp = Path(tempfile.mkdtemp(prefix="parity-rt02-"))
+    os.environ["LI_DATA_DIR"] = str(tmp)
+    try:
+        from routes.realtime.changefeed import ChangefeedSource
+        from routes.realtime.protocol import postgres_changes_payload
+
+        src = ChangefeedSource(data_dir=tmp)
+        src.push_mock(
+            table="parity_items",
+            op="insert",
+            record={"id": "rt02-1", "name": "parity-rt02", "owner_id": "u-rt"},
+        )
+        events = list(src.poll_once())
+        # push_mock already dispatched; poll may be empty if offset advanced — re-parse file
+        if not events:
+            line = (tmp / "wal.changefeed.mock.jsonl").read_text(encoding="utf-8").strip().splitlines()[-1]
+            parsed = ChangefeedSource._parse_line(line)
+            events = [parsed] if parsed else []
+        if not events:
+            return Result("P-RT-02", "fail", "no changefeed event with record")
+        ev = events[0]
+        if ev.record.get("name") != "parity-rt02":
+            return Result("P-RT-02", "fail", "record missing row fields", {"record": ev.record})
+        payload = postgres_changes_payload(
+            subscription_id=1,
+            schema=ev.schema,
+            table=ev.table,
+            event_type="INSERT",
+            record=ev.record,
+            old_record=ev.old_record,
+        )
+        if (payload.get("data") or {}).get("record", {}).get("name") != "parity-rt02":
+            return Result("P-RT-02", "fail", "postgres_changes payload missing record", {"payload": payload})
+        return Result("P-RT-02", "pass", "record fanout OK (in-process)", {"record": ev.record})
+    except Exception as exc:  # noqa: BLE001
+        return Result("P-RT-02", "fail", f"P-RT-02 error: {exc}")
+    finally:
+        import shutil
+
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+CONTRACTS = [
+    p_sql_01,
+    p_rest_01,
+    p_auth_01,
+    p_auth_02,
+    p_auth_03,
+    p_auth_04,
+    p_sto_01,
+    p_sto_02,
+    p_fn_01,
+    p_rls_01,
+    p_io_01,
+    p_rt_01,
+    p_rt_02,
+]
 
 
 def run_all() -> list[Result]:

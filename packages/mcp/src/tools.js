@@ -121,6 +121,191 @@ export const tools = [
     description: "Summarize capability matrix + last parity harness report",
     inputSchema: { type: "object", properties: {} },
   },
+  {
+    name: "execute_sql",
+    description:
+      "POST SQL to project API /rest/v1/rpc/exec or LIBREBASE_SQL_URL; fail closed if unreachable",
+    inputSchema: {
+      type: "object",
+      properties: {
+        sql: { type: "string" },
+        apiBase: { type: "string", description: "Override LIBREBASE_PARITY_API / project API" },
+        bearer: { type: "string" },
+      },
+      required: ["sql"],
+    },
+  },
+  {
+    name: "list_tables",
+    description: "List tables via GET /rest/v1/ (or information_schema probe)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        apiBase: { type: "string" },
+        bearer: { type: "string" },
+        schema: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "list_storage_buckets",
+    description: "GET /storage/v1/bucket on project API",
+    inputSchema: {
+      type: "object",
+      properties: {
+        apiBase: { type: "string" },
+        bearer: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "list_edge_functions",
+    description: "GET /functions/v1 meta / list (lean — may return service banner only)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        apiBase: { type: "string" },
+        bearer: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "get_auth_mfa_status",
+    description: "GET /v1/auth/mfa for current bearer session",
+    inputSchema: {
+      type: "object",
+      properties: {
+        apiBase: { type: "string" },
+        bearer: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "list_auth_users",
+    description: "GET /auth/v1/admin/users (requires service_role bearer)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        apiBase: { type: "string" },
+        bearer: { type: "string" },
+        page: { type: "number" },
+        perPage: { type: "number" },
+      },
+    },
+  },
+  {
+    name: "create_auth_user",
+    description: "POST /auth/v1/admin/users (service_role)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        apiBase: { type: "string" },
+        bearer: { type: "string" },
+        email: { type: "string" },
+        password: { type: "string" },
+      },
+      required: ["email", "password"],
+    },
+  },
+  {
+    name: "delete_auth_user",
+    description: "DELETE /auth/v1/admin/users/{id} (service_role)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        apiBase: { type: "string" },
+        bearer: { type: "string" },
+        userId: { type: "string" },
+      },
+      required: ["userId"],
+    },
+  },
+  {
+    name: "apply_migration",
+    description: "POST SQL migration via /v1/sql or rpc/exec (fail closed)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        apiBase: { type: "string" },
+        bearer: { type: "string" },
+        sql: { type: "string" },
+        name: { type: "string" },
+      },
+      required: ["sql"],
+    },
+  },
+  {
+    name: "get_logs",
+    description: "GET project logs if /logs or Studio logs URL configured",
+    inputSchema: {
+      type: "object",
+      properties: {
+        apiBase: { type: "string" },
+        bearer: { type: "string" },
+        limit: { type: "number" },
+      },
+    },
+  },
+  {
+    name: "sign_storage_url",
+    description: "POST /storage/v1/object/sign/{bucket}/{path} (HMAC or sigv4 query)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        apiBase: { type: "string" },
+        bearer: { type: "string" },
+        bucket: { type: "string" },
+        path: { type: "string" },
+        expiresIn: { type: "number" },
+        sigv4: { type: "boolean" },
+      },
+      required: ["bucket", "path"],
+    },
+  },
+  {
+    name: "auth_otp",
+    description: "POST /auth/v1/otp magiclink (LI_SMTP_MOCK / LI_OTP_MOCK for tests)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        apiBase: { type: "string" },
+        email: { type: "string" },
+        type: { type: "string" },
+      },
+      required: ["email"],
+    },
+  },
+  {
+    name: "get_project_url",
+    description: "Return configured project API base (LIBREBASE_PARITY_API / override)",
+    inputSchema: {
+      type: "object",
+      properties: { apiBase: { type: "string" } },
+    },
+  },
+  {
+    name: "get_publishable_keys",
+    description: "Return anon/publishable keys from env (honest stub — fail closed if unset)",
+    inputSchema: { type: "object", properties: {} },
+  },
+  {
+    name: "get_project",
+    description: "GET /org/v1/orgs/{orgId}/projects/{projectId} (fail closed)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        orgId: { type: "string" },
+        projectId: { type: "string" },
+      },
+      required: ["orgId", "projectId"],
+    },
+  },
+  {
+    name: "deepen_status",
+    description: "Read DEEPEN.json deepen-remainders tracker",
+    inputSchema: { type: "object", properties: {} },
+  },
 ];
+
 
 export const TOOL_NAMES = tools.map((t) => t.name);

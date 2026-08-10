@@ -51,6 +51,10 @@ python admin-api/scripts/admin_server.py
 | `parity_run` | Wave A `parity_runner.py` |
 | `check_entitlement` | Feature gate |
 | `matrix_status` | Count ✅/🚧/⬜/❌ + last harness report |
+| `execute_sql` / `list_tables` / `list_storage_buckets` | Project API (fail closed) |
+| `sign_storage_url` / `auth_otp` | Storage sign + magiclink OTP |
+| `get_project_url` / `get_publishable_keys` | Env-backed meta (honest stubs) |
+| `list_edge_functions` / auth admin / `apply_migration` / `get_logs` | Lean Supabase-MCP-shaped |
 
 After `admin_setup` / `admin_login`, put the returned `token` in `LIBREBASE_ADMIN_SESSION` for authenticated calls (or restart MCP with that env).
 

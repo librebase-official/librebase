@@ -21,9 +21,9 @@
 |-----|---------------|--------------------|-------|
 | **lic** | `C:\Users\Julian\Documents\Programming\li\lic-parity-w0` | `main` @ `1a466a6` | Fresh GitLab clone (replaces broken `lic` junction/worktrees). Wave 0 gate: stage0 build + `li-tests/self_host_parity/run_token_parity.sh` |
 | lidb | `C:\Users\Julian\Documents\Programming\li\lidb` | `feat/wave-3-migrate-depth` @ `e9abac6` | Wave 3 UNIQUE/multi-col INDEX + POLICY metadata (MR !4). Includes W2 `23f93ca` + W1 RLS |
-| lis | `C:\Users\Julian\Documents\Programming\li\lis` | `feat/wave-b-functions-echo` @ `723cc95` | storage/edge echo + REST PATCH; realtime notify on `feat/realtime-changefeed` @ `36eef49` (merge both) |
+| lis | `C:\Users\Julian\Documents\Programming\li\lis` | `feat/deepen-phase1-refresh-buckets` @ `e4f92dc` | Deepen: refresh + buckets + GitHub OAuth (MR !161). Includes W7 edge |
 | li-oauth | `C:\Users\Julian\Documents\Programming\li-oauth` | `main` @ `92501c6` | OAuth scaffold |
-| li-edge | `C:\Users\Julian\Documents\Programming\li-edge` | `main` @ `2dc7578` | Optional `LI_EDGE_ROOT` invoke |
+| li-edge | `C:\Users\Julian\Documents\Programming\li-edge` | `feat/wave-7-invoke` @ `708a6fa` | `scripts/invoke.py` real runtime (MR !1); set `LI_EDGE_ROOT` or sibling auto-discover |
 | li-httpd | `C:\Users\Julian\Documents\Programming\li\li-httpd` | `main` @ `3b7472e` | Compose stub: `deploy/edge/librebase.httpd.toml` |
 
 **lis tip note:** Prefer merging `feat/realtime-changefeed` (`36eef49`) into the functions-echo line so one pin carries both notify + echo.
@@ -52,7 +52,7 @@ Tracked in [parity-roadmap-v2](sdd/specs/parity-roadmap-v2/design.md):
 | Li REST rewrite | W4 | Python `/rest/v1` MVP | lis |
 | GoTrue `/auth/v1` + OAuth | W5 | `/v1/auth` only | lis + li-oauth |
 | S3-shaped Storage | W6 | Filesystem MVP | lis |
-| Edge real runtime | W7 | Echo MVP | li-edge |
+| Edge real runtime | W7 | Done — li-edge invoke (not Deno) | li-edge |
 | Pooler | W8 | Matrix ❌ or li-pool | li-pool |
 | PITR / branching | W9 | Matrix ❌ or lidb | lidb |
 | Billing entitlements | W10 | Studio/Admin gates | librebase |
