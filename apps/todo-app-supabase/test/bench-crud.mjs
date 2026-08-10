@@ -13,6 +13,8 @@
 import assert from "node:assert/strict";
 
 const API = (process.env.LIBREBASE_API ?? "https://supabase.obsevia.com").replace(/\/$/, "");
+const AUTH = (process.env.LIBREBASE_AUTH_URL ?? API).replace(/\/$/, "");
+const REST_PREFIX = (process.env.LIBREBASE_REST_PREFIX ?? "/rest/v1").replace(/\/$/, "");
 const ANON = process.env.LIBREBASE_ANON ?? "";
 const SR = process.env.LIBREBASE_SERVICE_ROLE ?? "";
 const ROUNDS = Number(process.env.BENCH_ROUNDS ?? 60);
@@ -52,7 +54,7 @@ function stats(latencies) {
 export async function run() {
   // 1. Create a confirmed user via admin API (service_role).
   const createUser = await timeRequest(async () => {
-    const res = await fetch(`${API}/auth/v1/admin/users`, {
+    const res = await fetch(`${AUTH}/admin/users`, {
       method: "POST",
       headers: h(SR),
       body: JSON.stringify({ email: EMAIL, password: PW, email_confirm: true }),
@@ -64,7 +66,7 @@ export async function run() {
 
   // 2. Sign in once (shared session for CRUD).
   const signinRes = await timeRequest(async () => {
-    const res = await fetch(`${API}/auth/v1/token?grant_type=password`, {
+    const res = await fetch(`${AUTH}/token?grant_type=password`, {
       method: "POST",
       headers: h(ANON),
       body: JSON.stringify({ email: EMAIL, password: PW }),
@@ -78,13 +80,17 @@ export async function run() {
 
   // Warmup: one full CRUD cycle so TLS + connection pooling reach steady state.
   {
-    const w = await fetch(`${API}/rest/v1/todos`, {
+    const w = await fetch(`${API}${REST_PREFIX}/todos`, {
       method: "POST", headers: { ...h(token), Prefer: "return=representation" },
       body: JSON.stringify({ title: "warmup", done: false, user_id: sub }),
     });
-    const wid = (await w.json())[0].id;
-    await fetch(`${API}/rest/v1/todos?id=eq.${wid}`, { method: "PATCH", headers: { ...h(token), Prefer: "return=representation" }, body: JSON.stringify({ done: true }) });
-    await fetch(`${API}/rest/v1/todos?id=eq.${wid}`, { method: "DELETE", headers: h(token) });
+    const wBody = await w.json();
+    if (!Array.isArray(wBody) || !wBody[0]) {
+      throw new Error(`warmup create returned non-array: ${w.status} ${JSON.stringify(wBody)}`);
+    }
+    const wid = wBody[0].id;
+    await fetch(`${API}${REST_PREFIX}/todos?id=eq.${wid}`, { method: "PATCH", headers: { ...h(token), Prefer: "return=representation" }, body: JSON.stringify({ done: true }) });
+    await fetch(`${API}${REST_PREFIX}/todos?id=eq.${wid}`, { method: "DELETE", headers: h(token) });
   }
 
   const latencies = {
@@ -99,7 +105,7 @@ export async function run() {
   for (let i = 0; i < ROUNDS; i++) {
     // create
     const c = await timeRequest(async () => {
-      const res = await fetch(`${API}/rest/v1/todos`, {
+      const res = await fetch(`${API}${REST_PREFIX}/todos`, {
         method: "POST",
         headers: { ...h(token), Prefer: "return=representation" },
         body: JSON.stringify({ title: `bench-${i}`, done: false, user_id: sub }),
@@ -113,7 +119,7 @@ export async function run() {
 
     // list
     const l = await timeRequest(async () => {
-      const res = await fetch(`${API}/rest/v1/todos?select=id&limit=1`, { headers: h(token) });
+      const res = await fetch(`${API}${REST_PREFIX}/todos?select=id&limit=1`, { headers: h(token) });
       await res.json();
       assert.ok(res.ok, `list[${i}]: ${res.status}`);
     });
@@ -121,7 +127,7 @@ export async function run() {
 
     // update (complete)
     const u = await timeRequest(async () => {
-      const res = await fetch(`${API}/rest/v1/todos?id=eq.${ids[ids.length - 1]}`, {
+      const res = await fetch(`${API}${REST_PREFIX}/todos?id=eq.${ids[ids.length - 1]}`, {
         method: "PATCH",
         headers: { ...h(token), Prefer: "return=representation" },
         body: JSON.stringify({ done: true }),
@@ -133,7 +139,7 @@ export async function run() {
 
     // delete
     const d = await timeRequest(async () => {
-      const res = await fetch(`${API}/rest/v1/todos?id=eq.${ids[ids.length - 1]}`, {
+      const res = await fetch(`${API}${REST_PREFIX}/todos?id=eq.${ids[ids.length - 1]}`, {
         method: "DELETE",
         headers: h(token),
       });
