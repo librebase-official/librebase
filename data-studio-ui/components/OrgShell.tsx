@@ -42,6 +42,9 @@ export function OrgShell({
 
         <nav className="nav-section">
           <div className="nav-label">Cloud</div>
+          <Link href="/hosts" className={navClass(pathname, "/hosts")}>
+            VMs / hosts
+          </Link>
           <Link href="/instances" className={navClass(pathname, "/instances")}>
             Instances
           </Link>

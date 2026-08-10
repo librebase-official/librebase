@@ -2,6 +2,7 @@ import Link from "next/link";
 import { LaunchButton } from "@/components/LaunchButton";
 import { getInstanceStatus } from "@/lib/k8s-provisioner";
 import { listInstancesAsync } from "@/lib/instances-store";
+import { listHostsAsync } from "@/lib/hosts-store";
 import { listProjectsByInstanceAsync } from "@/lib/projects-store";
 import { resolveStudioOrgId } from "@/lib/org-context";
 import { probeInstanceDb } from "@/lib/project-runtime";
@@ -14,6 +15,9 @@ export default async function InstancesPage() {
   const instances = await listInstancesAsync(orgId);
   const defaultRuntime = getLibrebaseRuntime();
   const k8sRuntime = getK8sContainerRuntime();
+
+  const hosts = await listHostsAsync(orgId).catch(() => [] as never[]);
+  const hostById = new Map(hosts.map((h) => [h.id, h]));
 
   const rows = await Promise.all(
     instances.map(async (instance) => {
@@ -42,8 +46,8 @@ export default async function InstancesPage() {
 
       {rows.length === 0 ? (
         <div className="empty">
-          <p>No instances yet. Create a project to provision a dedicated runtime.</p>
-          <Link href="/projects/new">New project</Link>
+          <p>No instances yet. Rent a VM, then launch an instance onto it.</p>
+          <Link href="/hosts/new">Rent a VM</Link> · <Link href="/instances/new">Launch instance</Link>
         </div>
       ) : (
         <div className="card-grid">
@@ -59,6 +63,12 @@ export default async function InstancesPage() {
                   K8s: {instance.k8sNamespace ?? k8s?.namespace ?? "—"}
                   {k8s?.podPhase ? ` · pod ${k8s.podPhase}` : ""}
                   {instance.k8sDegraded || k8s?.degraded ? " · degraded" : ""}
+                </p>
+              )}
+              {instance.hostId && (
+                <p className="muted" style={{ fontSize: "0.8rem", marginTop: "0.25rem" }}>
+                  Host: {hostById.get(instance.hostId)?.name ?? instance.hostId} ·{" "}
+                  {instance.memLimitMb ?? "—"} MB reserved
                 </p>
               )}
               <p style={{ margin: "0.75rem 0" }}>

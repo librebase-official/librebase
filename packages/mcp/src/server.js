@@ -23,6 +23,15 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { tools } from "./tools.js";
+import {
+  clearAdminSession,
+  getAdminOrgId,
+  getAdminToken,
+  getProjectToken,
+  setAdminSession,
+  setProjectSession,
+  sessionSummary,
+} from "./session.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO =
@@ -46,7 +55,9 @@ async function projectFetch(pathname, { apiBase, bearer, method = "GET", body } 
   const headers = { "Content-Type": "application/json" };
   const token =
     bearer ||
+    getProjectToken() ||
     process.env.LIBREBASE_PROJECT_SESSION ||
+    getAdminToken() ||
     process.env.LIBREBASE_ADMIN_SESSION;
   if (token) headers.Authorization = `Bearer ${token}`;
   let res;
@@ -74,7 +85,9 @@ async function projectFetch(pathname, { apiBase, bearer, method = "GET", body } 
 }
 function sessionHeaders() {
   const token =
-    process.env.LIBREBASE_ADMIN_SESSION ?? process.env.LIBREBASE_ORG_SESSION;
+    getAdminToken() ??
+    process.env.LIBREBASE_ADMIN_SESSION ??
+    process.env.LIBREBASE_ORG_SESSION;
   const h = { "Content-Type": "application/json" };
   if (token) h.Authorization = `Bearer ${token}`;
   return h;
@@ -116,6 +129,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         method: "POST",
         body: JSON.stringify(args),
       });
+      if (r.ok && r.body?.token) {
+        setAdminSession(r.body.token, r.body.orgId);
+      }
       return { content: [{ type: "text", text: JSON.stringify(r, null, 2) }] };
     }
     if (name === "admin_login") {
@@ -123,25 +139,96 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         method: "POST",
         body: JSON.stringify(args),
       });
+      if (r.ok && r.body?.token) {
+        setAdminSession(r.body.token, r.body.orgId);
+      }
       return { content: [{ type: "text", text: JSON.stringify(r, null, 2) }] };
     }
+    if (name === "auth_status") {
+      const orgId = args.orgId ?? getAdminOrgId();
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              { ...sessionSummary(), activeOrgId: orgId, ADMIN_URL },
+              null,
+              2,
+            ),
+          },
+        ],
+      };
+    }
+    if (name === "admin_logout") {
+      clearAdminSession();
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              { ok: true, message: "admin session cleared" },
+              null,
+              2,
+            ),
+          },
+        ],
+      };
+    }
+    if (name === "set_project_session") {
+      if (args.token) setProjectSession(String(args.token));
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              { ok: true, projectSession: Boolean(args.token), honesty: "project bearer token stored in-memory for project tools" },
+              null,
+              2,
+            ),
+          },
+        ],
+      };
+    }
     if (name === "list_projects") {
-      const r = await adminFetch(`/org/v1/orgs/${args.orgId}/projects`);
+      const orgId = args.orgId ?? getAdminOrgId();
+      if (!orgId) {
+        return {
+          content: [{ type: "text", text: JSON.stringify({ ok: false, error: "no org_id — call admin_login first or pass orgId" }, null, 2) }],
+          isError: true,
+        };
+      }
+      const r = await adminFetch(`/org/v1/orgs/${orgId}/projects`);
       return { content: [{ type: "text", text: JSON.stringify(r, null, 2) }] };
     }
     if (name === "create_instance") {
-      const r = await adminFetch(`/org/v1/orgs/${args.orgId}/instances`, {
+      const orgId = args.orgId ?? getAdminOrgId();
+      if (!orgId) {
+        return {
+          content: [{ type: "text", text: JSON.stringify({ ok: false, error: "no org_id — call admin_login first or pass orgId" }, null, 2) }],
+          isError: true,
+        };
+      }
+      const r = await adminFetch(`/org/v1/orgs/${orgId}/instances`, {
         method: "POST",
         body: JSON.stringify({
           name: args.name,
           runtimeTarget: args.runtimeTarget ?? "local",
-          ports: { api: 54320, postgres: 54322 },
+          hostId: args.hostId,
+          memLimitMb: args.memLimitMb,
+          ports: args.ports ?? { api: 54320, postgres: 54322 },
         }),
       });
       return { content: [{ type: "text", text: JSON.stringify(r, null, 2) }] };
     }
     if (name === "create_project") {
-      const r = await adminFetch(`/org/v1/orgs/${args.orgId}/projects`, {
+      const orgId = args.orgId ?? getAdminOrgId();
+      if (!orgId) {
+        return {
+          content: [{ type: "text", text: JSON.stringify({ ok: false, error: "no org_id — call admin_login first or pass orgId" }, null, 2) }],
+          isError: true,
+        };
+      }
+      const r = await adminFetch(`/org/v1/orgs/${orgId}/projects`, {
         method: "POST",
         body: JSON.stringify({
           name: args.name,
@@ -153,7 +240,55 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return { content: [{ type: "text", text: JSON.stringify(r, null, 2) }] };
     }
     if (name === "list_instances") {
-      const r = await adminFetch(`/org/v1/orgs/${args.orgId}/instances`);
+      const orgId = args.orgId ?? getAdminOrgId();
+      if (!orgId) {
+        return {
+          content: [{ type: "text", text: JSON.stringify({ ok: false, error: "no org_id — call admin_login first or pass orgId" }, null, 2) }],
+          isError: true,
+        };
+      }
+      const r = await adminFetch(`/org/v1/orgs/${orgId}/instances`);
+      return { content: [{ type: "text", text: JSON.stringify(r, null, 2) }] };
+    }
+    if (name === "create_host") {
+      const orgId = args.orgId ?? getAdminOrgId();
+      if (!orgId) {
+        return {
+          content: [{ type: "text", text: JSON.stringify({ ok: false, error: "no org_id — call admin_login first or pass orgId" }, null, 2) }],
+          isError: true,
+        };
+      }
+      const r = await adminFetch(`/org/v1/orgs/${orgId}/hosts`, {
+        method: "POST",
+        body: JSON.stringify({
+          name: args.name,
+          memMb: args.memMb ?? 512,
+          provider: args.provider ?? "linative-cloud",
+          region: args.region ?? "local",
+        }),
+      });
+      return { content: [{ type: "text", text: JSON.stringify(r, null, 2) }] };
+    }
+    if (name === "list_hosts") {
+      const orgId = args.orgId ?? getAdminOrgId();
+      if (!orgId) {
+        return {
+          content: [{ type: "text", text: JSON.stringify({ ok: false, error: "no org_id — call admin_login first or pass orgId" }, null, 2) }],
+          isError: true,
+        };
+      }
+      const r = await adminFetch(`/org/v1/orgs/${orgId}/hosts`);
+      return { content: [{ type: "text", text: JSON.stringify(r, null, 2) }] };
+    }
+    if (name === "get_host") {
+      const orgId = args.orgId ?? getAdminOrgId();
+      if (!orgId || !args.hostId) {
+        return {
+          content: [{ type: "text", text: JSON.stringify({ ok: false, error: "orgId and hostId required" }, null, 2) }],
+          isError: true,
+        };
+      }
+      const r = await adminFetch(`/org/v1/orgs/${orgId}/hosts/${args.hostId}`);
       return { content: [{ type: "text", text: JSON.stringify(r, null, 2) }] };
     }
     if (name === "studio_probe") {
@@ -242,8 +377,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       };
     }
     if (name === "check_entitlement") {
+      const orgId = args.orgId ?? getAdminOrgId();
+      if (!orgId) {
+        return {
+          content: [{ type: "text", text: JSON.stringify({ ok: false, error: "no org_id — call admin_login first or pass orgId" }, null, 2) }],
+          isError: true,
+        };
+      }
       const r = await adminFetch(
-        `/org/v1/orgs/${args.orgId}/entitlements/${args.featureKey}`,
+        `/org/v1/orgs/${orgId}/entitlements/${args.featureKey}`,
       );
       return { content: [{ type: "text", text: JSON.stringify(r, null, 2) }] };
     }
@@ -522,8 +664,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       };
     }
     if (name === "get_project") {
+      const orgId = args.orgId ?? getAdminOrgId();
+      if (!orgId || !args.projectId) {
+        return {
+          content: [{ type: "text", text: JSON.stringify({ ok: false, error: "orgId and projectId required" }, null, 2) }],
+          isError: true,
+        };
+      }
       const r = await adminFetch(
-        `/org/v1/orgs/${args.orgId}/projects/${args.projectId}`,
+        `/org/v1/orgs/${orgId}/projects/${args.projectId}`,
       );
       return {
         content: [{ type: "text", text: JSON.stringify(r, null, 2) }],

@@ -11,9 +11,26 @@ export type InstanceStatus =
   | "error"
   | "unknown";
 
+export type HostStatus = "stopped" | "starting" | "running" | "error";
+
 export interface InstancePorts {
   api: number;
   postgres: number;
+}
+
+export interface Host {
+  id: string;
+  orgId: string;
+  name: string;
+  provider: string;
+  region: string;
+  /** Total memory budget (MB) the rented VM provides. */
+  memMb: number;
+  /** Committed memory (MB) across placed instances. */
+  memUsedMb: number;
+  status: HostStatus;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Instance {
@@ -26,6 +43,10 @@ export interface Instance {
   deploymentMode: DeploymentMode;
   /** Where this instance runs: local lis process or Kubernetes. */
   runtimeTarget: RuntimeTarget;
+  /** Host VM this instance is placed on (multi-instance-per-VM). */
+  hostId?: string;
+  /** Memory limit (MB) reserved on the host for this instance. */
+  memLimitMb?: number;
   /** Populated when runtimeTarget is kubernetes. */
   k8sNamespace?: string;
   k8sDegraded?: boolean;
@@ -62,6 +83,19 @@ export interface CreateInstanceInput {
   orgId?: string;
   deploymentMode?: DeploymentMode;
   runtime?: RuntimeTarget;
+  /** Host VM to place this instance on. */
+  hostId?: string;
+  /** Memory limit (MB) reserved on the host. */
+  memLimitMb?: number;
+}
+
+export interface CreateHostInput {
+  name: string;
+  orgId?: string;
+  provider?: string;
+  region?: string;
+  /** Total memory budget (MB), e.g. 512. */
+  memMb?: number;
 }
 
 export type RuntimeMode = "dev" | "production" | "unavailable";

@@ -31,6 +31,8 @@ export async function POST(request: Request) {
       orgId,
       deploymentMode: body.deploymentMode,
       runtime: body.runtime,
+      hostId: body.hostId,
+      memLimitMb: body.memLimitMb,
     });
 
     let provision:

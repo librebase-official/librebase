@@ -202,6 +202,8 @@ export async function createInstanceAsync(
     runtimeTarget,
     deploymentMode,
     dataDir: "",
+    hostId: input.hostId,
+    memLimitMb: input.memLimitMb,
   });
   const dataDir = instanceDataDir(created.id);
   fs.mkdirSync(dataDir, { recursive: true });

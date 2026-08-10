@@ -152,19 +152,20 @@ class LiorgDb:
 
 def entitlement_for_edition(edition: str, feature_key: str) -> int:
     if edition == "self-host":
-        if feature_key in ("project.create", "instance.launch"):
+        if feature_key in ("project.create", "instance.launch", "host.create"):
             return 1
         return 0
     if edition == "cloud-free":
         if feature_key == "project.create":
             return 2
-        if feature_key == "instance.launch":
+        if feature_key in ("instance.launch", "host.create"):
             return 1
         return 0
     if edition == "cloud-paid":
         if feature_key in (
             "project.create",
             "instance.launch",
+            "host.create",
             "k8s.provision",
             "branching.pitr",
         ):
@@ -181,6 +182,21 @@ def row_project(row: sqlite3.Row) -> dict[str, Any]:
         "instanceId": row["instance_id"],
         "deploymentMode": row["deployment_mode"],
         "region": row["region"],
+        "createdAt": row["created_at"],
+        "updatedAt": row["updated_at"],
+    }
+
+
+def row_host(row: sqlite3.Row) -> dict[str, Any]:
+    return {
+        "id": row["id"],
+        "orgId": row["org_id"],
+        "name": row["name"],
+        "provider": row["provider"],
+        "region": row["region"],
+        "memMb": row["mem_mb"],
+        "memUsedMb": row["mem_used_mb"],
+        "status": row["status"],
         "createdAt": row["created_at"],
         "updatedAt": row["updated_at"],
     }
@@ -203,6 +219,10 @@ def row_instance(row: sqlite3.Row) -> dict[str, Any]:
     }
     if ports:
         payload["ports"] = ports
+    if row["host_id"]:
+        payload["hostId"] = row["host_id"]
+    if row["mem_limit_mb"] is not None:
+        payload["memLimitMb"] = row["mem_limit_mb"]
     if row["k8s_namespace"]:
         payload["k8sNamespace"] = row["k8s_namespace"]
     if row["k8s_degraded"] is not None:
@@ -406,6 +426,33 @@ class LiorgHandler(BaseHTTPRequestHandler):
             self.send_json(200, self.check_entitlement(org_id, feature_key))
             return
 
+        hosts_match = re.fullmatch(r"/org/v1/orgs/([^/]+)/hosts", path)
+        if hosts_match:
+            org_id = hosts_match.group(1)
+            if not self.require_org_member(org_id):
+                return
+            rows = self.db.fetchall(
+                "SELECT * FROM hosts WHERE org_id = ? ORDER BY created_at",
+                (org_id,),
+            )
+            self.send_json(200, [row_host(r) for r in rows])
+            return
+
+        host_one = re.fullmatch(r"/org/v1/orgs/([^/]+)/hosts/([^/]+)", path)
+        if host_one:
+            org_id, host_id = host_one.groups()
+            if not self.require_org_member(org_id):
+                return
+            row = self.db.fetchone(
+                "SELECT * FROM hosts WHERE org_id = ? AND id = ?",
+                (org_id, host_id),
+            )
+            if not row:
+                self.send_json(404, {"error": "host not found"})
+                return
+            self.send_json(200, row_host(row))
+            return
+
         self.send_json(404, {"error": "not found"})
 
     def do_POST(self) -> None:  # noqa: N802
@@ -538,6 +585,36 @@ class LiorgHandler(BaseHTTPRequestHandler):
             self.send_json(201, row_project(row))
             return
 
+        org_hosts = re.fullmatch(r"/org/v1/orgs/([^/]+)/hosts", path)
+        if org_hosts:
+            org_id = org_hosts.group(1)
+            if not self.require_org_member(org_id):
+                return
+            gate = self.check_entitlement(org_id, "host.create")
+            if gate["code"] == 0:
+                self.send_json(403, {"error": "entitlement denied", "entitlement": gate})
+                return
+            name = str(body.get("name", "")).strip()
+            if not name:
+                self.send_json(400, {"error": "name required"})
+                return
+            now = utc_now()
+            host_id = new_id("host")
+            mem_mb = int(body.get("memMb", body.get("mem_mb", 512)))
+            provider = str(body.get("provider", "linative-cloud")).strip()
+            region = str(body.get("region", "local")).strip()
+            status = str(body.get("status", "stopped")).strip()
+            self.db.execute(
+                "INSERT INTO hosts "
+                "(id, org_id, name, provider, region, mem_mb, mem_used_mb, status, "
+                "created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?)",
+                (host_id, org_id, name, provider, region, mem_mb, status, now, now),
+            )
+            row = self.db.fetchone("SELECT * FROM hosts WHERE id = ?", (host_id,))
+            self.send_json(201, row_host(row))
+            return
+
         org_instances = re.fullmatch(r"/org/v1/orgs/([^/]+)/instances", path)
         if org_instances:
             org_id = org_instances.group(1)
@@ -567,11 +644,34 @@ class LiorgHandler(BaseHTTPRequestHandler):
             k8s_namespace = body.get("k8sNamespace") or body.get("k8s_namespace")
             k8s_degraded = body.get("k8sDegraded")
             k8s_message = body.get("k8sMessage") or body.get("k8s_message")
+            host_id = body.get("hostId") or body.get("host_id")
+            mem_limit_mb = body.get("memLimitMb", body.get("mem_limit_mb"))
+            if host_id:
+                host_row = self.db.fetchone(
+                    "SELECT * FROM hosts WHERE org_id = ? AND id = ?",
+                    (org_id, host_id),
+                )
+                if not host_row:
+                    self.send_json(404, {"error": "host not found"})
+                    return
+                mem = int(mem_limit_mb) if mem_limit_mb is not None else 0
+                if mem and host_row["mem_used_mb"] + mem > host_row["mem_mb"]:
+                    self.send_json(
+                        409,
+                        {
+                            "error": "host memory budget exceeded",
+                            "memMb": host_row["mem_mb"],
+                            "memUsedMb": host_row["mem_used_mb"],
+                            "requestedMb": mem,
+                        },
+                    )
+                    return
             self.db.execute(
                 "INSERT INTO instances "
                 "(id, org_id, name, data_dir, deployment_mode, runtime_target, region, status, "
-                "created_at, updated_at, ports_json, k8s_namespace, k8s_degraded, k8s_message) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "created_at, updated_at, ports_json, k8s_namespace, k8s_degraded, k8s_message, "
+                "host_id, mem_limit_mb) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     inst_id,
                     org_id,
@@ -587,8 +687,16 @@ class LiorgHandler(BaseHTTPRequestHandler):
                     k8s_namespace,
                     int(k8s_degraded) if k8s_degraded is not None else None,
                     k8s_message,
+                    host_id,
+                    int(mem_limit_mb) if mem_limit_mb is not None else None,
                 ),
             )
+            if host_id and mem_limit_mb:
+                self.db.execute(
+                    "UPDATE hosts SET mem_used_mb = mem_used_mb + ?, updated_at = ? "
+                    "WHERE id = ?",
+                    (int(mem_limit_mb), now, host_id),
+                )
             row = self.db.fetchone("SELECT * FROM instances WHERE id = ?", (inst_id,))
             self.send_json(201, row_instance(row))
             return
@@ -659,6 +767,10 @@ class LiorgHandler(BaseHTTPRequestHandler):
                 "k8s_namespace": "k8s_namespace",
                 "k8sMessage": "k8s_message",
                 "k8s_message": "k8s_message",
+                "hostId": "host_id",
+                "host_id": "host_id",
+                "memLimitMb": "mem_limit_mb",
+                "mem_limit_mb": "mem_limit_mb",
             }
             for key, col in mapping.items():
                 if key in body:

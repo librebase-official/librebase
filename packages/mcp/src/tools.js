@@ -6,6 +6,30 @@ export const tools = [
     inputSchema: { type: "object", properties: {} },
   },
   {
+    name: "auth_status",
+    description:
+      "Report current MCP auth state (admin session, org id, project session). Pass orgId to pin the active org.",
+    inputSchema: {
+      type: "object",
+      properties: { orgId: { type: "string" } },
+    },
+  },
+  {
+    name: "admin_logout",
+    description: "Clear the in-memory admin session (token + org id).",
+    inputSchema: { type: "object", properties: {} },
+  },
+  {
+    name: "set_project_session",
+    description:
+      "Store a project API bearer token in-memory so project tools (SQL/storage/auth) authenticate without a per-call bearer.",
+    inputSchema: {
+      type: "object",
+      properties: { token: { type: "string" } },
+      required: ["token"],
+    },
+  },
+  {
     name: "admin_setup",
     description: "First-run POST /org/v1/setup (creates org + owner + JWT)",
     inputSchema: {
@@ -41,15 +65,58 @@ export const tools = [
   },
   {
     name: "create_instance",
-    description: "POST /org/v1/orgs/{orgId}/instances",
+    description:
+      "POST /org/v1/orgs/{orgId}/instances — optionally place on a hostId VM with memLimitMb",
     inputSchema: {
       type: "object",
       properties: {
-        orgId: { type: "string" },
+        orgId: { type: "string", description: "Defaults to the active admin session org" },
         name: { type: "string" },
         runtimeTarget: { type: "string" },
+        hostId: { type: "string", description: "Host VM to place this instance on" },
+        memLimitMb: { type: "number", description: "Memory limit (MB) reserved on the host" },
+        ports: {
+          type: "object",
+          properties: { api: { type: "number" }, postgres: { type: "number" } },
+        },
       },
-      required: ["orgId", "name"],
+      required: ["name"],
+    },
+  },
+  {
+    name: "create_host",
+    description:
+      "POST /org/v1/orgs/{orgId}/hosts — rent a VM (default 512MB) to launch instances onto",
+    inputSchema: {
+      type: "object",
+      properties: {
+        orgId: { type: "string", description: "Defaults to the active admin session org" },
+        name: { type: "string" },
+        memMb: { type: "number", description: "Memory budget (MB), e.g. 512" },
+        provider: { type: "string" },
+        region: { type: "string" },
+      },
+      required: ["name"],
+    },
+  },
+  {
+    name: "list_hosts",
+    description: "GET /org/v1/orgs/{orgId}/hosts — list rented VMs",
+    inputSchema: {
+      type: "object",
+      properties: { orgId: { type: "string", description: "Defaults to the active admin session org" } },
+    },
+  },
+  {
+    name: "get_host",
+    description: "GET /org/v1/orgs/{orgId}/hosts/{hostId}",
+    inputSchema: {
+      type: "object",
+      properties: {
+        orgId: { type: "string", description: "Defaults to the active admin session org" },
+        hostId: { type: "string" },
+      },
+      required: ["hostId"],
     },
   },
   {

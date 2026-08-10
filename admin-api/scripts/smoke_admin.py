@@ -136,7 +136,46 @@ def main() -> int:
                 print("FAIL: entitlement project.create", st, ent, file=sys.stderr)
                 return 1
 
-            print(json.dumps({"ok": True, "orgId": org_id, "projectId": proj["id"]}))
+            # Hosts: create 512MB VM, place instances, enforce budget
+            st, host = http(
+                "POST",
+                f"{base}/org/v1/orgs/{org_id}/hosts",
+                {"name": "smoke-vm", "memMb": 512},
+                token=token,
+            )
+            if st != 201:
+                print("FAIL: create host", st, host, file=sys.stderr)
+                return 1
+            host_id = host["id"]
+
+            st, hinst = http(
+                "POST",
+                f"{base}/org/v1/orgs/{org_id}/instances",
+                {"name": "hosted-inst", "hostId": host_id, "memLimitMb": 256},
+                token=token,
+            )
+            if st != 201 or hinst.get("hostId") != host_id or hinst.get("memLimitMb") != 256:
+                print("FAIL: create instance on host", st, hinst, file=sys.stderr)
+                return 1
+
+            st, over = http(
+                "POST",
+                f"{base}/org/v1/orgs/{org_id}/instances",
+                {"name": "over-budget", "hostId": host_id, "memLimitMb": 400},
+                token=token,
+            )
+            if st != 409:
+                print("FAIL: expected host budget 409, got", st, over, file=sys.stderr)
+                return 1
+
+            st, hosts = http(
+                "GET", f"{base}/org/v1/orgs/{org_id}/hosts", token=token
+            )
+            if st != 200 or not isinstance(hosts, list) or hosts[0]["memUsedMb"] != 256:
+                print("FAIL: host mem_used", st, hosts, file=sys.stderr)
+                return 1
+
+            print(json.dumps({"ok": True, "orgId": org_id, "projectId": proj["id"], "hostId": host_id}))
             return 0
         finally:
             proc.terminate()

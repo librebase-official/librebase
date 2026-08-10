@@ -7,8 +7,10 @@
  */
 
 import type {
+  CreateHostInput,
   CreateInstanceInput,
   CreateProjectInput,
+  Host,
   Instance,
   InstancePorts,
   InstanceStatus,
@@ -181,6 +183,8 @@ export async function adminCreateInstance(
       dataDir: input.dataDir,
       ports: input.ports,
       status: input.status ?? "stopped",
+      hostId: input.hostId,
+      memLimitMb: input.memLimitMb,
     }),
   });
   return normalizeInstance(row);
@@ -235,6 +239,36 @@ export async function adminHealth(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+export async function adminListHosts(orgId: string): Promise<Host[]> {
+  return adminFetch<Host[]>(`/org/v1/orgs/${orgId}/hosts`);
+}
+
+export async function adminGetHost(
+  orgId: string,
+  hostId: string,
+): Promise<Host | undefined> {
+  try {
+    return await adminFetch<Host>(`/org/v1/orgs/${orgId}/hosts/${hostId}`);
+  } catch {
+    return undefined;
+  }
+}
+
+export async function adminCreateHost(
+  orgId: string,
+  input: CreateHostInput,
+): Promise<Host> {
+  return adminFetch<Host>(`/org/v1/orgs/${orgId}/hosts`, {
+    method: "POST",
+    body: JSON.stringify({
+      name: input.name,
+      provider: input.provider ?? "linative-cloud",
+      region: input.region ?? "local",
+      memMb: input.memMb ?? 512,
+    }),
+  });
 }
 
 export { SESSION_COOKIE };
