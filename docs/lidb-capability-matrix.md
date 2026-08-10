@@ -16,7 +16,7 @@
 | 6 | Object Storage | Storage | **lis** `routes/storage` | ✅ | Buckets + HMAC + **SigV4 query GET** (host-bound) + TUS stub. **CDN resize `oos_lean`** — `/render/image` passthrough only |
 | 7 | Edge Functions | Edge Functions | **lis** + **li-edge** | ✅ | Wave 7: `scripts/invoke.py` (`runtime: li-edge`) @ `708a6fa` / lis. Echo only with `LI_FUNCTIONS_ECHO=1`. Not Deno/WASM |
 | 8 | Connection pooler | Supavisor | **lis** in-process | ❌ | **Wave 8 settled:** OOS for v1 — in-process embed; no `li-pool` |
-| 9 | Migrations | CLI / Studio | **lidb** + `lis db migrate` | ✅ | Allowlisted CREATE TABLE + single-col INDEX; POLICY/UNIQUE/multi-col → Wave 3 |
+| 9 | Migrations | CLI / Studio | **lidb** + `lis db migrate` | ✅ | Allowlisted CREATE TABLE + INDEX (incl. UNIQUE + ≤3-col) + POLICY metadata @ `e9abac6`; not full Postgres DDL |
 | 10 | Backup / restore | Backup | **lis** `db backup` + export | ✅ | Multi-table SQL/COPY allowlist. Not PITR |
 | 11 | PITR / branching | Branching | **lidb** | ❌ | **Wave 9 settled:** OOS for v1 / paid Cloud later |
 | 12 | Auth (email/OAuth) | GoTrue | **lis** + **li-oauth** | ✅ | Password + refresh + OAuth + MFA + admin + magiclink + **lean SMTP** (`LI_SMTP_MOCK` outbox / `LI_SMTP_*` smtplib). Phone OOS |
