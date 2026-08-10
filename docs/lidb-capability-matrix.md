@@ -23,7 +23,7 @@
 | 13 | Logs | Logflare | **li-log** + Studio | ✅ | Studio `/logs` JSONL tail |
 | 14 | Analytics | Analytics | future | ❌ | Out of scope for v1 |
 | 15 | API gateway | Kong | **li-httpd** + **lis** | ✅ | Compose stub + smoke |
-| 16 | Studio console | Dashboard | **Librebase Studio** | ✅ | Projects/instances + login/admin/logs |
+| 16 | Studio console | Dashboard | **Librebase Studio** | ✅ | Projects/instances + login/admin/logs + **VMs/hosts** (multi-instance per VM, memMb budget) |
 | 17 | Client SDK | `@supabase/supabase-js` | **`@librebase/librebase`** | ✅ | createClient + smoke |
 
 ## Product layers (not matrix rows)
@@ -33,7 +33,7 @@
 | Operator admin UI | **Librebase Admin** (Studio) | ✅ | `/setup`, `/login`, `/admin` members |
 | Operator admin API | `admin-api/` in librebase | ✅ | Bearer + entitlements (Wave 10 gates on create/launch) |
 | Installable CLI | `librebase` lip + `@librebase/cli` npm | ✅ | smoke |
-| Agent control | Librebase MCP | ✅ | Admin/parity + SQL/storage/auth admin tools (fail closed). Not full ~79-item Supabase MCP set (`done_lean`) |
+| Agent control | Librebase MCP | ✅ | Admin/parity + SQL/storage/auth admin tools (fail closed) + **in-memory session auth** (`admin_login` persists token/orgId; `auth_status`/`admin_logout`/`set_project_session`) + **VM hosts** (`create_host`/`list_hosts`/`get_host`, instance placement). Not full ~79-item Supabase MCP set (`done_lean`) |
 
 ## Honest bottom line
 
