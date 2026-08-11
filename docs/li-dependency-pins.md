@@ -20,8 +20,8 @@
 | Dep | Absolute path | Git (branch @ SHA) | Notes |
 |-----|---------------|--------------------|-------|
 | **lic** | `C:\Users\Julian\Documents\Programming\li\lic-parity-w0` | `main` @ `1a466a6` | Fresh GitLab clone (replaces broken `lic` junction/worktrees). Wave 0 gate: stage0 build + `li-tests/self_host_parity/run_token_parity.sh` |
-| lidb | `C:\Users\Julian\Documents\Programming\li\lidb` | `main` @ `e5d6b00` | Merged to main: P5 sorted_tree CREATE INDEX + prefix range, PH-DB-7 lean RSS, wave-3 migrate depth, wave-2 WAL changefeed, wave-1 engine RLS. OLTP CI hard gate pin |
-| lidb (PH-DB-7 footprint) | same checkout | `main` @ `e5d6b00` | Lean RSS gate + `lidb-bench --profile librebase-lean`; PH-DB-7 merged into main |
+| lidb | `C:\Users\Julian\Documents\Programming\li\lidb` | `main` @ `920ebda` | Merged to main: P5 sorted_tree CREATE INDEX + prefix range, PH-DB-7 lean RSS, wave-3 migrate depth, wave-2 WAL changefeed, wave-1 engine RLS. OLTP CI hard gate pin |
+| lidb (PH-DB-7 footprint) | same checkout | `main` @ `920ebda` | Lean RSS gate + `lidb-bench --profile librebase-lean`; PH-DB-7 merged into main |
 | lis | `C:\Users\Julian\Documents\Programming\li\lis` | `main` @ `6268be5` | Merged to main: deepen Phase 1 (refresh + buckets + GitHub OAuth), embed session pool / persistent `set_claims` for RLS, Wave 7 edge. Includes realtime changefeed |
 | li-oauth | `C:\Users\Julian\Documents\Programming\li-oauth` | `main` @ `92501c6` | OAuth scaffold |
 | li-edge | `C:\Users\Julian\Documents\Programming\li-edge` | `main` @ `7ed02b5` | Merged to main: `scripts/invoke.py` real runtime (Wave 7); set `LI_EDGE_ROOT` or sibling auto-discover |
