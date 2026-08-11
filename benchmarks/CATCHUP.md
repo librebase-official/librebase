@@ -12,7 +12,7 @@ Legend: ⬜ not started · 🚧 in progress · ✅ done · ❌ out of scope for 
 |---|-----|-----------------|-------|----------|--------|
 | G1 | REST update/delete by non-id filter | `P-REST-02` (new) — pass vs live lis | SDK live check: `update/delete().eq(code, ...)` verified on :54325 | `tests/parity/last-report.json` + matrix row 17 | ✅ |
 | G2 | WAL durability for UPDATE/DELETE | `test_wal_crash_replay_restores_update/_delete` | durability microbench (crash-kill) | CI log + matrix row 4 | ✅ |
-| G3 | Realtime event delivery (REST INSERT → WS) | `P-RT-03` (new) | `realtime.mjs` event-delivery on both stacks | `results/realtime-e2e.json` | ⬜ |
+| G3 | Realtime event delivery (REST INSERT → WS) | `P-RT-03` (new) — pass vs live stack | `realtime.mjs` event-delivery on lis | `results/realtime-e2e-lis.json` (60/60, p50 ≈ 50 ms) | ✅ |
 | G4 | Storage depth + fair dual-stack bench | `P-STO-03` (new) | storage e2e script | `results/storage-e2e.json` | ⬜ |
 | G5 | Edge beyond echo | `P-FN-02` (new) | optional cold-invoke latency | parity report | ⬜ |
 

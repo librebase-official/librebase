@@ -29,6 +29,6 @@
     "supabase_js_compatible": "createClient + auth.signUp + signInWithPassword + from().insert/select/eq work on Librebase",
     "postgrest_auth_compatible": "lis serves /rest/v1 (PostgREST-shaped) + /v1/auth (GoTrue-shaped)",
     "upgrade_path": "applications move to full Supabase when they graduate to production",
-    "honest_gaps": "Realtime user-table event delivery + Storage bucket ops behind full-Supabase bootstrap; update/delete by non-id filter needs SDK/lis support"
+    "honest_gaps": "Storage bucket ops on Supabase side blocked by self-host bootstrap (403 RLS grants); Realtime user-table event delivery blocked on Supabase CDC worker discovery. Librebase REST→WS event delivery now measured (see realtime-e2e-lis.json)."
   }
 }

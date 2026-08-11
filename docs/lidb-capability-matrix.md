@@ -12,7 +12,7 @@
 | 2 | REST `/rest/v1` | PostgREST | **lis** `routes/rest` | ✅ | GET/POST/PATCH/DELETE `parity_items` (lidb UPDATE/DELETE @ `9c928eb` + lis wire). Memory PATCH smoke green |
 | 3 | RLS + JWT | Postgres RLS + GoTrue | **lidb** + **lis** auth | ✅ | JWT + Python RLS default. **`LI_RLS_ENGINE=1`** → lidb embed `session` + `set_claims` (engine eval, skip Python post-filter). Allowlisted `parity_items` / owner_id |
 | 4 | WAL / durability | Postgres WAL | **lidb** | ✅ | WalReader + empty-`catalog.heap` crash-replay restores INSERT, UPDATE, and DELETE (`test_wal_crash_replay_restores_{insert,update,delete}`). UPDATE/DELETE carry real row payloads; snapshot remains authority when present |
-| 5 | Realtime fanout | Realtime | **lis** `routes/realtime` | ✅ | Phoenix join ✅. Row `record` from lidb @ `23f93ca` + JSONL; P-RT-02 in-process record fanout + contract. Live REST→WS needs stack (same as P-RT-01) |
+| 5 | Realtime fanout | Realtime | **lis** `routes/realtime` | ✅ | Phoenix join ✅. Live REST INSERT → WS `postgres_changes` delivered (`P-RT-03` + `realtime-e2e-lis.json`: 60/60, p50 ≈ 50 ms). lidb native changefeed (WAL poll) path measured (P-RT-02) |
 | 6 | Object Storage | Storage | **lis** `routes/storage` | ✅ | Buckets + HMAC + **SigV4 query GET** (host-bound) + TUS stub. **CDN resize `oos_lean`** — `/render/image` passthrough only |
 | 7 | Edge Functions | Edge Functions | **lis** + **li-edge** | ✅ | Wave 7: `scripts/invoke.py` (`runtime: li-edge`) @ `708a6fa` / lis. Echo only with `LI_FUNCTIONS_ECHO=1`. Not Deno/WASM |
 | 8 | Connection pooler | Supavisor | **lis** in-process | ❌ | **Wave 8 settled:** OOS for v1 — in-process embed; no `li-pool` |

@@ -83,8 +83,12 @@ async function benchSupabase() {
 
 async function benchLis() {
   const WS = process.env.LIS_WS ?? "ws://127.0.0.1:54323/realtime/v1/websocket";
+  const API = (process.env.LIS_API ?? "http://127.0.0.1:54321").replace(/\/$/, "");
+  const N = Number(process.env.RUNS ?? 60);
+
   const connects = [];
   const joins = [];
+  const delivery = [];
   for (let i = 0; i < N; i++) {
     const t0 = performance.now();
     const ws = new WebSocket(WS);
@@ -101,6 +105,25 @@ async function benchLis() {
       ws.onmessage = (ev) => { const m = JSON.parse(ev.data); if (m.event === "phx_reply") res(m); };
     });
     joins.push(performance.now() - t1);
+    // event delivery: insert via lis REST -> wait for WS postgres_changes
+    const code = `lis-rt-${i}`;
+    const t = performance.now();
+    await fetch(`${API}/rest/v1/parity_items`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Prefer: "return=representation" },
+      body: JSON.stringify({ name: "lis-rt", code }),
+    });
+    const delivered = await new Promise((res) => {
+      const to = setTimeout(() => res(null), 2000);
+      ws.onmessage = (ev) => {
+        const m = JSON.parse(ev.data);
+        const data = m.payload?.data ?? {};
+        if (m.event === "postgres_changes" && data.table === "parity_items" && data.record?.code === code) {
+          clearTimeout(to); res(performance.now() - t);
+        }
+      };
+    });
+    if (delivered !== null) delivery.push(delivered);
     ws.close();
   }
   return {
@@ -108,9 +131,9 @@ async function benchLis() {
     ws: WS,
     connect_ms: stats(connects),
     join_subscribe_ms: stats(joins),
-    event_delivery_ms: { n: 0, min: 0, p50: 0, p95: 0, max: 0 },
-    events_received: 0,
-    honesty: "lis WS accepts postgres_changes joins; row-event delivery requires the lidb native changefeed (WAL poll) — the HTTP in-memory REST store does not emit changefeed records. Delivery benchmarked only on Supabase here.",
+    event_delivery_ms: stats(delivery),
+    events_received: delivery.length,
+    honesty: "Requires lis REST + realtime sharing LI_DATA_DIR with LI_REST_CHANGEFEED=1; memory-store writes append changefeed JSONL the WS server fans out. Native lidb changefeed path measured separately.",
   };
 }
 

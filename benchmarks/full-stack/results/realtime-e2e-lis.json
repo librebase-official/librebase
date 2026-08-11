@@ -1,0 +1,37 @@
+{
+  "benchmark": "lis realtime event delivery \u2014 REST INSERT (memory store, LI_REST_CHANGEFEED=1) \u2192 WS postgres_changes",
+  "date": "2026-08-11",
+  "setup": {
+    "rest": "lis routes/registry/server.py :54327 (memory backend)",
+    "ws": "lis routes/realtime/server.py :54323 (Phoenix v1.0.0)",
+    "data_dir": "shared LI_DATA_DIR (wal.changefeed.jsonl bridge)",
+    "client": "benchmarks/full-stack/realtime.mjs STACK=lis"
+  },
+  "results": {
+    "stack": "librebase-lis-realtime",
+    "ws": "ws://127.0.0.1:54323/realtime/v1/websocket",
+    "connect_ms": {
+      "n": 60,
+      "min": 1.19,
+      "p50": 1.62,
+      "p95": 3.78,
+      "max": 103.27
+    },
+    "join_subscribe_ms": {
+      "n": 60,
+      "min": 0.34,
+      "p50": 0.61,
+      "p95": 3.4,
+      "max": 5.94
+    },
+    "event_delivery_ms": {
+      "n": 60,
+      "min": 43.88,
+      "p50": 50,
+      "p95": 53.68,
+      "max": 60.29
+    },
+    "events_received": 60,
+    "honesty": "Requires lis REST + realtime sharing LI_DATA_DIR with LI_REST_CHANGEFEED=1; memory-store writes append changefeed JSONL the WS server fans out. Native lidb changefeed path measured separately."
+  }
+}

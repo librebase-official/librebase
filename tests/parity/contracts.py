@@ -627,6 +627,92 @@ def p_rt_02() -> Result:
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+def p_rt_03() -> Result:
+    """Live REST INSERT → WS postgres_changes event (P-RT-03, hard).
+
+    Requires the full lis stack (REST API + realtime WS sharing LI_DATA_DIR) with
+    `LI_REST_CHANGEFEED=1` so the memory REST store appends changefeed JSONL the
+    realtime server fans out. Fails if the stack is up but no event arrives.
+    """
+    import asyncio
+
+    ws_url = os.environ.get(
+        "LIBREBASE_PARITY_WS",
+        "ws://127.0.0.1:54323/realtime/v1/websocket",
+    )
+    api = os.environ.get("LIBREBASE_PARITY_API", "http://127.0.0.1:54321").rstrip("/")
+    try:
+        import websockets
+    except ImportError:
+        return Result(
+            "P-RT-03",
+            "skip",
+            "websockets package required for P-RT-03 (pip install websockets)",
+            honest_skip=True,
+        )
+
+    async def _probe() -> Result:
+        try:
+            async with websockets.connect(ws_url, open_timeout=5, close_timeout=3) as ws:
+                join = {
+                    "topic": "realtime:parity",
+                    "event": "phx_join",
+                    "payload": {
+                        "config": {
+                            "postgres_changes": [
+                                {"event": "INSERT", "schema": "public", "table": "parity_items"}
+                            ]
+                        }
+                    },
+                    "ref": "1",
+                    "join_ref": "1",
+                }
+                await ws.send(json.dumps(join))
+                raw = await asyncio.wait_for(ws.recv(), timeout=5)
+                msg = json.loads(raw) if isinstance(raw, str) else {}
+                if (msg.get("payload") or {}).get("status") != "ok":
+                    return Result("P-RT-03", "fail", f"join status not ok: {msg}", {"msg": msg})
+
+                import urllib.request
+
+                code = "rt03-live"
+                req = urllib.request.Request(
+                    f"{api}/rest/v1/parity_items",
+                    data=json.dumps({"name": "rt03", "code": code}).encode(),
+                    headers={"Content-Type": "application/json", "Prefer": "return=representation"},
+                    method="POST",
+                )
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    if resp.status not in (200, 201):
+                        return Result("P-RT-03", "fail", f"REST insert status={resp.status}")
+
+                deadline = asyncio.get_event_loop().time() + 5
+                while asyncio.get_event_loop().time() < deadline:
+                    try:
+                        raw_ev = await asyncio.wait_for(ws.recv(), timeout=1)
+                    except asyncio.TimeoutError:
+                        return Result("P-RT-03", "fail", "no postgres_changes event within 5s")
+                    ev = json.loads(raw_ev) if isinstance(raw_ev, str) else {}
+                    if (ev.get("event") or "").lower() != "postgres_changes":
+                        continue
+                    data = (ev.get("payload") or {}).get("data") or {}
+                    record = data.get("record") or {}
+                    if data.get("table") == "parity_items" and record.get("code") == code:
+                        return Result(
+                            "P-RT-03",
+                            "pass",
+                            "REST INSERT → WS postgres_changes delivered",
+                            {"event": ev.get("event"), "record": record},
+                        )
+                return Result("P-RT-03", "fail", "event never matched parity_items insert")
+        except (OSError, TimeoutError) as exc:
+            return Result("P-RT-03", "skip", f"realtime stack not up: {exc}", honest_skip=True)
+        except Exception as exc:  # noqa: BLE001
+            return Result("P-RT-03", "fail", f"P-RT-03 error: {exc}")
+
+    return asyncio.run(_probe())
+
+
 CONTRACTS = [
     p_sql_01,
     p_rest_01,
@@ -642,6 +728,7 @@ CONTRACTS = [
     p_io_01,
     p_rt_01,
     p_rt_02,
+    p_rt_03,
 ]
 
 

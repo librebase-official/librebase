@@ -65,13 +65,17 @@ with the remainder being Postgres-native RPC/spread/explain features.
 |--------|------------------------------|------------------------|
 | WS connect p50 | 5.1 ms | **0.9 ms** |
 | phx_join (subscribe) p50 | 1.9 ms | **0.4 ms** |
+| Event delivery p50 (REST INSERT → WS) | not measured (CDC worker discovery) | **50 ms** ([`results/realtime-e2e-lis.json`](results/realtime-e2e-lis.json)) |
 
 - Both accept `postgres_changes` subscriptions (Phoenix protocol).
 - **Event delivery** (INSERT → WS): Supabase realtime user-table CDC requires a
   running per-tenant replication worker; in this single-node podman bootstrap the
   CDC worker for user tables stayed in cluster-discovery (event delivery not
-  measured). Librebase event delivery is via lidb changefeed (WAL poll) — measured
-  in-process (P-RT-02) but not wired to a live HTTP-insert → WS in this run.
+  measured). Librebase delivers via a REST→changefeed bridge: with
+  `LI_REST_CHANGEFEED=1` the memory REST store appends changefeed JSONL under
+  `LI_DATA_DIR`, which the realtime WS server polls and fans out. Measured live:
+  60/60 events delivered, p50 ≈ 50 ms, p95 ≈ 54 ms (see the linked artifact).
+  The lidb native changefeed (WAL poll) path is measured separately (P-RT-02).
 
 ## 3. Buckets / object storage
 
@@ -115,7 +119,8 @@ memory, cold on disk):
   put lidb behind the lis HTTP REST (in-memory store, no index yet).
 - Supabase Realtime user-table event-delivery and Storage bucket ops are **blocked
   by self-host bootstrap config** (CDC worker discovery, storage role grants) — not
-  measured, documented as gaps.
+  measured, documented as gaps. Librebase realtime event delivery **is** measured
+  ([`results/realtime-e2e-lis.json`](results/realtime-e2e-lis.json)).
 - lidb has no vector engine (pgvector-only baseline).
 
 ## How to run
