@@ -17,7 +17,7 @@ set -euo pipefail
 REST_URL="${REST_URL:?set REST_URL, e.g. http://127.0.0.1:54325/rest/v1}"
 ANON_KEY="${ANON_KEY:-}"
 SUITE_DIR="${SUITE_DIR:-/tmp/postgrest-js}"
-REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 SUITE_PKG="$SUITE_DIR/packages/core/postgrest-js"
 
 if [ ! -d "$SUITE_PKG" ]; then
@@ -29,7 +29,9 @@ fi
 # Seed the test data via the Data API (backend-agnostic)
 if [ "${SEED:-0}" = "1" ]; then
   echo ">> seeding postgrest-js test schema data via REST"
-  node "$REPO_ROOT/benchmarks/full-stack/supalite/seed-rest.mjs" "$REST_URL" "${ANON_KEY:-anon}"
+  # seed-rest.mjs takes the base API URL (supabase-js appends /rest/v1)
+  SEED_BASE="${REST_URL%%/rest/v1*}"
+  node "$REPO_ROOT/benchmarks/full-stack/supalite/seed-rest.mjs" "$SEED_BASE" "${ANON_KEY:-anon}"
 fi
 
 cd "$SUITE_PKG"
