@@ -38,24 +38,22 @@ npx vitest run --config acceptance.vitest.config.ts
 ## Current status vs Supabase
 
 Profiles are capability-gated by `ACCEPTANCE_PROFILE` + `ACCEPTANCE_ENABLE_*`.
-For lis (core profile, `tus` on), the suite runs **60 tests**: 9 pass, 11 fail,
-40 skip (capabilities lis doesn't implement: admin/cdn/iceberg/render/rls/vector/
-wire).
+For lis (core profile, `tus` on), the suite runs **80 tests**: **29 pass**, 11
+fail, 40 skip (capabilities lis doesn't implement: admin/cdn/iceberg/render/
+rls/vector/wire).
 
-**Passing:** health (status/version), bucket create/upload/read/list/sign/
-delete lifecycle, signed-URL scope isolation, list-v2 prefix + underscore keys +
-updated_at cursor, LIKE-literal bucket search, empty-bucket delete.
+**Passing (29):** health (status/version); full REST lifecycle (create/upload/
+read/list/sign/delete); signed-URL scope isolation; list-v2 cursor pagination
+(created_at/updated_at), delimiter folders, underscore/LIKE-literal search;
+copy/move/update + x-upsert conflict; bulk delete by prefixes; bucket metadata
++ public/info reads + MIME policy + file-size limits + special-character keys;
+cache-control + ETag + x-metadata round-trips; batch signed URLs; duplicate
+protection; legacy auth error shapes; **full TUS 1.0** (creation-with-upload,
+chunked POST/HEAD/PATCH, offset conflicts, termination, signed TUS).
 
-**Failing (remaining lis gaps, tracked in `benchmarks/CATCHUP.md`):**
-- list-v2 cursor pagination for `created_at desc` ordering (created_at not
-  captured on insert metadata)
-- list-v2 `with_delimiter` folder semantics (search_v2 path)
-- copy-without-`x-upsert` conflict on existing dest
-- legacy auth error shapes on protected routes
-- the composite rest-extended tests (bucket metadata, public/info reads, signed
-  upload, copy/move/update, bulk delete, list-v1, duplicate protection,
-  pagination/search, cross-bucket mutations, cache-control-after-copy,
-  file-size limits, special-character keys)
-
-These are deliberate, honest gaps — the suite is the roadmap. Each closed gap
-lands with the lis feature + a passing acceptance test.
+**Failing (11, all `s3.test.ts`):** the S3 wire-protocol suite (S3 XML
+responses, SigV4 request signing, presigned POST forms, multipart XML
+ListParts/ListMultipartUploads pagination, conditional GET validators, range
+requests). lis exposes REST/S3-*shaped* HTTP, not the S3 XML/SigV4 wire
+protocol — a distinct endpoint lis does not yet serve. Tracked as the next
+storage surface.
