@@ -56,16 +56,27 @@ measured in seconds. Sub-second provisioning — that's Librebase, today."
 
 ## 0:55–1:20 — supabase-js compatibility: your app works as-is
 
-*[Screen record: the @librebase/librebase client (supabase-js-shaped) doing
-`signUp`, `signInWithPassword`, `from("items").insert().select().eq()`]*
+*[Screen record: the same `@supabase/supabase-js` test suite against Supabase
+Lite, Supabase full, and Librebase]*
 
-**VO:** "The whole point is drop-in. Our client is supabase-js-shaped —
-`createClient(url, key)`, `auth.signUp`, `auth.signInWithPassword`,
-`from("todos").insert(...).select("*").eq(...)`. Signup, login, insert, query —
-the same calls your app already makes. Point it at Librebase and it just works,
-with an upgrade path to full Supabase when the app graduates to production."
+**VO:** "The whole point is drop-in. We run the **same** `@supabase/supabase-js`
+test suite — `createClient`, `auth.signUp`, `auth.signInWithPassword`,
+`from("todos").insert().select().eq()`, storage — against all three backends,
+as-is. Supabase Lite passes 12 of 12. Supabase full passes 9 of 12. And
+Librebase passes 10 of 12 — the same calls your app already makes, just
+pointed at a different URL."
 
-**On screen:** live REPL showing signUp → signInWithPassword → insert → select → rows.
+**On screen:**
+
+| | supabase-js suite | auth.signUp | from.insert |
+|---|---|---|---|
+| Supabase Lite | 12/12 | 922 ms | 77 ms |
+| Supabase full (Kong) | 9/12 | 1119 ms | 246 ms |
+| **Librebase** | **10/12** | **138 ms** | **12 ms** |
+
+**VO (honest):** "Librebase's two misses are update/delete by a non-`id` filter
+— a fixable gap in the li stack. We don't modify Supabase software; this is
+each backend as-shipped."
 
 ---
 

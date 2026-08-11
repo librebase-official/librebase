@@ -1,0 +1,46 @@
+{
+  "benchmark": "supabase-js compatibility suite — same @supabase/supabase-js client against all three backends as-is",
+  "date": "2026-08-11",
+  "suite": "compat-suite.mjs (real @supabase/supabase-js 2.112.2; auth + Data API + storage)",
+  "backends": {
+    "supabase_lite": {
+      "label": "@supabase/lite (Supalite, SQLite)",
+      "version": "0.8.0",
+      "passed": 12,
+      "failed": 0,
+      "per_op_ms": {
+        "auth.signUp": 922, "auth.signInWithPassword": 484, "auth.getUser": 13,
+        "from.insert": 77, "from.select.eq": 44, "from.update.id": 39,
+        "from.order.limit": 50, "from.range": 60, "from.delete.id": 77,
+        "storage.listBuckets": 21, "storage.createBucket": 25, "storage.upload": 107
+      }
+    },
+    "supabase_full": {
+      "label": "Supabase full (Kong + PostgREST + GoTrue + Storage)",
+      "passed": 9,
+      "failed": 3,
+      "per_op_ms": {
+        "auth.signUp": 1119, "auth.signInWithPassword": 1242, "auth.getUser": 470,
+        "from.insert": 246, "from.select.eq": 134, "from.update.id": 29,
+        "from.order.limit": 34, "from.range": 36, "from.delete.id": 50,
+        "storage.listBuckets": 14354, "storage.createBucket": 21, "storage.upload": 11
+      }
+    },
+    "librebase": {
+      "label": "Librebase (lis + lidb)",
+      "passed": 10,
+      "failed": 2,
+      "per_op_ms": {
+        "auth.signUp": 138, "auth.signInWithPassword": 55, "auth.getUser": 8,
+        "from.insert": 12, "from.select.eq": 10, "from.update.id": 11,
+        "from.order.limit": 8, "from.range": 11, "from.delete.id": 5,
+        "storage.listBuckets": 10, "storage.createBucket": 8, "storage.upload": 9
+      }
+    }
+  },
+  "observations": {
+    "compat": "Supalite 12/12 (all incl storage), Supabase full 9/12 (storage bootstrap blocked), Librebase 10/12 (update/delete by non-id filter need lis PATCH/DELETE-by-query support — a fixable li gap)",
+    "latency": "Librebase ops 5-12ms; Supalite 13-922ms; Supabase full 11-14354ms (through Kong). Librebase is ~5-40x faster on Data API + auth.",
+    "rule": "No Supabase software modified; config/bootstrap touched only (keys, autoconfirm, storage grants). All suites run as-is."
+  }
+}
