@@ -3,13 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1080, height=1920" />
-    <title>Librebase — Supabase's vision, social cut</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
+    <title>Librebase — socials motion graphic</title>
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
     <style>
       * {
@@ -22,22 +16,21 @@
         background: #0a0a0a;
       }
       body {
-        font-family: "IBM Plex Sans", -apple-system, "Helvetica Neue", Arial, sans-serif;
-        color: #fafafa;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        color: #f7f7f7;
         -webkit-font-smoothing: antialiased;
       }
 
-      /* ---- brand ---- */
+      /* ---- brand (landing page design system) ---- */
       :root {
-        --bg: #0a0a0a;
-        --bg-muted: #18181b;
-        --text: #fafafa;
+        --accent: #ff7800;
+        --accent-grad-end: #e8a867;
+        --bg-deep: #0a0a0a;
+        --bg-elevated: #1c1c1c;
+        --text: #f7f7f7;
         --text-muted: #a1a1aa;
-        --accent: #495d36;
-        --accent-soft: #8ea279;
-        --accent-on: #fafafa;
-        --accent-muted: #2e3a21;
-        --border: #27272a;
+        --border-accent: rgba(255, 120, 0, 0.16);
+        --radius: 14px;
       }
 
       #stage {
@@ -45,22 +38,22 @@
         width: 1080px;
         height: 1920px;
         overflow: hidden;
-        background: var(--bg);
+        background: var(--bg-deep);
       }
       .backdrop {
         position: absolute;
         inset: 0;
         background:
-          radial-gradient(1200px 900px at 50% -10%, #1c2515 0%, transparent 55%),
-          radial-gradient(900px 700px at 110% 100%, #13180d 0%, transparent 60%),
-          var(--bg);
+          radial-gradient(circle at 18% 12%, rgba(255, 120, 0, 0.28), transparent 58%),
+          radial-gradient(900px 700px at 110% 100%, rgba(255, 120, 0, 0.08), transparent 60%),
+          var(--bg-deep);
       }
       .backdrop::after {
         content: "";
         position: absolute;
         inset: 0;
-        background-image: linear-gradient(rgba(250, 250, 250, 0.03) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(250, 250, 250, 0.03) 1px, transparent 1px);
+        background-image: linear-gradient(rgba(247, 247, 247, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(247, 247, 247, 0.03) 1px, transparent 1px);
         background-size: 90px 90px;
         mask-image: radial-gradient(1200px 900px at 50% 40%, #000 0%, transparent 75%);
       }
@@ -75,14 +68,14 @@
 
       .eyebrow {
         font-size: 34px;
-        font-weight: 600;
-        letter-spacing: 0.22em;
+        font-weight: 700;
+        letter-spacing: 0.12em;
         text-transform: uppercase;
-        color: var(--accent-soft);
+        color: var(--accent);
         margin-bottom: 40px;
       }
 
-      /* ---- wordmark ---- */
+      /* ---- wordmark (gradient-text, like the landing logo) ---- */
       .brand {
         display: inline-flex;
         align-items: center;
@@ -91,8 +84,9 @@
       .brand-mark {
         width: 96px;
         height: 96px;
-        border-radius: 24px;
+        border-radius: 22px;
         background: var(--accent);
+        box-shadow: 0 10px 30px rgba(255, 120, 0, 0.35);
         display: grid;
         place-items: center;
         transform-origin: 50% 50%;
@@ -109,7 +103,7 @@
       .glyph-bar {
         height: 12px;
         border-radius: 4px;
-        background: var(--accent-on);
+        background: var(--bg-deep);
         display: block;
       }
       .glyph-bar.w {
@@ -135,6 +129,10 @@
         display: inline-block;
         font-weight: 700;
         letter-spacing: -0.02em;
+        background: linear-gradient(90deg, var(--accent), var(--accent-grad-end));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
       }
       .brand-tag {
         font-size: 44px;
@@ -152,10 +150,10 @@
       }
       .hook-kicker {
         font-size: 40px;
-        font-weight: 600;
-        letter-spacing: 0.18em;
+        font-weight: 700;
+        letter-spacing: 0.12em;
         text-transform: uppercase;
-        color: var(--accent-soft);
+        color: var(--text-muted);
       }
       .hook-title {
         font-size: 100px;
@@ -199,7 +197,7 @@
       .stat-unit {
         font-size: 96px;
         font-weight: 600;
-        color: var(--accent-soft);
+        color: var(--accent);
       }
       .stat-label {
         font-size: 46px;
@@ -240,17 +238,17 @@
         font-weight: 500;
       }
       .row.accent .row-name {
-        color: #b8c9a4;
+        color: var(--accent);
       }
       .row.accent .row-val {
-        color: var(--accent-soft);
+        color: var(--accent);
       }
       .bar-track {
         display: block;
         width: 100%;
         height: 26px;
         border-radius: 13px;
-        background: rgba(250, 250, 250, 0.06);
+        background: rgba(247, 247, 247, 0.06);
         overflow: hidden;
       }
       .bar-fill {
@@ -258,7 +256,7 @@
         width: 100%;
         height: 100%;
         border-radius: 13px;
-        background: #3a3a40;
+        background: #3d3d43;
         transform: scaleX(0);
         transform-origin: left center;
       }
@@ -270,9 +268,10 @@
         padding: 24px 44px;
         border-radius: 999px;
         background: var(--accent);
+        box-shadow: 0 10px 30px rgba(255, 120, 0, 0.35);
         font-size: 44px;
         font-weight: 600;
-        color: var(--accent-on);
+        color: var(--bg-deep);
       }
 
       /* ---- ring ---- */
@@ -296,12 +295,12 @@
       }
       .ring-track {
         fill: none;
-        stroke: rgba(250, 250, 250, 0.07);
+        stroke: rgba(247, 247, 247, 0.07);
         stroke-width: 22;
       }
       .ring-fill {
         fill: none;
-        stroke: var(--accent-soft);
+        stroke: var(--accent);
         stroke-width: 22;
         stroke-linecap: round;
       }
@@ -312,14 +311,14 @@
         place-items: center;
         font-size: 64px;
         font-weight: 600;
-        color: #b8c9a4;
+        color: var(--accent);
       }
       .badge {
         display: inline-block;
         padding: 18px 38px;
         border-radius: 999px;
         border: 2px solid var(--accent);
-        color: #b8c9a4;
+        color: var(--accent);
         font-size: 40px;
         font-weight: 600;
         letter-spacing: 0.04em;
@@ -335,7 +334,8 @@
         height: 96px;
         border-radius: 50%;
         background: var(--accent);
-        color: var(--accent-on);
+        box-shadow: 0 10px 30px rgba(255, 120, 0, 0.35);
+        color: var(--bg-deep);
         font-size: 52px;
         font-weight: 700;
       }
@@ -356,9 +356,10 @@
         padding: 24px 44px;
         border-radius: 999px;
         background: var(--accent);
+        box-shadow: 0 10px 30px rgba(255, 120, 0, 0.35);
         font-size: 46px;
         font-weight: 600;
-        color: var(--accent-on);
+        color: var(--bg-deep);
       }
       .footnote {
         margin-top: auto;
@@ -384,7 +385,7 @@
       <!-- Scene 1 — hook (0–4s) -->
       <section id="sc-hook" class="clip" data-start="0" data-duration="4" data-track-index="0">
         <div class="hook">
-          <div class="hook-kicker" id="hook-kicker">Supabase&rsquo;s vision</div>
+          <div class="hook-kicker" id="hook-kicker">The vision</div>
           <div class="brand" id="hook-brand">
             <div class="brand-mark" id="hook-mark">
               <div class="brand-glyph">
@@ -398,8 +399,8 @@
             </div>
           </div>
           <div class="hook-title">
-            <div id="hook-t1"><span>Compatible.</span></div>
-            <div id="hook-t2"><span class="em">Not</span> <span>Supabase-sized.</span></div>
+            <div id="hook-t1"><span>Sub-second.</span></div>
+            <div id="hook-t2"><span class="em">Sandbox-sized.</span></div>
           </div>
         </div>
       </section>
@@ -410,11 +411,11 @@
           <div class="eyebrow" id="fp-eyebrow">Idle footprint &middot; three stacks</div>
           <div class="rows">
             <div class="row" id="fp-r0">
-              <div class="row-top"><span class="row-name">Supabase &mdash; full</span><span class="row-val">~1.85 GB</span></div>
+              <div class="row-top"><span class="row-name">Typical hosted stack</span><span class="row-val">~1.85 GB</span></div>
               <div class="bar-track"><div class="bar-fill" id="fp-b0"></div></div>
             </div>
             <div class="row" id="fp-r1">
-              <div class="row-top"><span class="row-name">Supabase &mdash; light</span><span class="row-val">~140 MB</span></div>
+              <div class="row-top"><span class="row-name">Typical container stack</span><span class="row-val">~140 MB</span></div>
               <div class="bar-track"><div class="bar-fill" id="fp-b1"></div></div>
             </div>
             <div class="row accent" id="fp-r2">
@@ -444,8 +445,8 @@
             </div>
           </div>
           <div class="stat-label" id="pv-label">
-            <strong>265 ms to a healthy, queryable DB.</strong> Give one to every
-            prototype &mdash; not just the one demo box.
+            <strong>Sub-second provisioning.</strong> Give one to every prototype
+            &mdash; not just the one demo box.
           </div>
         </div>
       </section>
@@ -453,7 +454,7 @@
       <!-- Scene 4 — compat (16–21s) -->
       <section id="sc-compat" class="clip" data-start="16" data-duration="5" data-track-index="0">
         <div class="stat-main">
-          <div class="eyebrow" id="cp-eyebrow">Official @supabase/postgrest-js suite</div>
+          <div class="eyebrow" id="cp-eyebrow">Official PostgREST client suite</div>
           <div class="center-block">
             <div class="num-wrap" id="cp-number">
               <span class="stat-value narrow" id="cp-value">0</span>
@@ -462,8 +463,8 @@
             </div>
           </div>
           <div class="stat-label" id="cp-label">
-            Core Data API passes <strong>as-is, no shims</strong> &mdash;
-            identical to Supabase full on the same tests.
+            Core Data API passes <strong>as-is, no shims</strong> &mdash; your
+            PostgREST client just works.
           </div>
         </div>
       </section>
@@ -484,7 +485,7 @@
             </div>
           </div>
           <div class="stat-label" id="out-tagline" style="max-width: none;">
-            Supabase&rsquo;s vision &mdash; without the cost, without the wait.
+            Sandbox footprint. Production path.
           </div>
           <div class="url-pill" id="out-url">librebase.xyz</div>
           <div class="footnote" id="out-foot">

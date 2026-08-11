@@ -1,8 +1,9 @@
 # Librebase socials video — HyperFrames composition
 
-Branded 9:16 (1080×1920) social cut of the vision story: **Supabase's vision —
-without the cost, without the wait.** Built as a HyperFrames HTML composition
-(see `docs/demo/librebase-vision-video-script.md` for the full story).
+Branded 9:16 (1080×1920) social cut of the vision story: **sub-second
+provisioning, sandbox-sized footprint, prototype→production path.** Built as a
+HyperFrames HTML composition (see `docs/demo/librebase-vision-video-script.md`
+for the full story).
 
 ## Composition spec
 
@@ -12,7 +13,7 @@ without the cost, without the wait.** Built as a HyperFrames HTML composition
 | Duration | 26 s |
 | FPS | 30 |
 | Scenes | Hook → Footprint → Provisioning → Compat → Outro |
-| Brand | Librebase tokens (`#0a0a0a` bg, `#495d36` accent, IBM Plex Sans) |
+| Brand | Librebase landing design system (`#0a0a0a` bg, `#ff7800` accent, gradient-text wordmark, system-ui) |
 
 ## Preview locally
 
@@ -31,7 +32,7 @@ npx hyperframes render . -o renders/librebase-socials.mp4
 ## Snapshot frames
 
 ```bash
-npx hyperframes snapshot . --at 2.0,7.5,13.0,18.0,23.5 --output renders
+npx hyperframes snapshot . --at 2.2,7.2,13.5,18.5,24.5 --output renders
 ```
 
 ## Motion design
@@ -44,8 +45,8 @@ deterministic, no render-time clocks.
 
 ## Copy
 
-- **Hook:** Supabase's vision — "Compatible. *Not* Supabase-sized."
-- **Footprint:** 8 MB image vs ~7.5 GB full stack / 12 containers.
-- **Provisioning:** 265 ms cold start → healthy.
-- **Compat:** 111/111 core Data API on the official postgrest-js suite.
-- **Outro:** librebase.xyz + honest footnote (Realtime & Storage still catching up).
+- **Hook:** The vision — "Sub-second. Sandbox-sized."
+- **Footprint:** 8 MB image / 1 container; ~2 MB idle vs ~1.85 GB hosted / ~140 MB containerized.
+- **Provisioning:** 265 ms cold start → healthy. "Give one to every prototype."
+- **Compat:** 111/111 Core Data API on the official PostgREST client suite, as-is no shims.
+- **Outro:** "Sandbox footprint. Production path." + librebase.xyz + honest footnote (Realtime & Storage still catching up).
