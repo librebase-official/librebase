@@ -35,7 +35,7 @@ npx hyperframes snapshot . --at 2.0,7.0,12.5,17.5,22.0 --output renders
 ## Copy
 
 - **Hook:** Meet Librebase — "Tiny backend as a service." / "Small enough to spin up for every idea."
-- **Footprint:** Idle memory (hosted ~1.85 GB / container ~140 MB / Librebase ~2 MB). Pill: "All built in one tiny container image."
+- **Footprint:** Idle memory (hosted ~1.85 GB / Postgres+GoTrue+PostgREST ~140 MB / Librebase ~2 MB). Pill: "All built in one tiny container image."
 - **Cold start:** 265 ms → ready. "Up before you finish the thought."
 - **Value:** Prototype. Ship. Stay lean.
 - **Outro:** Wordmark + "Lean backend for apps and AI tools." + librebase.xyz
