@@ -29,6 +29,9 @@ tests/parity/last-report.json
 # Build output
 dist/
 
+# Demo video renders (regenerate via docs/demo/socials/README.md)
+docs/demo/socials/renders/
+
 # Studio local persistence (user machine)
 # JSON stores live under ~/.local/share/librebase/studio — not in repo
 

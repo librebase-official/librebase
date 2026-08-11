@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Librebase vision demo — storyboard</title>
+    <style>
+      :root {
+        --bg: #0d1117;
+        --surface: #161b22;
+        --border: #30363d;
+        --text: #e6edf3;
+        --muted: #8b949e;
+        --accent: #3fb950;
+        --green: #3fb950;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans", system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.5;
+        padding: 1.5rem 2rem 3rem;
+        max-width: 960px;
+        margin-inline: auto;
+      }
+      h1 {
+        font-size: 1.35rem;
+        margin-bottom: 0.25rem;
+      }
+      .meta {
+        color: var(--muted);
+        font-size: 0.9rem;
+        margin-bottom: 1.5rem;
+      }
+      .meta a {
+        color: var(--accent);
+      }
+      .beats {
+        display: grid;
+        gap: 0.75rem;
+      }
+      .beat {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 1rem 1.25rem;
+      }
+      .beat header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+      .beat h2 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 600;
+      }
+      .time {
+        font-family: "IBM Plex Mono", monospace;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+      .beat p {
+        margin: 0.5rem 0 0;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+      .beat p.vo {
+        color: var(--text);
+        margin-top: 0.65rem;
+      }
+      .beat a.ref {
+        display: inline-block;
+        margin-top: 0.65rem;
+        font-family: "IBM Plex Mono", monospace;
+        color: var(--accent);
+        text-decoration: none;
+        font-size: 0.9rem;
+      }
+      .beat a.ref:hover {
+        text-decoration: underline;
+      }
+      .honesty {
+        border-color: var(--green);
+        background: rgba(63, 185, 80, 0.08);
+      }
+      footer {
+        margin-top: 2rem;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+      code {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 0.88em;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Librebase vision demo — storyboard</h1>
+    <p class="meta">
+      Script:
+      <a href="./librebase-vision-video-script.md">librebase-vision-video-script.md</a>
+      · Record helper:
+      <a href="../../scripts/record-vision-demo.sh">scripts/record-vision-demo.sh</a>
+      · Benchmarks:
+      <a href="../../benchmarks/full-stack/README.md">benchmarks/full-stack/README.md</a>
+    </p>
+
+    <div class="beats" id="beats"></div>
+
+    <footer>
+      Run <code>./scripts/record-vision-demo.sh</code> before recording. Beat
+      cards link to the local result files they quote.
+    </footer>
+
+    <script>
+      const beats = [
+        { t: "0:00", title: "Hook: the vision, stated back", note: "Split screen: Supabase logo fades to Librebase; vision bullets (sub-second provisioning, runs in a sandbox, upgrade path to Supabase).", vo: "Supabase built the vision. The missing piece? The cost and the wait." },
+        { t: "0:15", title: "The footprint gap: three stacks, one table", note: "Screen record: podman images + podman stats on Supabase full, Supabase Light, Librebase. Table: images / RAM idle / containers.", vo: "Full: 7.5GB, ~1.85GB, 12 containers. Light: 2.3GB, ~140MB, 3. Librebase: 8.2MB, ~2MB, 1.", ref: "../../benchmarks/full-stack/results/footprint-provisioning.json" },
+        { t: "0:35", title: "Sub-second provisioning: cold start to ready", note: "Timed podman run + curl /health on Librebase, then a stop/start on Supabase Light.", vo: "Librebase cold-starts to a healthy, queryable database in ~265ms; Supabase Light ~442ms.", ref: "../../benchmarks/full-stack/results/footprint-provisioning.json" },
+        { t: "0:55", title: "supabase-js compatibility: your app works as-is", note: "Official @supabase/postgrest-js test suite against Librebase, then the same suite against Supabase full.", vo: "Core Data API: 111/111 on both. Full suite: 274/350 on Librebase; the rest are Postgres-native (stored functions, explain).", ref: "../../benchmarks/full-stack/results/supabase-js-compat.json" },
+        { t: "1:20", title: "And the data plane isn't a toy", note: "CRUD benchmark table from benchmarks/full-stack: 50k rows, 60 queries, indexed lookup p50.", vo: "Indexed point lookup 0.04ms vs ~3ms through the full stack — at 1/200th the footprint.", ref: "../../benchmarks/full-stack/results/ingest-index-lidb-hash.json" },
+        { t: "1:45", title: "The vision, delivered + honest gaps", note: "Librebase logo + one line. Small print: Realtime event-delivery and Storage bucket ops are still behind full-Supabase bootstrap.", vo: "Sub-second provisioning. Sandbox-sized footprint. A PostgREST and Auth compatible API. And full Supabase is the upgrade path.", cls: "honesty", ref: "../../benchmarks/full-stack/README.md" },
+      ];
+
+      const root = document.getElementById("beats");
+      for (const b of beats) {
+        const el = document.createElement("article");
+        el.className = "beat" + (b.cls ? " " + b.cls : "");
+        let html =
+          "<header><h2>" +
+          b.title +
+          '</h2><span class="time">' +
+          b.t +
+          "</span></header>" +
+          "<p>" +
+          b.note +
+          "</p>";
+        if (b.vo) html += '<p class="vo">VO: ' + b.vo + "</p>";
+        if (b.ref)
+          html +=
+            '<a class="ref" href="' +
+            b.ref +
+            '">' +
+            b.ref +
+            "</a>";
+        el.innerHTML = html;
+        root.appendChild(el);
+      }
+    </script>
+  </body>
+</html>

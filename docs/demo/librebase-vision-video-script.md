@@ -5,6 +5,19 @@ footprint small enough for a sandbox, and an upgrade path to full Supabase. The
 benchmark shows Librebase delivering all of it — compared head-to-head against
 **Supabase (full)** and **Supabase Light** (minimal db+auth+rest).
 
+**Record tooling:** `scripts/record-vision-demo.sh` (health-checks + seeds the
+three backends, prints capture commands) and `demo-storyboard.html` (clickable
+beat board that opens the quoted result files).
+
+## Record today in under 20 minutes
+
+| Step | Time | Action |
+|------|------|--------|
+| 1 | 3 min | `./scripts/record-vision-demo.sh` (bring up lis/Supalite/Supabase full first; script health-checks + seeds) |
+| 2 | 1 min | Open `docs/demo/demo-storyboard.html` in a browser; set display zoom 100%, dark room, hide notifications |
+| 3 | 12–15 min | One take following the beats below; pause ≤2 s on each table |
+| 4 | 2 min | Optional trim in QuickTime or `ffmpeg` (commands printed by the script) |
+
 ---
 
 ## 0:00–0:15 — Hook: the vision, stated back
@@ -110,10 +123,15 @@ above are measured, not marketed."
 
 ## Production notes
 
+- **Storyboard:** `docs/demo/demo-storyboard.html` — clickable beat board; links
+  open the result JSONs each beat quotes.
 - Record the three-stack comparison live: `podman images`, `podman stats --no-stream`,
   timed cold starts.
 - Use the supabase-js-shaped client demo (`createClient` + auth + CRUD) against
   Librebase.
 - Show the `benchmarks/full-stack/` results (ingest-index, realtime, vector).
+- **Compat beat:** run the official suite with `run-suite.sh` (see
+  `benchmarks/full-stack/postgrest-js-suite/README.md`): Librebase at
+  `REST_URL=http://127.0.0.1:54325/rest/v1`, Supabase full with the Kong anon key.
 - Honesty rule: show measured numbers; don't claim Realtime/Storage parity yet.
 - Output: `docs/demo/librebase-vision-benchmark.mp4` (ffmpeg, 1080p).
