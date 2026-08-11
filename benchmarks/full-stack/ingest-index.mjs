@@ -10,7 +10,7 @@
  */
 import { performance } from "node:perf_hooks";
 import { createHmac } from "node:crypto";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 
 const STACK = process.env.STACK ?? "sb";
@@ -76,25 +76,68 @@ function lidbExec(dataDir, sql, params = []) {
   return JSON.parse(r.stdout);
 }
 
-function benchLidb() {
+/** Persistent `lidb_embed session` (NDJSON) — the realistic server path, avoids
+ *  per-query subprocess spawn (which dominated the old benchmark at ~5ms/query). */
+function lidbSession(dataDir) {
+  const embed = process.env.LIDB_EMBED ?? "/Users/julian/Documents/coding-projects/li-langverse-gitlab/li-langverse/lidb/build/smoke/lidb_embed";
+  const child = spawn(embed, ["session", dataDir], { stdio: ["pipe", "pipe", "ignore"] });
+  let buf = "";
+  let gotReady = false;
+  const queue = [];
+  const readyResolvers = [];
+  child.stdout.on("data", (c) => {
+    buf += c.toString();
+    let i;
+    while ((i = buf.indexOf("\n")) !== -1) {
+      const line = buf.slice(0, i).trim();
+      buf = buf.slice(i + 1);
+      if (!line) continue;
+      let msg;
+      try { msg = JSON.parse(line); } catch { continue; }
+      if (!gotReady) {
+        gotReady = true;
+        readyResolvers.forEach((r) => r());
+        continue;
+      }
+      if (queue.length) queue.shift()(msg);
+    }
+  });
+  return {
+    ready: new Promise((res) => { if (gotReady) res(); else readyResolvers.push(res); }),
+    exec(sql, params = []) {
+      const p = new Promise((res) => queue.push(res));
+      child.stdin.write(JSON.stringify({ cmd: "exec", sql, params }) + "\n");
+      return p;
+    },
+    close() {
+      child.stdin.write(JSON.stringify({ cmd: "quit" }) + "\n");
+      child.kill();
+    },
+  };
+}
+
+async function benchLidb() {
   const dir = process.env.LIDB_DATA ?? "/tmp/lb-bench-data";
   mkdirSync(dir, { recursive: true });
   spawnSync(process.env.LIDB_EMBED ?? "lidb_embed", ["migrate", dir], { encoding: "utf8" });
-  lidbExec(dir, "CREATE TABLE IF NOT EXISTS items (id TEXT, code TEXT, value INTEGER)");
-  lidbExec(dir, "CREATE INDEX IF NOT EXISTS idx_code ON items(code)");
+  const s = lidbSession(dir);
+  await s.ready;
+  const r0 = await s.exec("CREATE TABLE IF NOT EXISTS items (id TEXT, code TEXT, value TEXT)");
+  if (!r0.ok) throw new Error("CREATE TABLE failed: " + JSON.stringify(r0));
+  await s.exec("CREATE INDEX IF NOT EXISTS idx_code ON items(code)");
 
   const ingestStart = performance.now();
   const BATCH = 2000;
   let inserted = 0;
   for (let i = 0; i < ROWS; i += BATCH) {
-    const values = [];
-    const params = [];
-    for (let j = i; j < Math.min(i + BATCH, ROWS); j++) {
-      values.push(`(?, ?, ?)`);
-      params.push(`id-${j}`, `code-${j}`, String(j));
+    // lidb exec_insert currently inserts ONE row per statement (multi-row VALUES
+    // only applies the first). Insert rows individually for correctness.
+    const batch = Math.min(BATCH, ROWS - i);
+    for (let j = 0; j < batch; j++) {
+      const n = i + j;
+      await s.exec("INSERT INTO items (id, code, value) VALUES (?, ?, ?)", [`id-${n}`, `code-${n}`, String(n)]);
+      inserted++;
     }
-    lidbExec(dir, `INSERT INTO items (id, code, value) VALUES ${values.join(",")}`, params);
-    inserted += Math.min(BATCH, ROWS - i);
   }
   const ingestMs = performance.now() - ingestStart;
 
@@ -102,17 +145,26 @@ function benchLidb() {
   for (let q = 0; q < Q; q++) {
     const key = `code-${Math.floor(Math.random() * ROWS)}`;
     const t = performance.now();
-    lidbExec(dir, "SELECT value FROM items WHERE code = ?", [key]);
+    await s.exec("SELECT value FROM items WHERE code = ?", [key]);
     lat.lookup.push(performance.now() - t);
     const t2 = performance.now();
-    lidbExec(dir, "SELECT value FROM items WHERE code LIKE ? LIMIT 50", [`code-${Math.floor(Math.random() * ROWS)}%`]);
+    await s.exec("SELECT value FROM items WHERE code LIKE ? LIMIT 50", [`code-${Math.floor(Math.random() * ROWS)}%`]);
     lat.range.push(performance.now() - t2);
     const t3 = performance.now();
-    lidbExec(dir, "SELECT value FROM items LIMIT 50");
+    await s.exec("SELECT value FROM items LIMIT 50");
     lat.page.push(performance.now() - t3);
   }
-  return { stack: "librebase-lidb-sorted_tree", rows: inserted, ingest_rows_per_sec: Math.round(inserted / (ingestMs / 1000)), ingest_total_ms: Math.round(ingestMs), query_ms: Object.fromEntries(Object.entries(lat).map(([k, v]) => [k, stats(v)])) };
+  s.close();
+  return {
+    stack: "librebase-lidb-sorted_tree",
+    transport: "persistent session (NDJSON)",
+    rows: inserted,
+    ingest_rows_per_sec: Math.round(inserted / (ingestMs / 1000)),
+    ingest_total_ms: Math.round(ingestMs),
+    query_ms: Object.fromEntries(Object.entries(lat).map(([k, v]) => [k, stats(v)])),
+  };
 }
 
-const out = STACK === "sb" ? await benchSupabase() : benchLidb();
+const out = STACK === "sb" ? await benchSupabase() : await benchLidb();
+if (!out || Object.keys(out).length === 0) throw new Error("benchmark returned empty");
 console.log(JSON.stringify(out, null, 2));

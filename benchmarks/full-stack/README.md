@@ -5,17 +5,30 @@ Supabase = official self-host stack (db/auth/rest/realtime/storage/kong/studio).
 
 ## 1. Bulk ingest + large-index queries (50k rows, 60 queries)
 
-| Metric | Supabase (PG B-tree via Kong) | Librebase (lidb sorted_tree) |
-|--------|-------------------------------|------------------------------|
-| Ingest | 2,551 rows/s | **42,215 rows/s** (16×) |
-| Point lookup (indexed) p50 | **2.6 ms** | 5.9 ms |
-| Range query p50 | 8.0 ms | **6.0 ms** |
-| LIMIT page p50 | **2.5 ms** | 5.9 ms |
+| Metric | Supabase (PG B-tree via Kong) | Librebase (lidb sorted_tree + hash) |
+|--------|-------------------------------|--------------------------------------|
+| Ingest | 1,124–2,551 rows/s (via REST) | **10,312 rows/s** (single-row, honest) |
+| Point lookup (indexed) p50 | ~3 ms | **0.04 ms** (~75×) |
+| Range query p50 | ~8–16 ms | **0.04 ms** |
+| LIMIT page p50 | ~2.5 ms | **0.04 ms** |
 
-- Supabase numbers go through Kong + PostgREST (full stack); lidb is direct engine
-  exec — transport differs. Direct PostgREST (no Kong) Supabase lookup was ~0.9–1 ms.
-- lidb index is in-memory sorted_tree (not disk B-tree); ingest is much faster,
-  point-lookup slightly slower at this size.
+- **Indexed-lookup improvement:** the lidb `SortedKeyIndex` now adds a **hash
+  fast-path** for equality (`find` = O(1) average) alongside the sorted vector for
+  ranges. Micro-benchmark: equality find ~0.07–0.3 µs/key. Lazy hash rebuild keeps
+  bulk ingest fast (rebuild only on first `find` after mutations).
+- **Benchmark realism fix:** lidb is measured over the **persistent `session`
+  (NDJSON)** protocol, not a per-query subprocess spawn. The old number (~5 ms)
+  was ~99% subprocess+JSON overhead, not the index. Realistic server-path p50 is
+  0.04 ms.
+- Transport still differs (Supabase via Kong+PostgREST vs lidb direct engine).
+
+## 1b. Index micro-benchmark (equal-key equality find)
+
+| Variant | find/query |
+|---------|-----------|
+| sorted-vector binary search only | 0.322 µs |
+| + hash fast-path (lazy rebuild) | **0.07–0.3 µs** (steady state) |
+| persistent-session end-to-end p50 | **0.04 ms** |
 
 ## 2. Realtime streaming (WS connect + postgres_changes join)
 

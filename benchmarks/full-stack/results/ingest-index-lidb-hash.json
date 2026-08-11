@@ -1,0 +1,30 @@
+{
+  "stack": "librebase-lidb-sorted_tree",
+  "transport": "persistent session (NDJSON)",
+  "rows": 50000,
+  "ingest_rows_per_sec": 5591,
+  "ingest_total_ms": 8942,
+  "query_ms": {
+    "lookup": {
+      "n": 60,
+      "min": 0.05,
+      "p50": 0.05,
+      "p95": 0.23,
+      "max": 4.1
+    },
+    "range": {
+      "n": 60,
+      "min": 0.06,
+      "p50": 0.06,
+      "p95": 0.17,
+      "max": 0.74
+    },
+    "page": {
+      "n": 60,
+      "min": 0.05,
+      "p50": 0.06,
+      "p95": 0.2,
+      "max": 0.37
+    }
+  }
+}
