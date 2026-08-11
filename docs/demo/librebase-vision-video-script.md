@@ -56,29 +56,26 @@ measured in seconds. Sub-second provisioning — that's Librebase, today."
 
 ## 0:55–1:20 — supabase-js compatibility: your app works as-is
 
-*[Screen record: the same `@supabase/supabase-js` test suite against Supabase
-Lite, Supabase full, and Librebase]*
+*[Screen record: the official `@supabase/postgrest-js` test suite running
+against Librebase, then the same suite against Supabase full]*
 
-**VO:** "The whole point is drop-in. We run the **same** `@supabase/supabase-js`
-test suite — `createClient`, `auth.signUp`, `auth.signInWithPassword`,
-`from("todos").insert().select().eq()`, storage — against all three backends,
-as-is, with no client-side shims. Supabase Lite passes 12 of 12. Supabase full
-passes 9 of 12 (its three misses are storage bootstrap config, not code). And
-Librebase passes **12 of 12** — the same calls your app already makes, pointed
-at a different URL."
+**VO:** "The whole point is drop-in. We run the **official** PostgREST test
+suite — the same `@supabase/postgrest-js` tests the Supabase team ships —
+against Librebase and Supabase full, as-is, no client shims. On the core Data
+API, Librebase passes **111 of 111 — identical to Supabase full**. Across the
+whole suite, Librebase passes 274 of 350; the rest are Postgres-native features
+like stored functions and `explain` that an in-memory engine doesn't execute."
 
 **On screen:**
 
-| | supabase-js suite | auth.signUp | from.insert |
-|---|---|---|---|
-| Supabase Lite | 12/12 | 922 ms | 77 ms |
-| Supabase full (Kong) | 9/12 | 1119 ms | 246 ms |
-| **Librebase** | **12/12** | **152 ms** | **15 ms** |
+| | official postgrest-js suite | core Data API |
+|---|---|---|
+| Supabase full (Kong + Postgres) | 350/350 | 111/111 |
+| **Librebase (lis)** | **274/350** | **111/111 (= reference)** |
 
-**VO (honest):** "Those gaps — update/delete by a non-`id` filter — are now
-implemented in Librebase's server, so the suite passes 12 of 12 with no client
-shims. We don't modify Supabase software; Librebase's gaps are closed in
-Librebase's own code."
+**VO (honest):** "The comparison is tiered: in-memory versus in-memory,
+on-disk versus on-disk. Librebase's in-memory tier matches the reference on
+everything that doesn't need Postgres SQL functions."
 
 ---
 

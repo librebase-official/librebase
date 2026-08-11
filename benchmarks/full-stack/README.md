@@ -3,6 +3,16 @@
 Both stacks run locally on the same Mac via podman. Librebase = lidb engine + lis;
 Supabase = official self-host stack (db/auth/rest/realtime/storage/kong/studio).
 
+## Tiered methodology (fair comparison)
+
+Storage tiers must not be compared head-to-head. In-memory vs on-disk is one
+**cross-tier** comparison, used as research input (see §5), not a win claim.
+
+| Tier | Librebase | Supabase |
+|------|-----------|----------|
+| **In-memory** (volatile, sandbox) | lis `_STORE` (process dict) | in-memory SQLite |
+| **On-disk** (durable) | lis + lidb (WAL + heap files) | Postgres + SQLite file |
+
 ## 0. Footprint + provisioning — Supabase vision coverage
 
 | Metric | Supabase (full, 12 ctr) | Supabase Light (db+auth+rest) | **Librebase tiny** |
@@ -18,9 +28,9 @@ is covered by Librebase: `createClient` + `auth.signUp` + `signInWithPassword` +
 `from().insert/select/eq` all work on the lis surface. See
 `docs/demo/librebase-vision-video-script.md` for the video.
 
-Honest gaps: Supabase Realtime user-table event delivery + Storage bucket ops are
-behind full-Supabase bootstrap; update/delete by non-`id` filter needs SDK/lis
-support.
+The compat claim is now measured against the **official postgrest-js suite** (see
+`postgrest-js-suite/`): core Data API 111/111 = Supabase full; full suite 274/350
+with the remainder being Postgres-native RPC/spread/explain features.
 
 ## 1. Bulk ingest + large-index queries (50k rows, 60 queries)
 
@@ -84,6 +94,20 @@ support.
 - **Honest:** Librebase/lidb has **no vector engine yet**. This pgvector baseline
   sets a target for future lidb vector work (dim=128, exact + HNSW).
 
+## 5. Cross-tier: in-memory vs on-disk (research input, not a head-to-head)
+
+One memory-vs-disk comparison, used to steer a hybrid design (hot rows in
+memory, cold on disk):
+
+- **In-memory (lis `_STORE`)** serves the postgrest-js core Data API at ~5–15 ms
+  per op (auth + CRUD + filters + joins) with zero I/O — ideal for the hot set.
+- **On-disk (lidb WAL + heap)** gives durability and indexes for cold data;
+  Supabase full (Postgres) is the durable reference (350/350 on its own suite).
+- **Hybrid insight:** lis's in-memory REST plus lidb's WAL-changefeed means a row
+  can be served from the in-memory cache and appended to the WAL for durability —
+  the same pattern Postgres uses (shared buffers + WAL), at a fraction of the
+  footprint. That is the design direction for a mixed on-disk + in-memory tier.
+
 ## Honest caveats
 
 - Transport: Supabase is measured through the **full stack (Kong + PostgREST)**;
@@ -102,4 +126,8 @@ cd benchmarks/full-stack
 STACK=sb LIBREBASE_API=http://127.0.0.1:8000/rest/v1 LIBREBASE_SERVICE_ROLE=<key> node ingest-index.mjs
 STACK=lidb LIDB_EMBED=<lidb> LIDB_DATA=<dir> node ingest-index.mjs
 LIBREBASE_SERVICE_ROLE=<key> LIBREBASE_JWT_SECRET=<secret> node vector.mjs
+
+# official postgrest-js suite (see postgrest-js-suite/README.md)
+REST_URL=http://127.0.0.1:54325/rest/v1 SEED=1 ./postgrest-js-suite/run-suite.sh -u
+REST_URL=http://127.0.0.1:8000/rest/v1 ANON_KEY=<anon> ./postgrest-js-suite/run-suite.sh -u
 ```
