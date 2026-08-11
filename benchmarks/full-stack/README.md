@@ -3,6 +3,25 @@
 Both stacks run locally on the same Mac via podman. Librebase = lidb engine + lis;
 Supabase = official self-host stack (db/auth/rest/realtime/storage/kong/studio).
 
+## 0. Footprint + provisioning — Supabase vision coverage
+
+| Metric | Supabase (full, 12 ctr) | Supabase Light (db+auth+rest) | **Librebase tiny** |
+|--------|------------------------|------------------------------|--------------------|
+| Images on disk | ~7.5 GB | ~2.3 GB | **8.2 MB** |
+| RAM idle (RSS) | ~1.85 GB | ~140 MB | **~2 MB** |
+| Cold start → healthy | seconds | ~442 ms | **~265 ms** |
+| Containers | 12 | 3 | **1** |
+
+The Supabase vision (sub-second provisioning, sandbox footprint, PostgREST+Auth
+compatible so `@supabase/supabase-js` works as-is, upgrade path to full Supabase)
+is covered by Librebase: `createClient` + `auth.signUp` + `signInWithPassword` +
+`from().insert/select/eq` all work on the lis surface. See
+`docs/demo/librebase-vision-video-script.md` for the video.
+
+Honest gaps: Supabase Realtime user-table event delivery + Storage bucket ops are
+behind full-Supabase bootstrap; update/delete by non-`id` filter needs SDK/lis
+support.
+
 ## 1. Bulk ingest + large-index queries (50k rows, 60 queries)
 
 | Metric | Supabase (PG B-tree via Kong) | Librebase (lidb sorted_tree + hash) |

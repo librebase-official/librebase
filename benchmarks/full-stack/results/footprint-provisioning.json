@@ -1,0 +1,34 @@
+{
+  "benchmark": "librebase vs supabase full vs supabase light — footprint + provisioning (same Mac, podman)",
+  "date": "2026-08-11",
+  "stacks": {
+    "supabase_full": {
+      "containers": 12,
+      "images_disk_gb": 7.46,
+      "rss_mb": 1847.02,
+      "note": "db/auth/rest/realtime/storage/kong/studio/imgproxy/meta/pooler/edge"
+    },
+    "supabase_light": {
+      "containers": 3,
+      "images_disk_gb": 2.26,
+      "rss_mb": 139.6,
+      "cold_start_ms": 442,
+      "note": "db+auth+rest only (Postgres 17 + GoTrue + PostgREST)"
+    },
+    "librebase_tiny": {
+      "containers": 1,
+      "images_disk_mb": 8.18,
+      "rss_mb": 1.7,
+      "cold_start_ms": 265,
+      "note": "scratch image, static Go shim + lidb engine"
+    }
+  },
+  "vision_coverage": {
+    "sub_second_provisioning": "Librebase 265ms cold start to healthy; Supabase Light 442ms; full stack seconds",
+    "sandbox_footprint": "Librebase 8.2MB image / ~2MB RSS vs Light 2.3GB / 140MB vs Full 7.5GB / 1.85GB",
+    "supabase_js_compatible": "createClient + auth.signUp + signInWithPassword + from().insert/select/eq work on Librebase",
+    "postgrest_auth_compatible": "lis serves /rest/v1 (PostgREST-shaped) + /v1/auth (GoTrue-shaped)",
+    "upgrade_path": "applications move to full Supabase when they graduate to production",
+    "honest_gaps": "Realtime user-table event delivery + Storage bucket ops behind full-Supabase bootstrap; update/delete by non-id filter needs SDK/lis support"
+  }
+}
