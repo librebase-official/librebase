@@ -25,6 +25,10 @@ const librebase = createClient("http://127.0.0.1:54321", "anon-key");
 
 const { data, error } = await librebase.from("parity_items").select().eq("name", "demo");
 
+// Update/delete by any filter column (id, code, name, ...) — PostgREST form:
+await librebase.from("parity_items").update({ done: true }).eq("code", "v1");
+await librebase.from("parity_items").delete().eq("code", "v1");
+
 await librebase.auth.signUp({ email: "a@b.c", password: "secret" });
 await librebase.auth.signIn({ email: "a@b.c", password: "secret" });
 

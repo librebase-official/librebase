@@ -24,7 +24,7 @@
 | 14 | Analytics | Analytics | future | ❌ | Out of scope for v1 |
 | 15 | API gateway | Kong | **li-httpd** + **lis** | ✅ | Compose stub + smoke |
 | 16 | Studio console | Dashboard | **Librebase Studio** | ✅ | Projects/instances + login/admin/logs + **VMs/hosts** (multi-instance per VM, memMb budget) |
-| 17 | Client SDK | `@supabase/supabase-js` | **`@librebase/librebase`** | ✅ | createClient + smoke |
+| 17 | Client SDK | `@supabase/supabase-js` | **`@librebase/librebase`** | ✅ | createClient + smoke; PATCH/DELETE by any `eq` filter column (non-id) via query-string form |
 
 ## Product layers (not matrix rows)
 

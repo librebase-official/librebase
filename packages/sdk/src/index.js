@@ -106,11 +106,12 @@ class QueryBuilder {
       headers: { ...this._headers },
     };
     if (this._method === "PATCH" || this._method === "DELETE") {
-      const id = this._idFilter();
-      if (id == null) {
-        return { data: null, error: { message: `${this._method}: an id filter (.eq("id", ...)) is required`, status: 400 } };
+      // PostgREST / supabase-js form: PATCH|DELETE /rest/v1/{table}?<eq filters>.
+      // Filters may target any column (id, code, name, ...), not just the primary key.
+      if (!this._filters.length) {
+        return { data: null, error: { message: `${this._method}: at least one .eq(...) filter is required`, status: 400 } };
       }
-      path = `/rest/v1/${encodeURIComponent(this._table)}/${encodeURIComponent(String(id))}`;
+      path = `/rest/v1/${encodeURIComponent(this._table)}?${this._filters.join("&")}`;
       if (this._method === "PATCH" && this._body !== undefined) {
         init.body = JSON.stringify(this._body);
         init.headers.Prefer = init.headers.Prefer ?? "return=representation";
@@ -123,15 +124,6 @@ class QueryBuilder {
     const data = await parseBody(res);
     if (!res.ok) return errorResult(res, data);
     return okResult(data);
-  }
-
-  _idFilter() {
-    for (let i = this._filters.length - 1; i >= 0; i--) {
-      const raw = this._filters[i];
-      const m = /^id=eq\.(.+)$/.exec(decodeURIComponent(raw));
-      if (m) return decodeURIComponent(m[1]);
-    }
-    return null;
   }
 }
 

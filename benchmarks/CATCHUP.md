@@ -10,7 +10,7 @@ Legend: ⬜ not started · 🚧 in progress · ✅ done · ❌ out of scope for 
 
 | # | Gap | Contract / test | Bench | Artifact | Status |
 |---|-----|-----------------|-------|----------|--------|
-| G1 | REST update/delete by non-id filter | `P-REST-02` (new) | postgrest-js suite | `benchmarks/full-stack/results/postgrest-js-*.json` | ⬜ |
+| G1 | REST update/delete by non-id filter | `P-REST-02` (new) | postgrest-js suite | `benchmarks/full-stack/results/postgrest-js-*.json` | ✅ |
 | G2 | WAL durability for UPDATE/DELETE | `test_wal_crash_replay_restores_update/_delete` | durability microbench (crash-kill) | CI log + matrix row 4 | ⬜ |
 | G3 | Realtime event delivery (REST INSERT → WS) | `P-RT-03` (new) | `realtime.mjs` event-delivery on both stacks | `results/realtime-e2e.json` | ⬜ |
 | G4 | Storage depth + fair dual-stack bench | `P-STO-03` (new) | storage e2e script | `results/storage-e2e.json` | ⬜ |
@@ -25,6 +25,7 @@ Legend: ⬜ not started · 🚧 in progress · ✅ done · ❌ out of scope for 
 | Range prefix 0.36× Release | `range-scan-streak.json` | ✅ (hard-gated nightly) |
 | HTTP REST 0.60× soft vs PostgREST | `http-streak.json` | ✅ soft |
 | Footprint (images / idle RSS) | `footprint-provisioning.json` | ✅ (socials source) |
+| Non-id PATCH/DELETE via SDK | `P-REST-02` pass vs live lis (:54325); SDK `update/delete().eq(<non-id>, v)` → `?col=eq.v` | ✅ |
 
 ## Out of scope for v1 (explicit)
 

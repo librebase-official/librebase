@@ -74,20 +74,34 @@ assert.ok(calls.some((c) => c.method === "POST" && c.url.includes("/rest/v1/pari
 const upd = await client.from("parity_items").update({ done: true }).eq("id", "abc");
 assert.equal(upd.error, null, JSON.stringify(upd.error));
 assert.ok(
-  calls.some((c) => c.method === "PATCH" && c.url.endsWith("/rest/v1/parity_items/abc")),
-  `expected PATCH /rest/v1/parity_items/abc got ${calls.map((c) => `${c.method} ${c.url}`).join(", ")}`,
+  calls.some((c) => c.method === "PATCH" && c.url.includes("/rest/v1/parity_items") && c.url.includes("id=eq.abc")),
+  `expected PATCH /rest/v1/parity_items?id=eq.abc got ${calls.map((c) => `${c.method} ${c.url}`).join(", ")}`,
 );
 
 const del = await client.from("parity_items").delete().eq("id", "abc");
 assert.equal(del.error, null, JSON.stringify(del.error));
 assert.ok(
-  calls.some((c) => c.method === "DELETE" && c.url.endsWith("/rest/v1/parity_items/abc")),
-  `expected DELETE /rest/v1/parity_items/abc`,
+  calls.some((c) => c.method === "DELETE" && c.url.includes("/rest/v1/parity_items") && c.url.includes("id=eq.abc")),
+  `expected DELETE /rest/v1/parity_items?id=eq.abc`,
+);
+
+const updNonId = await client.from("parity_items").update({ done: true }).eq("code", "v1");
+assert.equal(updNonId.error, null, JSON.stringify(updNonId.error));
+assert.ok(
+  calls.some((c) => c.method === "PATCH" && c.url.includes("/rest/v1/parity_items") && c.url.includes("code=eq.v1")),
+  `expected PATCH /rest/v1/parity_items?code=eq.v1 (non-id filter)`,
+);
+
+const delNonId = await client.from("parity_items").delete().eq("code", "v1");
+assert.equal(delNonId.error, null, JSON.stringify(delNonId.error));
+assert.ok(
+  calls.some((c) => c.method === "DELETE" && c.url.includes("/rest/v1/parity_items") && c.url.includes("code=eq.v1")),
+  `expected DELETE /rest/v1/parity_items?code=eq.v1 (non-id filter)`,
 );
 
 const updNoId = await client.from("parity_items").update({ done: true });
-assert.ok(updNoId.error, "update without id filter should error");
-assert.match(String(updNoId.error.message), /id filter/);
+assert.ok(updNoId.error, "update without filter should error");
+assert.match(String(updNoId.error.message), /filter/);
 
 const up = await client.auth.signUp({ email: "a@b.c", password: "secret" });
 assert.equal(up.error, null);

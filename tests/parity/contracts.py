@@ -301,6 +301,55 @@ def p_rest_01() -> Result:
     return Result("P-REST-01", "pass", "POST+GET OK", {"get": body_g})
 
 
+def p_rest_02() -> Result:
+    """Update/delete by a non-id filter column (PostgREST query form)."""
+    table = os.environ.get("PARITY_REST_TABLE", "parity_items")
+    email = os.environ.get("PARITY_EMAIL", "parity-rest02@example.com")
+    password = os.environ.get("PARITY_PASSWORD", "parity-secret-change-me")
+    _http("POST", "/v1/auth/signup", body={"email": email, "password": password})
+    status_l, login = _http("POST", "/v1/auth/login", body={"email": email, "password": password})
+    token = None
+    if isinstance(login, dict):
+        token = login.get("access_token") or login.get("token")
+    if status_l != 200 or not token:
+        return Result("P-REST-02", "fail", "need auth for RLS-backed rest", {"login": login})
+    hdrs = {"Authorization": f"Bearer {token}", "Prefer": "return=representation"}
+    base = f"/rest/v1/{table}"
+    if not (isinstance(_http("GET", f"{base}?limit=1", headers=hdrs)[0], int)):
+        return Result("P-REST-02", "fail", "API unreachable")
+    # seed two rows addressed by a non-id column
+    code = "rest02-non-id"
+    for i in range(2):
+        st, body = _http("POST", base, body={"name": f"rest02-{i}", "code": f"{code}-{i}"}, headers=hdrs)
+        if st not in (200, 201):
+            return Result("P-REST-02", "fail", f"seed POST status={st}", {"body": body})
+    # PATCH one row by code=eq.<non-id>
+    st_u, body_u = _http(
+        "PATCH",
+        f"{base}?code=eq.{code}-0",
+        body={"name": "rest02-updated"},
+        headers=hdrs,
+    )
+    if st_u != 200:
+        return Result("P-REST-02", "fail", f"PATCH by non-id status={st_u}", {"body": body_u})
+    patched = body_u if isinstance(body_u, list) else (body_u.get("data") if isinstance(body_u, dict) else [])
+    if not (isinstance(patched, list) and len(patched) == 1 and patched[0].get("name") == "rest02-updated"):
+        return Result("P-REST-02", "fail", "PATCH by non-id did not update the addressed row", {"body": body_u})
+    # DELETE one row by code=eq.<non-id>
+    st_d, body_d = _http("DELETE", f"{base}?code=eq.{code}-1", headers=hdrs)
+    if st_d != 200:
+        return Result("P-REST-02", "fail", f"DELETE by non-id status={st_d}", {"body": body_d})
+    st_g, rows = _http("GET", f"{base}?code=eq.{code}-1", headers=hdrs)
+    if st_g != 200 or (isinstance(rows, list) and len(rows) != 0):
+        return Result("P-REST-02", "fail", "DELETE by non-id left the row", {"get": rows})
+    return Result(
+        "P-REST-02",
+        "pass",
+        "PATCH+DELETE by non-id filter OK",
+        {"patched": patched, "deleted": body_d, "after": rows},
+    )
+
+
 def p_sql_01() -> Result:
     """Ensure table + DML — via REST health of fixture or SQL endpoint if present."""
     # Prefer dedicated SQL health when exposed; else infer from rest ensure.
@@ -581,6 +630,7 @@ def p_rt_02() -> Result:
 CONTRACTS = [
     p_sql_01,
     p_rest_01,
+    p_rest_02,
     p_auth_01,
     p_auth_02,
     p_auth_03,
