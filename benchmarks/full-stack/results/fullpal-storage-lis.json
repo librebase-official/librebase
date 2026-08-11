@@ -1,0 +1,44 @@
+{
+  "benchmark": "object storage — bucket/upload/list/get/signed-GET latency",
+  "stack": "librebase-lis-storage",
+  "date": "2026-08-11",
+  "bucket": "bench-1786492000235",
+  "object_bytes": 832,
+  "runs": 30,
+  "create_bucket_ms": {
+    "n": 5,
+    "min": 1.77,
+    "p50": 1.96,
+    "p95": 4.22,
+    "max": 4.22
+  },
+  "upload_ms": {
+    "n": 30,
+    "min": 1.44,
+    "p50": 1.95,
+    "p95": 3.55,
+    "max": 3.56
+  },
+  "list_ms": {
+    "n": 30,
+    "min": 1.78,
+    "p50": 3.2,
+    "p95": 5.03,
+    "max": 7.73
+  },
+  "get_ms": {
+    "n": 30,
+    "min": 1.32,
+    "p50": 1.66,
+    "p95": 3.18,
+    "max": 4.68
+  },
+  "signed_get_ms": {
+    "n": 30,
+    "min": 1.1,
+    "p50": 1.47,
+    "p95": 3.08,
+    "max": 3.09
+  },
+  "honesty": "Dual-stack since 2026-08-11 after fixing Supabase storage bootstrap (role grants, RLS policies, PGRST_DB_SCHEMAS). Same script, same bucket shape."
+}

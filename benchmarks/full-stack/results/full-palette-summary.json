@@ -1,0 +1,104 @@
+{
+  "benchmark": "Librebase vs Supabase full \u2014 full feature palette (13+ container stack)",
+  "date": "2026-08-12",
+  "stacks": {
+    "librebase": {
+      "containers": 1,
+      "idle_rss_mb": 5,
+      "cold_start_ms": 319,
+      "runtime": "lis in-process (memory/lidb)"
+    },
+    "supabase_full": {
+      "containers": 15,
+      "idle_rss_gb": 1.7,
+      "cold_start_rest_ms": 1289,
+      "runtime": "13+ podman containers",
+      "honesty": "cold start = single supabase-rest container restart; full stack cold start is minutes"
+    }
+  },
+  "features": {
+    "REST insert": {
+      "librebase_ms": 4.63,
+      "supabase_ms": 6.52,
+      "ratio_lb_over_sb": 0.71
+    },
+    "REST select": {
+      "librebase_ms": 3.59,
+      "supabase_ms": 5.1,
+      "ratio_lb_over_sb": 0.704
+    },
+    "REST filter": {
+      "librebase_ms": 4.14,
+      "supabase_ms": 5.95,
+      "ratio_lb_over_sb": 0.696
+    },
+    "REST update": {
+      "librebase_ms": 4.37,
+      "supabase_ms": 6.24,
+      "ratio_lb_over_sb": 0.7
+    },
+    "REST delete": {
+      "librebase_ms": 4.07,
+      "supabase_ms": 4.99,
+      "ratio_lb_over_sb": 0.816
+    },
+    "Auth signup": {
+      "librebase_ms": 56.02,
+      "supabase_ms": 206.76,
+      "ratio_lb_over_sb": 0.271
+    },
+    "Auth login": {
+      "librebase_ms": 52.03,
+      "supabase_ms": 196.06,
+      "ratio_lb_over_sb": 0.265
+    },
+    "Storage upload": {
+      "librebase_ms": 1.95,
+      "supabase_ms": 19.38,
+      "ratio_lb_over_sb": 0.101
+    },
+    "Storage list": {
+      "librebase_ms": 3.2,
+      "supabase_ms": 6.66,
+      "ratio_lb_over_sb": 0.48
+    },
+    "Storage get": {
+      "librebase_ms": 1.66,
+      "supabase_ms": 10.36,
+      "ratio_lb_over_sb": 0.16
+    },
+    "Storage signed URL": {
+      "librebase_ms": 1.47,
+      "supabase_ms": 8.13,
+      "ratio_lb_over_sb": 0.181
+    },
+    "Vector search": {
+      "librebase_ms": 7.77,
+      "supabase_ms": null,
+      "ratio_lb_over_sb": null,
+      "honesty": "lis in-process vector engine (200x64d exact); Supabase pgvector baseline in vector.mjs"
+    },
+    "Edge invoke": {
+      "librebase_ms": 64.96,
+      "supabase_ms": 63.46,
+      "ratio_lb_over_sb": 1.024,
+      "honesty": "lis = lean WASM interpreter (not Deno); Supabase = Deno edge runtime"
+    },
+    "Realtime connect": {
+      "librebase_ms": 2.68,
+      "supabase_ms": null,
+      "ratio_lb_over_sb": null
+    },
+    "Realtime join": {
+      "librebase_ms": 0.86,
+      "supabase_ms": null,
+      "ratio_lb_over_sb": null
+    },
+    "Realtime event delivery": {
+      "librebase_ms": 48.45,
+      "supabase_ms": null,
+      "ratio_lb_over_sb": null,
+      "honesty": "Supabase realtime cluster unhealthy (db_connected:false) \u2014 delivery not measurable; lis live 20/20"
+    }
+  }
+}

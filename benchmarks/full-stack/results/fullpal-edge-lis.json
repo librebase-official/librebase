@@ -1,0 +1,15 @@
+{
+  "benchmark": "lis edge function invoke — hello (li-edge runtime)",
+  "stack": "librebase-lis-edge",
+  "date": "2026-08-11",
+  "fn": "hello",
+  "runs": 10,
+  "invoke_ms": {
+    "n": 10,
+    "min": 45.01,
+    "p50": 64.96,
+    "p95": 130.03,
+    "max": 130.03
+  },
+  "honesty": "li-edge invoke.py subprocess runtime — not Deno/WASM, not Supabase Edge parity. Warm sequential loop."
+}
