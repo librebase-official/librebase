@@ -27,15 +27,17 @@ const stats = (a) => {
 };
 
 async function benchSupabase() {
-  const WS = process.env.SB_WS ?? "ws://127.0.0.1:4000/websocket";
+  const WS = process.env.SB_WS ?? "ws://127.0.0.1:4000/socket/websocket";
+  const SB_HOST = process.env.SB_HOST ?? "realtime-dev.supabase-realtime";
   const API = (process.env.LIBREBASE_API ?? "http://127.0.0.1:3000").replace(/\/$/, "");
   const SR = process.env.LIBREBASE_SERVICE_ROLE ?? "";
   const ANON = process.env.LIBREBASE_ANON ?? "";
   if (!SR) throw new Error("LIBREBASE_SERVICE_ROLE required");
   const hdr = { apikey: ANON || SR, Authorization: `Bearer ${SR}`, "Content-Type": "application/json" };
 
-  // one subscription for event delivery
-  const ws = new WebSocket(WS);
+  // Realtime v2 routes by tenant subdomain via the Host header; auth via query apikey.
+  const wsUrl = `${WS}?apikey=${encodeURIComponent(ANON || SR)}`;
+  const ws = new WebSocket(wsUrl, { headers: { Host: SB_HOST } });
   await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
   const connectLat = performance.now() - 0; // baseline below
 

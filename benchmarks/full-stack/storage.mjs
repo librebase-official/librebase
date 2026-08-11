@@ -1,21 +1,22 @@
 #!/usr/bin/env node
 /**
- * Object storage benchmark — Librebase (lis routes/storage).
+ * Object storage benchmark — Librebase (lis) vs Supabase Storage (podman).
  *
- * Measures bucket create, object PUT (upload), object list, object GET, and
- * signed GET round-trip latency. lis side only: the Supabase storage container
- * is blocked in our podman bootstrap (403 storage role grants), so a dual-stack
- * head-to-head is not possible until that bootstrap is fixed (see CATCHUP G4).
+ * Measures bucket create, object PUT (upload), object list (POST), object GET,
+ * and signed GET round-trip latency on both stacks.
  *
- * STACK=lis   LIS_API (lis base, e.g. http://127.0.0.1:54321)
- *             LIS_AUTH=1 + LIS_EMAIL/LIS_PASSWORD for a Bearer JWT; if LIS_AUTH=0
- *             (default) it signs up/logs in a throwaway user.
+ * Supabase side unblocked 2026-08-11: storage role grants + canonical RLS
+ * policies + PGRST_DB_SCHEMAS=storage (see CATCHUP G4).
+ *
+ * STACK=lis|sb
+ *   lis: LIS_API=http://127.0.0.1:54321   (signs up a throwaway user)
+ *   sb:  SB_API=http://127.0.0.1:8000  SB_KEY=<anon-or-service JWT>
  */
 import { performance } from "node:perf_hooks";
 
-const API = (process.env.LIS_API ?? "http://127.0.0.1:54321").replace(/\/$/, "");
+const STACK = process.env.STACK ?? "lis";
 const RUNS = Number(process.env.RUNS ?? 60);
-const BUCKET = process.env.LIS_BUCKET ?? "bench-" + Date.now();
+const BUCKET = process.env.BUCKET ?? "bench-" + Date.now();
 
 const stats = (a) => {
   if (!a.length) return { n: 0, min: 0, p50: 0, p95: 0, max: 0 };
@@ -25,32 +26,41 @@ const stats = (a) => {
 };
 
 const j = (b) => JSON.stringify(b);
-const POST = (path, body, hdrs = {}) =>
-  fetch(`${API}${path}`, { method: "POST", headers: { "Content-Type": "application/json", ...hdrs }, body: j(body) });
-const PUT = (path, body, hdrs = {}) =>
-  fetch(`${API}${path}`, { method: "PUT", headers: { "Content-Type": "text/plain", ...hdrs }, body });
-const GET = (path, hdrs = {}) => fetch(`${API}${path}`, { headers: hdrs });
 
-async function getToken() {
+async function getLisToken() {
+  const API = (process.env.LIS_API ?? "http://127.0.0.1:54321").replace(/\/$/, "");
   const email = process.env.LIS_EMAIL ?? `storage-bench-${Date.now()}@example.com`;
   const password = process.env.LIS_PASSWORD ?? "storage-bench-secret";
-  await POST("/v1/auth/signup", { email, password }).catch(() => {});
-  const res = await POST("/v1/auth/login", { email, password });
+  const post = (p, b) => fetch(`${API}${p}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: j(b) });
+  await post("/v1/auth/signup", { email, password }).catch(() => {});
+  const res = await post("/v1/auth/login", { email, password });
   const body = await res.json();
   const token = body?.access_token || body?.token;
-  if (!token) throw new Error(`login failed: ${res.status} ${j(body)}`);
-  return { token, email, password };
+  if (!token) throw new Error(`lis login failed: ${res.status} ${j(body)}`);
+  return { token, API };
 }
 
 async function main() {
-  const { token } = await getToken();
-  const hdr = { Authorization: `Bearer ${token}`, apikey: token };
+  let API;
+  let hdr = { "Content-Type": "application/json" };
+  let stackLabel;
+  if (STACK === "lis") {
+    const { token, API: a } = await getLisToken();
+    API = a;
+    hdr = { ...hdr, Authorization: `Bearer ${token}`, apikey: token };
+    stackLabel = "librebase-lis-storage";
+  } else {
+    API = (process.env.SB_API ?? "http://127.0.0.1:8000").replace(/\/$/, "");
+    const key = process.env.SB_KEY;
+    if (!key) throw new Error("SB_KEY required for STACK=sb (service_role JWT)");
+    hdr = { ...hdr, Authorization: `Bearer ${key}`, apikey: key };
+    stackLabel = "supabase-storage";
+  }
 
-  // bucket create
   const createBucket = [];
   for (let i = 0; i < 5; i++) {
     const t = performance.now();
-    await POST("/storage/v1/bucket", { name: BUCKET, public: false }, hdr);
+    await fetch(`${API}/storage/v1/bucket`, { method: "POST", headers: hdr, body: j({ name: BUCKET, public: false }) });
     createBucket.push(performance.now() - t);
   }
 
@@ -63,24 +73,31 @@ async function main() {
   for (let i = 0; i < RUNS; i++) {
     const key = `bench/${i}.txt`;
     let t = performance.now();
-    await PUT(`/storage/v1/object/${BUCKET}/${key}`, payload, { ...hdr, "Content-Type": "text/plain" });
+    await fetch(`${API}/storage/v1/object/${BUCKET}/${key}`, { method: "POST", headers: { ...hdr, "Content-Type": "text/plain" }, body: payload });
     upload.push(performance.now() - t);
 
+    // list is POST with a JSON body on both stacks
     t = performance.now();
-    await GET(`/storage/v1/object/list/${BUCKET}?prefix=bench`, hdr);
+    await fetch(`${API}/storage/v1/object/list/${BUCKET}`, {
+      method: "POST",
+      headers: hdr,
+      body: j({ prefix: "bench", limit: 10, offset: 0, sortBy: { column: "name", order: "asc" } }),
+    });
     list.push(performance.now() - t);
 
     t = performance.now();
-    const got = await GET(`/storage/v1/object/${BUCKET}/${key}`, hdr);
+    const got = await fetch(`${API}/storage/v1/object/${BUCKET}/${key}`, { headers: hdr });
     await got.arrayBuffer();
     get.push(performance.now() - t);
 
     t = performance.now();
-    const signRes = await POST(`/storage/v1/object/sign/${BUCKET}/${key}`, { expiresIn: 300 }, hdr);
+    const signRes = await fetch(`${API}/storage/v1/object/sign/${BUCKET}/${key}`, { method: "POST", headers: hdr, body: j({ expiresIn: 300 }) });
     const signBody = await signRes.json();
     if (signBody?.signedURL) {
       const useT = performance.now();
-      const ok = await fetch(`${API}${signBody.signedURL}`);
+      // lis returns /storage/v1/... ; supabase returns /object/sign/... (kong-relative)
+      const url = signBody.signedURL.startsWith("/storage/v1") ? `${API}${signBody.signedURL}` : `${API}/storage/v1/${signBody.signedURL.replace(/^\/+/, "")}`;
+      const ok = await fetch(url);
       await ok.arrayBuffer();
       signed.push(performance.now() - useT);
     }
@@ -89,8 +106,8 @@ async function main() {
   console.log(
     JSON.stringify(
       {
-        benchmark: "lis object storage — bucket/upload/list/get/signed-GET latency",
-        stack: "librebase-lis-storage",
+        benchmark: "object storage — bucket/upload/list/get/signed-GET latency",
+        stack: stackLabel,
         date: new Date().toISOString().slice(0, 10),
         bucket: BUCKET,
         object_bytes: payload.length,
@@ -101,7 +118,7 @@ async function main() {
         get_ms: stats(get),
         signed_get_ms: stats(signed),
         honesty:
-          "lis side only — Supabase storage blocked in podman bootstrap (403 role grants). Not a head-to-head.",
+          "Dual-stack since 2026-08-11 after fixing Supabase storage bootstrap (role grants, RLS policies, PGRST_DB_SCHEMAS). Same script, same bucket shape.",
       },
       null,
       2,

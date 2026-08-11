@@ -81,14 +81,19 @@ with the remainder being Postgres-native RPC/spread/explain features.
 
 | Metric | Supabase Storage | Librebase lis storage |
 |--------|------------------|------------------------|
-| Bucket create / object upload / list | **blocked** (403 — storage RLS/set_config bootstrap) | **works** (200, S3-shaped PUT/GET/list) |
+| Bucket create / object upload / list | **works** (after G4 bootstrap fix) | **works** (200, S3-shaped PUT/GET/list) |
+| Upload p50 (60 runs) | ~24 ms | **~2.8 ms** |
+| Get p50 (60 runs) | ~13 ms | **~2.2 ms** |
 
 - Librebase storage (lis `routes/storage`) works end-to-end (bucket create, object
-  PUT/GET/list, HMAC/sign, signed GET). Supabase storage container is healthy but the
-  `set_config('role'...)` DB call returns 403 in this bootstrap — documented gap.
-- **lis-side latency** ([`results/storage-e2e-lis.json`](results/storage-e2e-lis.json)):
-  upload p50 ≈ 4.6 ms, get p50 ≈ 3.6 ms, signed GET p50 ≈ 3.4 ms (60 runs). Not a
-  head-to-head — Supabase side blocked. Run: `LIS_API=http://127.0.0.1:54325 RUNS=60 node storage.mjs`
+  PUT/GET/list, HMAC/sign, signed GET).
+- **Supabase storage was 403** in this bootstrap; fixed 2026-08-11 (see CATCHUP G4):
+  role grants to `supabase_storage_admin`, canonical storage RLS policies,
+  `PGRST_DB_SCHEMAS` += `storage`, and object-list is POST not GET.
+- **Dual-stack latency** ([`results/storage-e2e-lis.json`](results/storage-e2e-lis.json),
+  [`results/storage-e2e-supabase.json`](results/storage-e2e-supabase.json)): same
+  script, same bucket shape. Run: `STACK=lis LIS_API=... node storage.mjs` /
+  `STACK=sb SB_API=... SB_KEY=... node storage.mjs`.
 
 ## 3b. Edge functions (li-edge)
 
@@ -130,10 +135,12 @@ memory, cold on disk):
 - Transport: Supabase is measured through the **full stack (Kong + PostgREST)**;
   lidb ingest/index is **direct engine exec**. A pure same-path comparison would
   put lidb behind the lis HTTP REST (in-memory store, no index yet).
-- Supabase Realtime user-table event-delivery and Storage bucket ops are **blocked
-  by self-host bootstrap config** (CDC worker discovery, storage role grants) — not
-  measured, documented as gaps. Librebase realtime event delivery **is** measured
+- Supabase Realtime user-table event-delivery is **blocked by self-host bootstrap**
+  (realtime cluster reports `replication_connected:false`) — not measured,
+  documented as a gap. Librebase realtime event delivery **is** measured
   ([`results/realtime-e2e-lis.json`](results/realtime-e2e-lis.json)).
+- Supabase Storage **is** now measurable after the G4 bootstrap fix (see §3);
+  the storage API still reads through PostgREST with `Accept-Profile: storage`.
 - lidb has no vector engine (pgvector-only baseline).
 
 ## How to run

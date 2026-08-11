@@ -12,8 +12,16 @@ Legend: ⬜ not started · 🚧 in progress · ✅ done · ❌ out of scope for 
 |---|-----|-----------------|-------|----------|--------|
 | G1 | REST update/delete by non-id filter | `P-REST-02` (new) — pass vs live lis | SDK live check: `update/delete().eq(code, ...)` verified on :54325 | `tests/parity/last-report.json` + matrix row 17 | ✅ |
 | G2 | WAL durability for UPDATE/DELETE | `test_wal_crash_replay_restores_update/_delete` | durability microbench (crash-kill) | CI log + matrix row 4 | ✅ |
-| G3 | Realtime event delivery (REST INSERT → WS) | `P-RT-03` (new) — pass vs live stack | `realtime.mjs` event-delivery on lis | `results/realtime-e2e-lis.json` (60/60, p50 ≈ 50 ms) | ✅ |
-| G4 | Storage depth + fair dual-stack bench | `P-STO-03` (new) — pass live: signed GET round-trip + anon deny | `storage.mjs` (lis side) | `results/storage-e2e-lis.json` (upload p50 ≈ 4.6 ms) + lis storage unit tests | ✅ (contracts + lis bench); Supabase-side dual-stack ⬜ (403 bootstrap) |
+| G3 | Realtime event delivery (REST INSERT → WS) | `P-RT-03` (new) — pass vs live stack | `realtime.mjs` event-delivery on lis | `results/realtime-e2e-lis.json` (60/60, p50 ≈ 50 ms) | ✅ (lis); Supabase side ⬜ (realtime cluster unhealthy — `replication_connected:false`) |
+| G4 | Storage depth + fair dual-stack bench | `P-STO-03` (new) — pass live: signed GET round-trip + anon deny | `storage.mjs` dual-stack (STACK=lis\|sb) | `results/storage-e2e-lis.json` + `results/storage-e2e-supabase.json` | ✅ |
+
+**G4 bootstrap fixed 2026-08-11** (Supabase storage was 403 in the podman stack):
+1. `GRANT authenticator, service_role, anon, authenticated TO supabase_storage_admin` (unblocked `set_config('role',…)`).
+2. Created the canonical storage RLS policies (`service_role all objects/buckets`, `public read`, `authenticated owner`) — the minimal bootstrap had RLS on with zero policies (deny-all).
+3. `PGRST_DB_SCHEMAS` += `storage` + `GRANT USAGE`/table grants + `Accept-Profile: storage` for PostgREST.
+4. Object-list is **POST** (`/object/list/{bucket}`), not GET.
+
+Dual-stack storage result (60 runs, same script): lis upload p50 ≈ 2.8 ms / get ≈ 2.2 ms; Supabase upload ≈ 24 ms / get ≈ 13 ms.
 | G5 | Edge beyond echo | `P-FN-01/02` — pass live: li-edge non-echo + fail-closed probe | `edge.mjs` (lis invoke latency) | `results/edge-e2e-lis.json` (p50 ≈ 140 ms subprocess) + lis functions unit tests | ✅ (li-edge non-echo + bench); Deno/WASM remains OOS |
 
 ## Closed / proven (do not reopen)
@@ -41,8 +49,8 @@ Legend: ⬜ not started · 🚧 in progress · ✅ done · ❌ out of scope for 
   measured numbers with the caveats: `sorted_tree` ≠ disk B-tree, Release
   `lidb_embed`, `embed_execjson` session IPC.
 - Never invent figures. Cite committed / CI-published PASS artifacts only.
-- Do **not** claim full Supabase replacement or Realtime/Storage parity until
-  G3/G4 land and are measured on both stacks.
+- Do **not** claim full Supabase replacement. Realtime dual-stack parity still
+  unmeasured (Supabase realtime cluster unhealthy in the podman stack).
 
 ## How to run
 
@@ -56,6 +64,7 @@ python scripts/parity_runner.py
 # full-stack benches
 cd benchmarks/full-stack
 node ingest-index.mjs   # vs Supabase full
-node realtime.mjs       # connect/join (G3 adds event delivery)
+node realtime.mjs       # lis event delivery (G3); Supabase side needs realtime cluster healthy
 node vector.mjs         # pgvector baseline (Librebase N/A today)
+node storage.mjs        # dual-stack: STACK=lis (LIS_API) or STACK=sb (SB_API + SB_KEY)
 ```
