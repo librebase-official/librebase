@@ -62,9 +62,10 @@ Lite, Supabase full, and Librebase]*
 **VO:** "The whole point is drop-in. We run the **same** `@supabase/supabase-js`
 test suite — `createClient`, `auth.signUp`, `auth.signInWithPassword`,
 `from("todos").insert().select().eq()`, storage — against all three backends,
-as-is. Supabase Lite passes 12 of 12. Supabase full passes 9 of 12. And
-Librebase passes 10 of 12 — the same calls your app already makes, just
-pointed at a different URL."
+as-is, with no client-side shims. Supabase Lite passes 12 of 12. Supabase full
+passes 9 of 12 (its three misses are storage bootstrap config, not code). And
+Librebase passes **12 of 12** — the same calls your app already makes, pointed
+at a different URL."
 
 **On screen:**
 
@@ -72,11 +73,12 @@ pointed at a different URL."
 |---|---|---|---|
 | Supabase Lite | 12/12 | 922 ms | 77 ms |
 | Supabase full (Kong) | 9/12 | 1119 ms | 246 ms |
-| **Librebase** | **10/12** | **138 ms** | **12 ms** |
+| **Librebase** | **12/12** | **152 ms** | **15 ms** |
 
-**VO (honest):** "Librebase's two misses are update/delete by a non-`id` filter
-— a fixable gap in the li stack. We don't modify Supabase software; this is
-each backend as-shipped."
+**VO (honest):** "Those gaps — update/delete by a non-`id` filter — are now
+implemented in Librebase's server, so the suite passes 12 of 12 with no client
+shims. We don't modify Supabase software; Librebase's gaps are closed in
+Librebase's own code."
 
 ---
 
@@ -104,8 +106,8 @@ production, full Supabase is the upgrade path — Librebase is the fastest way t
 get there. Run it on every prototype. Give it to every AI builder."
 
 **VO (honest, small):** "Supabase Realtime event-delivery and Storage bucket ops
-are still behind full-Supabase bootstrap; update-by-filter needs one more SDK
-tweak. The footprint and provisioning claims above are measured, not marketed."
+are still behind full-Supabase bootstrap. The footprint and provisioning claims
+above are measured, not marketed."
 
 ---
 

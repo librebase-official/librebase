@@ -49,13 +49,11 @@ async function timed(name, fn) {
   }
 }
 
-// Helper: normalize the PK from insert/select responses (array or single object).
+// PostgREST contract: insert/select/update with return=representation returns an array.
 function firstId(data) {
   if (Array.isArray(data) && data.length) return data[0]?.id;
-  if (data && typeof data === "object") return data.id;
   return undefined;
 }
-
 export async function run() {
   // ---- Auth ----
   try {
@@ -78,13 +76,13 @@ export async function run() {
   try {
     const { data, error } = await timed("from.insert", () => sb.from("items").insert({ code: "c1", value: 1 }).select());
     ins = data;
-    check("from.insert", !error, error?.message ?? "shape=" + (Array.isArray(data) ? "array" : typeof data));
+    check("from.insert", !error && Array.isArray(data), error?.message ?? "shape=" + (Array.isArray(data) ? "array" : typeof data));
   } catch (e) { check("from.insert", false, e.message); }
 
   // ---- Data API: select + eq ----
   try {
     const { data, error } = await timed("from.select.eq", () => sb.from("items").select("*").eq("code", "c1"));
-    const ok = !error && (Array.isArray(data) ? data.length >= 1 : data != null);
+    const ok = !error && Array.isArray(data) && data.length >= 1;
     check("from.select.eq", ok, error?.message ?? `rows=${Array.isArray(data) ? data.length : typeof data}`);
   } catch (e) { check("from.select.eq", false, e.message); }
 
