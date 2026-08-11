@@ -125,6 +125,9 @@ above are measured, not marketed."
 
 - **Storyboard:** `docs/demo/demo-storyboard.html` — clickable beat board; links
   open the result JSONs each beat quotes.
+- **Socials cut:** `docs/demo/socials/` — rendered 26 s, 9:16 HyperFrames
+  composition (`librebase-socials.mp4`): hook → footprint → provisioning →
+  compat → outro with wordmark lockup. Render with `npx hyperframes render`.
 - Record the three-stack comparison live: `podman images`, `podman stats --no-stream`,
   timed cold starts.
 - Use the supabase-js-shaped client demo (`createClient` + auth + CRUD) against
