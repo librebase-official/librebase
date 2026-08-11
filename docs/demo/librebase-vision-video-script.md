@@ -115,9 +115,10 @@ compatible API your supabase-js app already speaks. And when you graduate to
 production, full Supabase is the upgrade path — Librebase is the fastest way to
 get there. Run it on every prototype. Give it to every AI builder."
 
-**VO (honest, small):** "Supabase Realtime event-delivery and Storage bucket ops
-are still behind full-Supabase bootstrap. The footprint and provisioning claims
-above are measured, not marketed."
+**VO (honest, small):** "Realtime REST→WS event delivery is measured (p50 ≈ 50 ms,
+60/60 delivered). Supabase-side Realtime delivery and Storage bucket ops are blocked
+by self-host bootstrap config on our bench box. Footprint, provisioning, and speed
+claims are measured, not marketed."
 
 ---
 
@@ -136,5 +137,6 @@ above are measured, not marketed."
 - **Compat beat:** run the official suite with `run-suite.sh` (see
   `benchmarks/full-stack/postgrest-js-suite/README.md`): Librebase at
   `REST_URL=http://127.0.0.1:54325/rest/v1`, Supabase full with the Kong anon key.
-- Honesty rule: show measured numbers; don't claim Realtime/Storage parity yet.
+- Honesty rule: show measured numbers only. Realtime REST→WS delivery is measured
+  (lis); Supabase-side Realtime/Storage gaps are bootstrap-blocked on the bench box.
 - Output: `docs/demo/librebase-vision-benchmark.mp4` (ffmpeg, 1080p).
