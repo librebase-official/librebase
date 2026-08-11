@@ -8,20 +8,21 @@
 
 | # | Capability | Supabase reference | Linative home | Status | Notes |
 |---|------------|-------------------|---------------|--------|-------|
-| 1 | Postgres-shaped SQL | Postgres | **lidb** | ✅ | Wave A INSERT/SELECT (P-SQL-01). Minimal `CREATE TABLE` @ `07e816b`. Single-col `CREATE INDEX` (sorted_tree / legacy hash_map — not disk B-tree; see oltp `index_impl`) |
+| 1 | Postgres-shaped SQL | Postgres | **lidb** | ✅ | Wave A INSERT/SELECT (P-SQL-01). Minimal `CREATE TABLE` @ `07e816b`. Single-col `CREATE INDEX` (sorted_tree / legacy hash_map). **v2 OOS-4:** on-disk B-tree index (`routes/index/btree.py`) — data-structure level, not Postgres page B-tree/MVCC |
 | 2 | REST `/rest/v1` | PostgREST | **lis** `routes/rest` | ✅ | GET/POST/PATCH/DELETE `parity_items` (lidb UPDATE/DELETE @ `9c928eb` + lis wire). Memory PATCH smoke green |
 | 3 | RLS + JWT | Postgres RLS + GoTrue | **lidb** + **lis** auth | ✅ | JWT + Python RLS default. **`LI_RLS_ENGINE=1`** → lidb embed `session` + `set_claims` (engine eval, skip Python post-filter). Allowlisted `parity_items` / owner_id |
 | 4 | WAL / durability | Postgres WAL | **lidb** | ✅ | WalReader + empty-`catalog.heap` crash-replay restores INSERT, UPDATE, and DELETE (`test_wal_crash_replay_restores_{insert,update,delete}`). UPDATE/DELETE carry real row payloads; snapshot remains authority when present |
 | 5 | Realtime fanout | Realtime | **lis** `routes/realtime` | ✅ | Phoenix join ✅. Live REST INSERT → WS `postgres_changes` delivered (`P-RT-03` + `realtime-e2e-lis.json`: 60/60, p50 ≈ 50 ms). lidb native changefeed (WAL poll) path measured (P-RT-02) |
+| 5b | Vector search | pgvector | **lis** `routes/vector` | ✅ | **v2 OOS-3:** `/vector/v1` collections + insert + search (cosine/euclidean/ip, exact + LSH-approx). In-process, not pgvector/HNSW native |
 | 6 | Object Storage | Storage | **lis** `routes/storage` | ✅ | Buckets + HMAC + **SigV4 query GET** (host-bound) + TUS stub. `P-STO-03` parity: signed GET round-trip + anonymous deny. **CDN resize `oos_lean`** — `/render/image` passthrough only. Dual-stack bench vs Supabase Storage (upload p50 ≈ 2.8 ms vs ~24 ms) |
-| 7 | Edge Functions | Edge Functions | **lis** + **li-edge** | ✅ | Wave 7: `scripts/invoke.py` (`runtime: li-edge`). Echo only with `LI_FUNCTIONS_ECHO=1`; `P-FN-01/02` non-echo + fail-closed probe. Not Deno/WASM |
-| 8 | Connection pooler | Supavisor | **lis** in-process | ❌ | **Wave 8 settled:** OOS for v1 — in-process embed; no `li-pool` |
+| 7 | Edge Functions | Edge Functions | **lis** + **li-edge** | ✅ | Wave 7: `scripts/invoke.py` (`runtime: li-edge`). Echo only with `LI_FUNCTIONS_ECHO=1`; `P-FN-01/02` non-echo + fail-closed probe. **v2 OOS-7:** lean WASM edge runtime (`/functions/v1/_wasm`) — subset interpreter, not Deno/npm |
+| 8 | Connection pooler | Supavisor | **lis** in-process | ✅ | **v2 OOS-2:** bounded thread-safe `ConnectionPool` + `/pooler/v1` (status/run). lidb embed sessions are the SQL backend; no separate `li-pool` |
 | 9 | Migrations | CLI / Studio | **lidb** + `lis db migrate` | ✅ | Allowlisted CREATE TABLE + INDEX (incl. UNIQUE + ≤3-col) + POLICY metadata @ `e9abac6`; not full Postgres DDL |
 | 10 | Backup / restore | Backup | **lis** `db backup` + export | ✅ | Multi-table SQL/COPY allowlist. Not PITR |
-| 11 | PITR / branching | Branching | **lidb** | ❌ | **Wave 9 settled:** OOS for v1 / paid Cloud later |
-| 12 | Auth (email/OAuth) | GoTrue | **lis** + **li-oauth** | ✅ | Password + refresh + OAuth + MFA + admin + magiclink + **lean SMTP** (`LI_SMTP_MOCK` outbox / `LI_SMTP_*` smtplib). Phone OOS |
+| 11 | PITR / branching | Branching | **lis** `scripts/lidb_branch.py` | ✅ | **v2 OOS-6:** named catalog snapshots + restore under `LI_DATA_DIR/branches/` (catalog.heap + WAL). Snapshot-based, not Postgres PITR-to-txn |
+| 12 | Auth (email/OAuth) | GoTrue | **lis** + **li-oauth** | ✅ | Password + refresh + OAuth + MFA + admin + magiclink + **lean SMTP** (`LI_SMTP_MOCK` outbox / `LI_SMTP_*` smtplib). **v2 OOS-1:** phone auth (SMS OTP `/v1/auth/sms/{otp,verify}` + phone signup) |
 | 13 | Logs | Logflare | **li-log** + Studio | ✅ | Studio `/logs` JSONL tail |
-| 14 | Analytics | Analytics | future | ❌ | Out of scope for v1 |
+| 14 | Analytics | Analytics | **lis** `routes/analytics` | ✅ | **v2 OOS-5:** aggregate request analytics (`/analytics/v1` summary/status/ingest) — status/route/latency aggregates over the audit trail, PII-safe |
 | 15 | API gateway | Kong | **li-httpd** + **lis** | ✅ | Compose stub + smoke |
 | 16 | Studio console | Dashboard | **Librebase Studio** | ✅ | Projects/instances + login/admin/logs + **VMs/hosts** (multi-instance per VM, memMb budget) |
 | 17 | Client SDK | `@supabase/supabase-js` | **`@librebase/librebase`** | ✅ | createClient + smoke; PATCH/DELETE by any `eq` filter column (non-id) via query-string form |
@@ -37,7 +38,7 @@
 
 ## Honest bottom line
 
-Wave A green; roadmap waves 0–10 marked done (W4 partial: full Li HTTP REST still blocked on lic P0 httpd). Waves 8–9 + phone + Deno Edge + pooler/PITR/analytics honest ❌. Deepen remainders closed (`auth_smtp`, SigV4 query, `cdn_image=oos_lean`, MCP lean). Realtime **event delivery** (REST INSERT → WS) and Storage depth remain active catch-up (see [CATCHUP.md](../benchmarks/CATCHUP.md)).
+Wave A green; roadmap waves 0–10 marked done (W4 partial: full Li HTTP REST still blocked on lic P0 httpd). **v2 OOS (155 tests) now land the former ❌ items:** pooler (OOS-2), PITR/branching (OOS-6), phone auth (OOS-1), analytics (OOS-5), vector (OOS-3), disk B-tree (OOS-4), lean WASM edge (OOS-7). Deepen remainders closed (`auth_smtp`, SigV4 query, `cdn_image=oos_lean`, MCP lean). Remaining honest caveats: Realtime/Storage Supabase-side bootstrap; **not** Postgres page B-tree/MVCC; WASM is a subset interpreter, **not** Deno/npm; vector is in-process, not pgvector/HNSW native. See [CATCHUP.md](../benchmarks/CATCHUP.md) + [oos-v2/DESIGN.md](sdd/specs/oos-v2/DESIGN.md).
 
 **Marketing status: [MARKETING_UNLOCK.md](../benchmarks/oltp-compare/MARKETING_UNLOCK.md) is `UNLOCKED`** — copy may cite measured numbers with the caveats below, but must never invent figures or claim full Supabase replacement.
 

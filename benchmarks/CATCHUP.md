@@ -35,13 +35,34 @@ Dual-stack storage result (60 runs, same script): lis upload p50 ≈ 2.8 ms / ge
 | Footprint (images / idle RSS) | `footprint-provisioning.json` | ✅ (socials source) |
 | Non-id PATCH/DELETE via SDK | `P-REST-02` pass vs live lis (:54325); SDK `update/delete().eq(<non-id>, v)` → `?col=eq.v` | ✅ |
 
-## Out of scope for v1 (explicit)
+## v2 — OOS items delivered (2026-08-11, 155 tests)
 
-- Connection pooler (Supavisor-class) — Wave 8 settled OOS
-- PITR / branching — Wave 9 settled OOS
-- Phone auth · Analytics · Deno/WASM Edge runtime
-- Vector engine (pgvector baseline only today)
-- Disk B-tree index (current index is an in-memory ordered secondary)
+Former v1-OOS capabilities now implemented in `lis` with test suites (see
+[docs/sdd/specs/oos-v2/DESIGN.md](../docs/sdd/specs/oos-v2/DESIGN.md)):
+
+| OOS | Capability | Module | Tests |
+|-----|-----------|--------|-------|
+| OOS-1 | Phone auth (SMS OTP) | `routes/auth` | 15 |
+| OOS-2 | Connection pooler | `routes/pooler.py` | 16 |
+| OOS-3 | Vector engine | `routes/vector` | 40 |
+| OOS-4 | Disk B-tree index | `routes/index` | 22 |
+| OOS-5 | Analytics | `routes/analytics` | 18 |
+| OOS-6 | PITR / branching | `scripts/lidb_branch.py` | 13 |
+| OOS-7 | WASM edge runtime | `routes/edge` | 31 |
+
+Honesty holds: these are lean in-process implementations, not full parity
+(pooler ≠ Supavisor, branch ≠ PITR-to-txn, vector ≠ pgvector/HNSW, B-tree ≠
+Postgres page B-tree/MVCC, WASM ≠ Deno).
+
+## Out of scope for v1 (superseded by v2)
+
+- Connection pooler (Supavisor-class) — delivered as OOS-2 (in-process)
+- PITR / branching — delivered as OOS-6 (snapshot branches)
+- Phone auth · Analytics · Deno/WASM Edge — delivered as OOS-1/OOS-5/OOS-7 (lean)
+- Vector engine — delivered as OOS-3 (in-process exact + LSH)
+- Disk B-tree index — delivered as OOS-4 (on-disk B-tree)
+- Remaining honest gaps: full Supabase Realtime/Storage bootstrap; native
+  pgvector/HNSW; Postgres page B-tree + MVCC; Deno/npm runtime
 
 ## Marketing honesty rules
 
