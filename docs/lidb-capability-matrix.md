@@ -37,4 +37,17 @@
 
 ## Honest bottom line
 
-Wave A green; roadmap waves 0–10 marked done (W4 partial: full Li HTTP REST still blocked on lic P0 httpd). Waves 8–9 + phone + Deno Edge + pooler/PITR/analytics honest ❌. Deepen remainders closed (`auth_smtp`, SigV4 query, `cdn_image=oos_lean`, MCP lean). Do **not** claim Supabase replacement or “as fast as Supabase” without CI OLTP ratios. Footprint / speed copy stays **aim/target** (lean **64 MB**, Supabase-class latency) until [MARKETING_UNLOCK.md](../benchmarks/oltp-compare/MARKETING_UNLOCK.md) required rows are green — checklist is mostly **not** unlocked yet.
+Wave A green; roadmap waves 0–10 marked done (W4 partial: full Li HTTP REST still blocked on lic P0 httpd). Waves 8–9 + phone + Deno Edge + pooler/PITR/analytics honest ❌. Deepen remainders closed (`auth_smtp`, SigV4 query, `cdn_image=oos_lean`, MCP lean). Realtime **event delivery** (REST INSERT → WS) and Storage depth remain active catch-up (see [CATCHUP.md](../benchmarks/CATCHUP.md)).
+
+**Marketing status: [MARKETING_UNLOCK.md](../benchmarks/oltp-compare/MARKETING_UNLOCK.md) is `UNLOCKED`** — copy may cite measured numbers with the caveats below, but must never invent figures or claim full Supabase replacement.
+
+Measured evidence (all published PASS artifacts linked in the unlock checklist):
+
+| Claim | Measured | Caveat |
+|---|---|---|
+| Lean RSS | **3.797 MB** VmRSS (Linux CI, GitLab job 99197) | Product framing stays “≤64 MB”; Windows advisory non-authoritative |
+| Core point lookup | **~0.20×** Postgres 16 (`point_lookup_with_index`) | `sorted_tree` = in-memory ordered secondary, **not** disk B-tree |
+| Range prefix scan | **0.36×** median (`range_scan_name_prefix`) | Release build only; Debug inflated ~1.94× |
+| HTTP REST vs PostgREST | soft **0.60×** median max | Soft gate only; Python MVP surface |
+
+Always keep caveats (`sorted_tree` ≠ B-tree, Release `lidb_embed`, `embed_execjson` session IPC) in any speed/RSS claim. Scheduled nightly CI stays the regression guard.

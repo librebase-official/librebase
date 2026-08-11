@@ -62,9 +62,9 @@ export function LandingPage() {
 
       <section className="lb-proof" aria-label="Proof">
         <p>
-          The engine is written in Li and compiles to machine code. We aim for about 64&nbsp;MB of
-          RAM and Supabase-class speed on common queries&mdash;targets until published benches are
-          green. The console shows real health.
+          The engine is written in Li and compiles to machine code. A lean instance measures
+          about 3.8&nbsp;MB of RAM resident, and indexed lookups and range scans benchmark at or
+          better than Postgres on our published OLTP comparison. The console shows real health.
         </p>
       </section>
 
@@ -141,9 +141,13 @@ export function LandingPage() {
         <details>
           <summary>How much memory are you targeting?</summary>
           <p>
-            We aim for about 64&nbsp;MB RAM for a lean dedicated instance, with Supabase-class /
-            Postgres-class speed on the same hardware. Aim/target only until the published OLTP
-            unlock checklist is green&mdash;not a measured claim yet.
+            A lean instance measures about 3.8&nbsp;MB of RAM resident on Linux
+            (published CI), and we hold the product target at 64&nbsp;MB for a
+            comfortable dedicated host. Supabase-class / Postgres-class speed on
+            the same hardware, from our published OLTP comparison&mdash;indexed
+            lookups and range scans measured at or better than Postgres on our
+            indexed path, with an honest caveat that the index is an in-memory
+            ordered secondary, not a Postgres disk B-tree.
           </p>
         </details>
         <details>
