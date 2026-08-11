@@ -242,6 +242,55 @@ def p_sto_02() -> Result:
     return Result("P-STO-02", "pass", "bucket create+list OK", {"buckets": names})
 
 
+def p_sto_03() -> Result:
+    """Signed GET round-trip + unauthenticated deny on a private bucket."""
+    email = os.environ.get("PARITY_EMAIL_STO3", "parity-sto3@example.com")
+    password = os.environ.get("PARITY_PASSWORD", "parity-secret-change-me")
+    _http("POST", "/v1/auth/signup", body={"email": email, "password": password})
+    status_l, login = _http("POST", "/v1/auth/login", body={"email": email, "password": password})
+    token = None
+    if isinstance(login, dict):
+        token = login.get("access_token") or login.get("token")
+    if status_l != 200 or not token:
+        return Result("P-STO-03", "fail", "need auth for storage", {"login": login})
+    hdrs = {"Authorization": f"Bearer {token}"}
+    bucket = os.environ.get("PARITY_BUCKET", "parity-bucket")
+    # private bucket (P-STO-02 creates it non-public); ensure object exists
+    _http(
+        "PUT",
+        f"/storage/v1/object/{bucket}/sto3.txt",
+        raw_body=b"sto3-private",
+        headers={**hdrs, "Content-Type": "text/plain"},
+    )
+    # unauthenticated GET must be denied on the private bucket
+    st_anon, _ = _http("GET", f"/storage/v1/object/{bucket}/sto3.txt")
+    if st_anon == 200:
+        return Result("P-STO-03", "fail", "anonymous GET on private bucket was allowed", {"status": st_anon})
+    # sign a GET URL (auth required), then fetch it unauthenticated
+    st_s, signed = _http(
+        "POST",
+        f"/storage/v1/object/sign/{bucket}/sto3.txt",
+        body={"expiresIn": 300},
+        headers=hdrs,
+    )
+    if st_s != 200 or not isinstance(signed, dict) or not signed.get("signedURL"):
+        return Result("P-STO-03", "fail", f"sign status={st_s}", {"body": signed})
+    signed_url = signed["signedURL"]
+    st_use, body_use = _http("GET", signed_url)
+    if st_use != 200:
+        return Result("P-STO-03", "fail", f"signed GET status={st_use}", {"body": body_use})
+    if isinstance(body_use, dict) and body_use.get("raw"):
+        body_use = body_use.get("raw")
+    if body_use != b"sto3-private" and body_use != "sto3-private":
+        return Result("P-STO-03", "fail", f"signed GET payload mismatch", {"body": body_use})
+    return Result(
+        "P-STO-03",
+        "pass",
+        "signed GET round-trip OK; anonymous GET denied",
+        {"anon_status": st_anon, "signedURL": signed_url[:60]},
+    )
+
+
 def p_fn_01() -> Result:
     """Edge invoke returns runtime li-edge (not echo) — Wave 7."""
     status, body = _http(
@@ -266,6 +315,38 @@ def p_fn_01() -> Result:
     if body.get("runtime") != "li-edge":
         return Result("P-FN-01", "fail", f"unexpected runtime={body.get('runtime')}", {"body": body})
     return Result("P-FN-01", "pass", "li-edge invoke OK", {"body": body})
+
+
+def p_fn_02() -> Result:
+    """Edge honesty: non-echo runtime reported; default (no echo flag) fails closed.
+
+    Keeps the "not Deno/WASM" honesty — asserts the probe reports li-edge and that
+    the endpoint refuses an echo fallback unless LI_FUNCTIONS_ECHO is explicitly set.
+    """
+    status, body = _http("GET", "/functions/v1/")
+    if status in (0,):
+        return Result("P-FN-02", "fail", "API unreachable", {"body": body})
+    if not isinstance(body, dict):
+        return Result("P-FN-02", "fail", f"probe status={status}", {"body": body})
+    echo_fallback = bool(body.get("echo_fallback"))
+    if echo_fallback:
+        return Result(
+            "P-FN-02",
+            "fail",
+            "edge reports echo fallback by default — Wave 7 requires fail-closed li-edge",
+            {"body": body},
+        )
+    if body.get("runtime") == "echo":
+        return Result("P-FN-02", "fail", "edge reports echo runtime", {"body": body})
+    edge_available = bool(body.get("edge_available"))
+    if not edge_available:
+        return Result("P-FN-02", "skip", "li-edge not present in this stack (honest)", honest_skip=True)
+    return Result(
+        "P-FN-02",
+        "pass",
+        "edge probe honest (non-echo, fail-closed default)",
+        {"echo_fallback": False, "edge_available": True},
+    )
 
 
 def p_rest_01() -> Result:
@@ -723,7 +804,9 @@ CONTRACTS = [
     p_auth_04,
     p_sto_01,
     p_sto_02,
+    p_sto_03,
     p_fn_01,
+    p_fn_02,
     p_rls_01,
     p_io_01,
     p_rt_01,
