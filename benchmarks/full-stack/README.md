@@ -84,8 +84,21 @@ with the remainder being Postgres-native RPC/spread/explain features.
 | Bucket create / object upload / list | **blocked** (403 — storage RLS/set_config bootstrap) | **works** (200, S3-shaped PUT/GET/list) |
 
 - Librebase storage (lis `routes/storage`) works end-to-end (bucket create, object
-  PUT/GET/list, HMAC/sign). Supabase storage container is healthy but the
+  PUT/GET/list, HMAC/sign, signed GET). Supabase storage container is healthy but the
   `set_config('role'...)` DB call returns 403 in this bootstrap — documented gap.
+- **lis-side latency** ([`results/storage-e2e-lis.json`](results/storage-e2e-lis.json)):
+  upload p50 ≈ 4.6 ms, get p50 ≈ 3.6 ms, signed GET p50 ≈ 3.4 ms (60 runs). Not a
+  head-to-head — Supabase side blocked. Run: `LIS_API=http://127.0.0.1:54325 RUNS=60 node storage.mjs`
+
+## 3b. Edge functions (li-edge)
+
+| Metric | Librebase lis `/functions/v1` |
+|--------|------------------------------|
+| Runtime | **li-edge** (subprocess invoke.py) — echo only with `LI_FUNCTIONS_ECHO=1` |
+| Invoke p50 | **~140 ms** ([`results/edge-e2e-lis.json`](results/edge-e2e-lis.json)) |
+
+- Honest: li-edge is a lean subprocess runtime, **not Deno/WASM**, no Supabase Edge
+  parity claim. Run: `LIS_API=http://127.0.0.1:54325 RUNS=60 node edge.mjs`
 
 ## 4. Vector search (pgvector baseline)
 
@@ -134,5 +147,12 @@ LIBREBASE_SERVICE_ROLE=<key> LIBREBASE_JWT_SECRET=<secret> node vector.mjs
 
 # official postgrest-js suite (see postgrest-js-suite/README.md)
 REST_URL=http://127.0.0.1:54325/rest/v1 SEED=1 ./postgrest-js-suite/run-suite.sh -u
+
+# lis realtime event delivery (REST + WS sharing LI_DATA_DIR, LI_REST_CHANGEFEED=1)
+STACK=lis LIS_WS=ws://127.0.0.1:54323/realtime/v1/websocket LIS_API=http://127.0.0.1:54327 node realtime.mjs
+
+# lis storage + edge benches (lis side only)
+LIS_API=http://127.0.0.1:54325 RUNS=60 node storage.mjs
+LIS_API=http://127.0.0.1:54325 RUNS=60 node edge.mjs
 REST_URL=http://127.0.0.1:8000/rest/v1 ANON_KEY=<anon> ./postgrest-js-suite/run-suite.sh -u
 ```

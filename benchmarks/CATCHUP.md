@@ -13,8 +13,8 @@ Legend: ⬜ not started · 🚧 in progress · ✅ done · ❌ out of scope for 
 | G1 | REST update/delete by non-id filter | `P-REST-02` (new) — pass vs live lis | SDK live check: `update/delete().eq(code, ...)` verified on :54325 | `tests/parity/last-report.json` + matrix row 17 | ✅ |
 | G2 | WAL durability for UPDATE/DELETE | `test_wal_crash_replay_restores_update/_delete` | durability microbench (crash-kill) | CI log + matrix row 4 | ✅ |
 | G3 | Realtime event delivery (REST INSERT → WS) | `P-RT-03` (new) — pass vs live stack | `realtime.mjs` event-delivery on lis | `results/realtime-e2e-lis.json` (60/60, p50 ≈ 50 ms) | ✅ |
-| G4 | Storage depth + fair dual-stack bench | `P-STO-03` (new) — pass live: signed GET round-trip + anon deny | storage e2e script (dual-stack blocked on Supabase 403 bootstrap) | `tests/parity/last-report.json` + lis storage unit tests | ✅ (contracts); dual-stack bench ⬜ (Supabase bootstrap) |
-| G5 | Edge beyond echo | `P-FN-01/02` — pass live: li-edge non-echo + fail-closed probe | optional cold-invoke latency | parity report + lis functions unit tests | ✅ (li-edge non-echo); Deno/WASM remains OOS |
+| G4 | Storage depth + fair dual-stack bench | `P-STO-03` (new) — pass live: signed GET round-trip + anon deny | `storage.mjs` (lis side) | `results/storage-e2e-lis.json` (upload p50 ≈ 4.6 ms) + lis storage unit tests | ✅ (contracts + lis bench); Supabase-side dual-stack ⬜ (403 bootstrap) |
+| G5 | Edge beyond echo | `P-FN-01/02` — pass live: li-edge non-echo + fail-closed probe | `edge.mjs` (lis invoke latency) | `results/edge-e2e-lis.json` (p50 ≈ 140 ms subprocess) + lis functions unit tests | ✅ (li-edge non-echo + bench); Deno/WASM remains OOS |
 
 ## Closed / proven (do not reopen)
 

@@ -60,7 +60,7 @@ class QueryBuilder {
   }
 
   /**
-   * PATCH /rest/v1/{table}/{id} — the last `eq` filter selects the row id.
+   * PATCH /rest/v1/{table}?<filters> — rows addressed by eq/gt/... filters.
    * @param {Record<string, unknown>} patch
    */
   update(patch) {
@@ -69,7 +69,7 @@ class QueryBuilder {
     return this;
   }
 
-  /** DELETE /rest/v1/{table}/{id} — the last `eq` filter selects the row id. */
+  /** DELETE /rest/v1/{table}?<filters> — rows addressed by eq/gt/... filters. */
   delete() {
     this._method = "DELETE";
     this._body = undefined;
@@ -78,6 +78,54 @@ class QueryBuilder {
 
   eq(column, value) {
     this._filters.push(`${encodeURIComponent(column)}=eq.${encodeURIComponent(String(value))}`);
+    return this;
+  }
+
+  neq(column, value) {
+    this._filters.push(`${encodeURIComponent(column)}=neq.${encodeURIComponent(String(value))}`);
+    return this;
+  }
+
+  gt(column, value) {
+    this._filters.push(`${encodeURIComponent(column)}=gt.${encodeURIComponent(String(value))}`);
+    return this;
+  }
+
+  gte(column, value) {
+    this._filters.push(`${encodeURIComponent(column)}=gte.${encodeURIComponent(String(value))}`);
+    return this;
+  }
+
+  lt(column, value) {
+    this._filters.push(`${encodeURIComponent(column)}=lt.${encodeURIComponent(String(value))}`);
+    return this;
+  }
+
+  lte(column, value) {
+    this._filters.push(`${encodeURIComponent(column)}=lte.${encodeURIComponent(String(value))}`);
+    return this;
+  }
+
+  in(column, values) {
+    const joined = Array.isArray(values)
+      ? values.map((v) => encodeURIComponent(String(v))).join(",")
+      : encodeURIComponent(String(values));
+    this._filters.push(`${encodeURIComponent(column)}=in.(${joined})`);
+    return this;
+  }
+
+  like(column, pattern) {
+    this._filters.push(`${encodeURIComponent(column)}=like.${encodeURIComponent(String(pattern))}`);
+    return this;
+  }
+
+  ilike(column, pattern) {
+    this._filters.push(`${encodeURIComponent(column)}=ilike.${encodeURIComponent(String(pattern))}`);
+    return this;
+  }
+
+  is(column, value) {
+    this._filters.push(`${encodeURIComponent(column)}=is.${encodeURIComponent(String(value))}`);
     return this;
   }
 

@@ -103,6 +103,34 @@ const updNoId = await client.from("parity_items").update({ done: true });
 assert.ok(updNoId.error, "update without filter should error");
 assert.match(String(updNoId.error.message), /filter/);
 
+// Filter operator coverage — each must emit the PostgREST form `col=op.value`
+const ops = [
+  ["eq", "name", "x", "name=eq.x"],
+  ["neq", "name", "x", "name=neq.x"],
+  ["gt", "age", 18, "age=gt.18"],
+  ["gte", "age", 18, "age=gte.18"],
+  ["lt", "age", 18, "age=lt.18"],
+  ["lte", "age", 18, "age=lte.18"],
+  ["in", "code", ["a", "b"], "code=in.(a,b)"],
+  ["like", "name", "%x%", "name=like.%25x%25"],
+  ["ilike", "name", "%X%", "name=ilike.%25X%25"],
+  ["is", "deleted", "null", "deleted=is.null"],
+];
+for (const [fn, col, arg, expect] of ops) {
+  calls.length = 0;
+  await client.from("parity_items").select()[fn](col, arg);
+  const hit = calls.some((c) => c.url.includes(`/rest/v1/parity_items`) && c.url.includes(expect));
+  assert.ok(hit, `expected ${fn} to emit ?${expect} got ${calls.map((c) => c.url).join(", ")}`);
+}
+
+// update() with a non-eq operator still works (filters address the rows)
+calls.length = 0;
+await client.from("parity_items").update({ seen: true }).gt("age", 21);
+assert.ok(
+  calls.some((c) => c.method === "PATCH" && c.url.includes("age=gt.21")),
+  `expected PATCH with gt filter`,
+);
+
 const up = await client.auth.signUp({ email: "a@b.c", password: "secret" });
 assert.equal(up.error, null);
 assert.ok(calls.some((c) => c.url.endsWith("/v1/auth/signup")));
