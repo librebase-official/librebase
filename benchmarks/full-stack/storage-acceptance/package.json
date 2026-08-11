@@ -1,0 +1,18 @@
+{
+  "name": "@librebase/storage-acceptance",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Supabase Storage acceptance suite (vendored) run as a black-box against Librebase lis storage.",
+  "scripts": {
+    "acceptance:run": "tsx scripts/run.ts",
+    "acceptance:run:lis": "tsx scripts/run.ts --profile core --base-url http://127.0.0.1:54325/storage/v1",
+    "acceptance:run:lis:full": "tsx scripts/run.ts --profile full --base-url http://127.0.0.1:54325/storage/v1",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vitest": "^4.1.10"
+  }
+}
