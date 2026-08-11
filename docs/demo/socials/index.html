@@ -124,11 +124,11 @@
         color: var(--signal);
       }
       .hook-sub {
-        font-size: 40px;
+        font-size: 42px;
         font-weight: 500;
         color: var(--fog);
         line-height: 1.35;
-        max-width: 820px;
+        max-width: 900px;
       }
 
       .stat-main {
@@ -286,14 +286,6 @@
       .path-line .em {
         color: var(--signal);
       }
-      .path-note {
-        margin-top: 12px;
-        font-size: 38px;
-        font-weight: 500;
-        color: var(--fog);
-        line-height: 1.4;
-        max-width: 820px;
-      }
 
       .outro {
         flex: 1;
@@ -342,10 +334,10 @@
         <div class="hook">
           <div class="hook-kicker" id="hook-kicker">Meet</div>
           <div class="wordmark hero" id="hook-mark">Libre<span class="base">base</span></div>
+          <div class="hook-sub" id="hook-tag">Tiny backend as a service.</div>
           <div class="hook-line" id="hook-line">
             Small enough<br />to <span class="em">spin up</span><br />for every idea.
           </div>
-          <div class="hook-sub" id="hook-sub">Postgres that stays lean.</div>
         </div>
       </section>
 
@@ -375,7 +367,7 @@
               <div class="bar-track"><div class="bar-fill" id="fp-b2"></div></div>
             </div>
           </div>
-          <div class="pill" id="fp-pill">One container. Tiny image.</div>
+          <div class="pill" id="fp-pill">All built in one tiny container image.</div>
         </div>
       </section>
 
@@ -410,14 +402,11 @@
 
       <section id="sc-path" class="clip" data-start="15.5" data-duration="4" data-track-index="0">
         <div class="stat-main">
-          <div class="eyebrow" id="path-eyebrow">The point</div>
+          <div class="eyebrow" id="path-eyebrow">The value</div>
           <div class="path-lines">
             <div class="path-line" id="path-l1">Prototype.</div>
             <div class="path-line" id="path-l2"><span class="em">Ship.</span></div>
-            <div class="path-line" id="path-l3">Same stack.</div>
-          </div>
-          <div class="path-note" id="path-note">
-            Sign-in, queries, and live updates — without the heavy lift.
+            <div class="path-line" id="path-l3">Stay lean.</div>
           </div>
         </div>
       </section>
@@ -426,7 +415,7 @@
         <div class="outro">
           <div class="wordmark lockup" id="out-mark">Libre<span class="base">base</span></div>
           <div class="outro-tag" id="out-tag">
-            PostgreSQL for apps and AI tools.<br />Small footprint. Honest status.
+            Lean backend for apps and AI tools.<br />Small footprint. Honest status.
           </div>
           <div class="url-pill" id="out-url">librebase.xyz</div>
         </div>
@@ -466,16 +455,16 @@
         0.4,
       );
       tl.fromTo(
+        "#hook-tag",
+        { y: 24, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" },
+        1.0,
+      );
+      tl.fromTo(
         "#hook-line",
         { y: 40, opacity: 0 },
         { y: 0, opacity: 1, duration: 0.65, ease: "power3.out" },
-        1.05,
-      );
-      tl.fromTo(
-        "#hook-sub",
-        { y: 24, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" },
-        1.7,
+        1.4,
       );
 
       tl.from("#fp-eyebrow", { y: 24, opacity: 0, duration: 0.45, ease: "power3.out" }, 4.65);
@@ -520,13 +509,6 @@
         { y: 0, opacity: 1, duration: 0.55, ease: "power3.out", stagger: 0.18 },
         15.95,
       );
-      tl.fromTo(
-        "#path-note",
-        { y: 20, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" },
-        17.0,
-      );
-
       tl.fromTo(
         "#out-mark",
         { y: 28, opacity: 0, scale: 0.94 },
