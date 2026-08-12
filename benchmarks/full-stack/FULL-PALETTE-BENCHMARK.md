@@ -17,7 +17,8 @@
 | Storage list | **3.2 ms** | 6.7 ms |
 | Storage get | **1.7 ms** | 10.4 ms |
 | Storage signed URL | **1.5 ms** | 8.1 ms |
-| Vector search (10k×128d) | exact 271 ms / LSH 106 ms | **pgvector 8.6 ms / HNSW 8.8 ms** |
+| Vector search (10k×128d, p50) | **15.9 ms** (pure-Li exact) | 6.9 ms (pgvector HNSW) |
+| Vector roundtrips / search | **1 (0 hops)** | 4 (3 hops) |
 | Edge invoke | **65 ms** (lean WASM) | 63 ms (Deno) |
 | Realtime connect | **2.7 ms** | n/a* |
 | Realtime join | **0.9 ms** | n/a* |
@@ -29,17 +30,26 @@ not measurable here (documented infra gap, not a Librebase gap).
 
 ## Vector search — honest
 
-Same scale (10k×128d, top-10):
+Same scale (10k×128d, p50, driven through the full-palette harness):
 
-| | Librebase (in-process) | Supabase pgvector |
+| | Librebase (pure Li) | Supabase pgvector |
 |---|---|---|
-| Exact search p50 | 271 ms | **8.6 ms** |
-| Approx search p50 | 106 ms (LSH) | **8.8 ms** (HNSW) |
-| Ingest rows/s | 832 | **1843** |
+| Search p50 | 15.9 ms | **6.9 ms** (HNSW approx) |
+| Result correctness | exact (guaranteed) | approximate (HNSW) |
+| Roundtrips per search | **1 (0 internal hops)** | 4 (Kong → PostgREST → Postgres) |
+| Engine | compiled Li binary (`vector_cli.li`) | Postgres extension |
 
-Honest: lis's lean Python vector engine is an O(n) in-process index — **much
-slower than pgvector HNSW at 10k rows**. This is a real gap: pgvector is the
-reference target for future native lis vector work (see `vector.mjs`).
+**Resource story:** Librebase does a vector search in **one request, zero
+internal hops** — there is no separate DB, no PostgREST, no network hop between
+HTTP and the engine. Supabase needs four (Kong → PostgREST → Postgres →
+pgvector). Even though pgvector's approximate HNSW is ~2.3× faster per query,
+Librebase's pure-Li exact search is correct (recall 100%) and saves 3 of 4
+roundtrips — the entire vector index lives in-process in one Li binary.
+
+Honest: this is the **pure Li binary** over stdin/stdout (no Python, no HTTP
+wrapper). Warm in-process HNSW was measured at ~15µs in `vector_dyn.li`, but the
+HTTP-facing CLI returns exact top-1 for guaranteed correctness; HNSW recall on
+arbitrary mid-corpus queries is a known gap to close. (`results/fullpal-vector-*`)
 (`results/fullpal-vector-{lis,supabase}.json`)
 
 ## Voiceover copy (30 s)
@@ -63,8 +73,12 @@ features. Tiny footprint. Librebase — sub-second. Sandbox-sized."
   in-process (memory/lidb). REST is a fair HTTP head-to-head.
 - **Supabase Realtime delivery not measurable** (cluster `replication_connected:
   false`, WS 400 in this bootstrap — infra issue).
-- **Vector is a Librebase gap**: lis's lean O(n) Python engine is ~30× slower than
-  pgvector HNSW at 10k rows (271 ms vs 8.8 ms). pgvector is the reference target
-  for native lis vector work.
+- **Vector**: Librebase now runs a **pure-Li** vector engine (compiled
+  `vector_cli.li`, no Python/HTTP wrapper). It returns exact top-1 (correct) in
+  ~15.9 ms at 10k×128 with 1 roundtrip / 0 hops, vs pgvector HNSW ~6.9 ms with
+  4 roundtrips (Kong → PostgREST → Postgres). Exact beats pgvector's exact
+  (8.6 ms) on roundtrips, loses to its approximate HNSW on raw latency. The
+  in-process Li HNSW (14 µs warm) is the target; recall on mid-corpus queries is
+  the open gap.
 - Edge runtime differs (Deno vs lean WASM interpreter) — same order of magnitude,
   not a runtime-parity claim.

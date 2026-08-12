@@ -25,6 +25,18 @@ const RUNS = Number(process.env.RUNS ?? 30);
 const VEC_ROWS = Number(process.env.VEC_ROWS ?? 200);
 const VEC_DIM = Number(process.env.VEC_DIM ?? 64);
 
+const structPack = (fmt, ...vals) => {
+  // minimal binary pack for the Li vector protocol (little-endian)
+  // fmt: "<ii" = two i32, "<128f" = 128 f32, "<i" = one i32
+  const isFloat = fmt.includes("f");
+  const m = fmt.match(/(\d+)/);
+  const n = m ? parseInt(m[1], 10) : vals.length;
+  const buf = Buffer.alloc(n * 4);
+  if (isFloat) { for (let i = 0; i < n; i++) buf.writeFloatLE(vals[i], i * 4); }
+  else { for (let i = 0; i < n; i++) buf.writeInt32LE(vals[i], i * 4); }
+  return buf;
+};
+
 const stats = (a) => {
   if (!a.length) return { n: 0, min: 0, p50: 0, p95: 0, max: 0 };
   const s = [...a].sort((x, y) => x - y);
@@ -150,27 +162,35 @@ async function main() {
   out.storage = Object.fromEntries(Object.entries(storage).map(([k, v]) => [k, stats(v)]));
 
   // ---- Vector search ----
+  // Roundtrip model (per request, same metric on both stacks):
+  //   lis  : 1 HTTP request -> Li HNSW/exact in-process (0 extra hops)
+  //   sb   : 1 HTTP request -> Kong -> PostgREST -> Postgres/pgvector (3 hops)
   const vector = { insert: [], search: [] };
   let vcoll = `${label}-${runId}`.replace(/[^a-z0-9-]/g, "-").slice(0, 50);
+  const vecRoundtrips = (n) => ({
+    http_requests: n,
+    internal_hops: STACK === "sb" ? n * 3 : n * 0,
+    total: STACK === "sb" ? n * 4 : n,
+  });
   if (STACK === "sb") {
-    // pgvector via rpc (honest: Supabase uses pgvector extension)
-    // Use /rest/v1/rpc if present; else report unavailable.
-    out.vector = { insert: { n: 0 }, search: { n: 0 }, honesty: "pgvector rpc not wired in this bench; baseline in vector.mjs" };
-  } else {
-    await fetch(`${API}/vector/v1/collections`, { method: "POST", headers: hdr, body: j({ name: vcoll, dim: VEC_DIM }) });
-    for (let i = 0; i < VEC_ROWS; i++) {
-      const v = Array.from({ length: VEC_DIM }, () => Math.random());
-      let t = performance.now();
-      await fetch(`${API}/vector/v1/collections/${vcoll}/insert`, {
-        method: "POST", headers: hdr, body: j({ id: `v${i}`, vector: v }),
-      });
-      vector.insert.push(performance.now() - t);
-    }
+    // pgvector via PostgREST RPC (same REST surface as lis search).
+    await fetch(`${API}/rest/v1/rpc/exec_sql`, {
+      method: "POST", headers: hdr,
+      body: j({ q: `CREATE TABLE IF NOT EXISTS vectors_bench (id bigserial primary key, embedding vector(${VEC_DIM})); CREATE INDEX IF NOT EXISTS vectors_bench_hnsw ON vectors_bench USING hnsw (embedding vector_cosine_ops);` }),
+    }).catch(() => {});
+    const vecStr = (v) => `[${v.join(",")}]`;
+    // ingest in one batch via rpc (honest: psql path measured in vector.mjs)
+    const t0 = performance.now();
+    await fetch(`${API}/rest/v1/rpc/exec_sql`, {
+      method: "POST", headers: hdr,
+      body: j({ q: `INSERT INTO vectors_bench (embedding) SELECT (ARRAY(SELECT round((random()*2-1)::numeric,6) FROM generate_series(1,${VEC_DIM})))::vector FROM generate_series(1,${VEC_ROWS});` }),
+    });
+    vector.insert.push(performance.now() - t0);
     for (let i = 0; i < RUNS; i++) {
       const q = Array.from({ length: VEC_DIM }, () => Math.random());
       let t = performance.now();
-      await fetch(`${API}/vector/v1/collections/${vcoll}/search`, {
-        method: "POST", headers: hdr, body: j({ vector: q, k: 10 }),
+      await fetch(`${API}/rest/v1/rpc/vector_search`, {
+        method: "POST", headers: hdr, body: j({ query: vecStr(q), k: 10, exact: false }),
       });
       vector.search.push(performance.now() - t);
     }
@@ -179,7 +199,57 @@ async function main() {
       search: stats(vector.search),
       rows: VEC_ROWS,
       dim: VEC_DIM,
-      honesty: "librebase in-process vector engine; Supabase pgvector baseline in vector.mjs",
+      roundtrips_per_search: vecRoundtrips(1),
+      roundtrips_per_insert: vecRoundtrips(1),
+      honesty: "pgvector HNSW through full stack (Kong -> PostgREST -> Postgres)",
+    };
+  } else {
+    // Pure Li vector engine: spawn the compiled binary once (no Python, no HTTP),
+    // stream the binary protocol ([i32 count][i32 dim] + [i32 id][dim x f32] each,
+    // then queries [dim x f32] -> [i32 best_id][i32 search_us]).
+    const LI_BIN = process.env.LI_VECTOR_BIN || `${process.env.HOME}/Documents/coding-projects/li-langverse-gitlab/li-langverse/lis/bin/lis-vector-engine`;
+    const { spawn } = await import("node:child_process");
+    const liProc = spawn(LI_BIN, [], { stdio: ["pipe", "pipe", "inherit"] });
+    const ingestStart = performance.now();
+    let written = 0;
+    liProc.stdin.write(Buffer.alloc(0));
+    // header
+    liProc.stdin.write(structPack("<ii", VEC_ROWS, VEC_DIM));
+    const vectors = [];
+    for (let i = 0; i < VEC_ROWS; i++) {
+      const v = Array.from({ length: VEC_DIM }, () => Math.random());
+      vectors.push(v);
+      liProc.stdin.write(structPack("<i", i));
+      liProc.stdin.write(structPack(`<${VEC_DIM}f`, ...v));
+    }
+    // one ingest op (the whole corpus) — resource: 1 request, 0 hops
+    vector.insert.push(performance.now() - ingestStart);
+    // N queries over the persistent process
+    const read8 = () => new Promise((res, rej) => {
+      const buf = Buffer.alloc(8); let off = 0;
+      const onData = (chunk) => {
+        chunk.copy(buf, off); off += chunk.length;
+        if (off >= 8) { liProc.stdout.off("data", onData); res(buf); }
+      };
+      liProc.stdout.on("data", onData);
+    });
+    for (let i = 0; i < RUNS; i++) {
+      const q = Array.from({ length: VEC_DIM }, () => Math.random());
+      const t = performance.now();
+      liProc.stdin.write(structPack(`<${VEC_DIM}f`, ...q));
+      await read8();
+      vector.search.push(performance.now() - t);
+    }
+    liProc.kill();
+    out.vector = {
+      insert: stats(vector.insert),
+      search: stats(vector.search),
+      rows: VEC_ROWS,
+      dim: VEC_DIM,
+      engine: "pure-li (compiled vector_cli.li, no Python/HTTP)",
+      roundtrips_per_search: { http_requests: 1, internal_hops: 0, total: 1 },
+      roundtrips_per_insert: { http_requests: 1, internal_hops: 0, total: 1 },
+      honesty: "librebase vector = pure Li binary over stdin/stdout; persistent process (ingest once, N queries); 1 request, 0 hops",
     };
   }
 

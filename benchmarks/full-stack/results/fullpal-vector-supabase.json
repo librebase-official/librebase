@@ -1,16 +1,134 @@
 {
-  "stack": "supabase-pgvector",
-  "dim": 128,
-  "rows": 10000,
-  "k": 10,
-  "ingest_rows_per_sec": 1843,
-  "exact_search_ms": {
-    "p50": 8.57,
-    "p95": 21.85
+  "stack": "supabase-full-13c",
+  "date": "2026-08-12",
+  "api": "http://127.0.0.1:8000",
+  "rest_crud": {
+    "insert": {
+      "n": 20,
+      "min": 1.07,
+      "p50": 2.07,
+      "p95": 107.99,
+      "max": 107.99
+    },
+    "select": {
+      "n": 20,
+      "min": 0.97,
+      "p50": 1.8,
+      "p95": 12.28,
+      "max": 12.28
+    },
+    "filter": {
+      "n": 20,
+      "min": 0.68,
+      "p50": 1.97,
+      "p95": 4.71,
+      "max": 4.71
+    },
+    "update": {
+      "n": 20,
+      "min": 1.02,
+      "p50": 1.84,
+      "p95": 5.88,
+      "max": 5.88
+    },
+    "del": {
+      "n": 20,
+      "min": 0.89,
+      "p50": 1.85,
+      "p95": 3.31,
+      "max": 3.31
+    }
   },
-  "hnsw_approx_ms": {
-    "p50": 8.8,
-    "p95": 14.41
+  "auth": {
+    "signup": {
+      "n": 10,
+      "min": 1.57,
+      "p50": 2.25,
+      "p95": 6.08,
+      "max": 6.08
+    },
+    "login": {
+      "n": 10,
+      "min": 1.12,
+      "p50": 1.86,
+      "p95": 5.04,
+      "max": 5.04
+    }
   },
-  "honesty": "pgvector HNSW in Supabase Postgres; measured via vector.mjs"
+  "storage": {
+    "create_bucket": {
+      "n": 0,
+      "min": 0,
+      "p50": 0,
+      "p95": 0,
+      "max": 0
+    },
+    "upload": {
+      "n": 20,
+      "min": 1.89,
+      "p50": 4.76,
+      "p95": 15.31,
+      "max": 15.31
+    },
+    "list": {
+      "n": 20,
+      "min": 2.06,
+      "p50": 4.28,
+      "p95": 11.4,
+      "max": 11.4
+    },
+    "get": {
+      "n": 20,
+      "min": 3.49,
+      "p50": 7.11,
+      "p95": 59.81,
+      "max": 59.81
+    },
+    "signed": {
+      "n": 0,
+      "min": 0,
+      "p50": 0,
+      "p95": 0,
+      "max": 0
+    }
+  },
+  "vector": {
+    "insert": {
+      "n": 1,
+      "min": 14.62,
+      "p50": 14.62,
+      "p95": 14.62,
+      "max": 14.62
+    },
+    "search": {
+      "n": 20,
+      "min": 2.15,
+      "p50": 6.91,
+      "p95": 22.79,
+      "max": 22.79
+    },
+    "rows": 10000,
+    "dim": 128,
+    "roundtrips_per_search": {
+      "http_requests": 1,
+      "internal_hops": 3,
+      "total": 4
+    },
+    "roundtrips_per_insert": {
+      "http_requests": 1,
+      "internal_hops": 3,
+      "total": 4
+    },
+    "honesty": "pgvector HNSW through full stack (Kong -> PostgREST -> Postgres)"
+  },
+  "edge": {
+    "invoke": {
+      "n": 10,
+      "min": 3.25,
+      "p50": 17.13,
+      "p95": 37.36,
+      "max": 37.36
+    },
+    "runtime": "deno-edge"
+  }
 }

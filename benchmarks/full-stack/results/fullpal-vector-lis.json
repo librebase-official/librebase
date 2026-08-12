@@ -1,23 +1,135 @@
 {
-  "stack": "librebase-lis-vector",
-  "dim": 128,
-  "rows": 10000,
-  "k": 10,
-  "ingest_rows_per_sec": 832,
-  "ingest_total_ms": 12022,
-  "exact_search_ms": {
-    "min": 234.07,
-    "p50": 271.49,
-    "p95": 360.86,
-    "max": 401.38,
-    "n": 30
+  "stack": "librebase-lis-1c",
+  "date": "2026-08-12",
+  "api": "http://127.0.0.1:54325",
+  "rest_crud": {
+    "insert": {
+      "n": 20,
+      "min": 0.55,
+      "p50": 0.77,
+      "p95": 78.15,
+      "max": 78.15
+    },
+    "select": {
+      "n": 20,
+      "min": 0.43,
+      "p50": 0.65,
+      "p95": 3.04,
+      "max": 3.04
+    },
+    "filter": {
+      "n": 20,
+      "min": 0.45,
+      "p50": 0.58,
+      "p95": 2.63,
+      "max": 2.63
+    },
+    "update": {
+      "n": 20,
+      "min": 0.5,
+      "p50": 0.69,
+      "p95": 3.5,
+      "max": 3.5
+    },
+    "del": {
+      "n": 20,
+      "min": 0.45,
+      "p50": 0.57,
+      "p95": 1.86,
+      "max": 1.86
+    }
   },
-  "lsh_approx_ms": {
-    "min": 87.11,
-    "p50": 105.83,
-    "p95": 179.0,
-    "max": 2571.81,
-    "n": 30
+  "auth": {
+    "signup": {
+      "n": 10,
+      "min": 15.59,
+      "p50": 24.76,
+      "p95": 41.5,
+      "max": 41.5
+    },
+    "login": {
+      "n": 10,
+      "min": 13.3,
+      "p50": 21.07,
+      "p95": 31.74,
+      "max": 31.74
+    }
   },
-  "honesty": "lis in-process vector engine (exact + LSH-approx); pgvector baseline is the reference"
+  "storage": {
+    "create_bucket": {
+      "n": 0,
+      "min": 0,
+      "p50": 0,
+      "p95": 0,
+      "max": 0
+    },
+    "upload": {
+      "n": 20,
+      "min": 0.77,
+      "p50": 1.86,
+      "p95": 3.14,
+      "max": 3.14
+    },
+    "list": {
+      "n": 20,
+      "min": 1.03,
+      "p50": 2.18,
+      "p95": 5.78,
+      "max": 5.78
+    },
+    "get": {
+      "n": 20,
+      "min": 0.9,
+      "p50": 1.95,
+      "p95": 4,
+      "max": 4
+    },
+    "signed": {
+      "n": 0,
+      "min": 0,
+      "p50": 0,
+      "p95": 0,
+      "max": 0
+    }
+  },
+  "vector": {
+    "insert": {
+      "n": 1,
+      "min": 97.51,
+      "p50": 97.51,
+      "p95": 97.51,
+      "max": 97.51
+    },
+    "search": {
+      "n": 20,
+      "min": 14.9,
+      "p50": 15.91,
+      "p95": 794.08,
+      "max": 794.08
+    },
+    "rows": 10000,
+    "dim": 128,
+    "engine": "pure-li (compiled vector_cli.li, no Python/HTTP)",
+    "roundtrips_per_search": {
+      "http_requests": 1,
+      "internal_hops": 0,
+      "total": 1
+    },
+    "roundtrips_per_insert": {
+      "http_requests": 1,
+      "internal_hops": 0,
+      "total": 1
+    },
+    "honesty": "librebase vector = pure Li binary over stdin/stdout; persistent process (ingest once, N queries); 1 request, 0 hops"
+  },
+  "edge": {
+    "invoke": {
+      "n": 10,
+      "min": 0.64,
+      "p50": 0.71,
+      "p95": 2.22,
+      "max": 2.22
+    },
+    "runtime": "wasm-lean (not Deno)"
+  }
 }
