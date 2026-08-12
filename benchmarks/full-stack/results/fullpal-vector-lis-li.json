@@ -1,0 +1,15 @@
+{
+  "stack": "librebase-lis-vector-li-native",
+  "engine": "Li-native IVF + HNSW (examples/vector_dyn.li, compiled via lic, native arm64)",
+  "dim": 128,
+  "rows": 10000,
+  "metric": "cosine (dot/sqrt(na*nb))",
+  "build_ivf_ms": 2179,
+  "build_hnsw_ms": 548,
+  "exact_search_us": 15564,
+  "hnsw_search_us": 14,
+  "ivf_search_us": 16372,
+  "hnsw_matches_exact": true,
+  "ivf_matches_exact": true,
+  "honesty": "Li in-process heap vector engine; pure Li, no C/C++/Python. Query latencies are in-process (no RPC/JSON). pgvector HNSW 8.8ms includes Postgres round-trip; Li HNSW 14us is pure search. Recall: HNSW and IVF both return the exact nearest id on the 10k clustered corpus."
+}
