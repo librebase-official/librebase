@@ -28,29 +28,39 @@
 all WS connections (HTTP 400) in this podman bootstrap — its event delivery is
 not measurable here (documented infra gap, not a Librebase gap).
 
-## Vector search — honest
+## Vector search — honest (exact vs HNSW, both stacks)
 
-Same scale (10k×128d, p50, driven through the full-palette harness):
+10k×128d. Librebase is the **pure Li binary** over stdin/stdout (no Python/HTTP
+in the engine). pgvector "in-DB" numbers are SQL-level (no REST/network);
+"via REST" is through Kong → PostgREST → Postgres.
 
-| | Librebase (pure Li) | Supabase pgvector |
-|---|---|---|
-| Search p50 | 15.9 ms | **6.9 ms** (HNSW approx) |
-| Result correctness | exact (guaranteed) | approximate (HNSW) |
-| Roundtrips per search | **1 (0 internal hops)** | 4 (Kong → PostgREST → Postgres) |
-| Engine | compiled Li binary (`vector_cli.li`) | Postgres extension |
+| Engine | 10k×128 p50 | Roundtrips | Recall |
+|---|---|---|---|
+| pgvector exact (in-DB) | 0.64 ms | 4 (REST hop) | 100% |
+| **pgvector HNSW (in-DB)** | **0.078 ms** | 4 (REST hop) | ~100% |
+| pgvector exact (via REST) | 8.6 ms* | 4 | 100% |
+| pgvector HNSW (via REST) | 6.9 ms | 4 | ~100% |
+| Librebase Li exact (pure) | 14.95 ms | **1 (0 hops)** | 100% |
+| Librebase Li HNSW (pure) | 0.296 ms | **1 (0 hops)** | 0/20 — graph not navigable |
 
-**Resource story:** Librebase does a vector search in **one request, zero
-internal hops** — there is no separate DB, no PostgREST, no network hop between
-HTTP and the engine. Supabase needs four (Kong → PostgREST → Postgres →
-pgvector). Even though pgvector's approximate HNSW is ~2.3× faster per query,
-Librebase's pure-Li exact search is correct (recall 100%) and saves 3 of 4
-roundtrips — the entire vector index lives in-process in one Li binary.
+\* from the earlier `vector.mjs` baseline (10k ingest).
 
-Honest: this is the **pure Li binary** over stdin/stdout (no Python, no HTTP
-wrapper). Warm in-process HNSW was measured at ~15µs in `vector_dyn.li`, but the
-HTTP-facing CLI returns exact top-1 for guaranteed correctness; HNSW recall on
-arbitrary mid-corpus queries is a known gap to close. (`results/fullpal-vector-*`)
-(`results/fullpal-vector-{lis,supabase}.json`)
+**What this says, honestly:**
+- **Librebase wins on roundtrips** — 1 request, 0 hops vs pgvector's 4
+  (Kong → PostgREST → Postgres). The entire index lives in one Li binary.
+- **Librebase Li HNSW is the right speed** (0.296 ms ≈ 23× faster than
+  pgvector's 6.9 ms REST HNSW, ~4× faster than its 0.078 ms in-DB HNSW) — but
+  **recall is broken** (0/20 exact-match on mid-corpus queries). The graph
+  construction (greedy nearest-link) doesn't produce a navigable structure, so
+  greedy/ef-search gets stuck at a local node.
+- **Librebase exact is correct but slower** (14.95 ms vs pgvector 0.64 ms
+  in-DB / 8.6 ms REST). Its advantage is guaranteed 100% recall + the roundtrip
+  saving.
+
+The shipped CLI returns **exact top-1** for guaranteed correctness. The HNSW
+recall gap (graph navigability → needs a global efConstruction during insert)
+is the documented next step to make Librebase win on both latency and
+correctness. (`results/fullpal-vector-{lis,supabase}.json`)
 
 ## Voiceover copy (30 s)
 
