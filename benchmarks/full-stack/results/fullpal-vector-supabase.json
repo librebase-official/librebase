@@ -1,0 +1,16 @@
+{
+  "stack": "supabase-pgvector",
+  "dim": 128,
+  "rows": 10000,
+  "k": 10,
+  "ingest_rows_per_sec": 1843,
+  "exact_search_ms": {
+    "p50": 8.57,
+    "p95": 21.85
+  },
+  "hnsw_approx_ms": {
+    "p50": 8.8,
+    "p95": 14.41
+  },
+  "honesty": "pgvector HNSW in Supabase Postgres; measured via vector.mjs"
+}

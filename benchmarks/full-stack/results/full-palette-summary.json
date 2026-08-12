@@ -72,12 +72,6 @@
       "supabase_ms": 8.13,
       "ratio_lb_over_sb": 0.181
     },
-    "Vector search": {
-      "librebase_ms": 7.77,
-      "supabase_ms": null,
-      "ratio_lb_over_sb": null,
-      "honesty": "lis in-process vector engine (200x64d exact); Supabase pgvector baseline in vector.mjs"
-    },
     "Edge invoke": {
       "librebase_ms": 64.96,
       "supabase_ms": 63.46,
@@ -87,18 +81,26 @@
     "Realtime connect": {
       "librebase_ms": 2.68,
       "supabase_ms": null,
-      "ratio_lb_over_sb": null
+      "ratio_lb_over_sb": null,
+      "honesty": "Supabase realtime cluster replication_connected:false, WS 400 in this bootstrap \u2014 not measurable (infra, not Librebase)"
     },
     "Realtime join": {
       "librebase_ms": 0.86,
       "supabase_ms": null,
-      "ratio_lb_over_sb": null
+      "ratio_lb_over_sb": null,
+      "honesty": "Supabase realtime cluster replication_connected:false, WS 400 in this bootstrap \u2014 not measurable (infra, not Librebase)"
     },
     "Realtime event delivery": {
       "librebase_ms": 48.45,
       "supabase_ms": null,
       "ratio_lb_over_sb": null,
-      "honesty": "Supabase realtime cluster unhealthy (db_connected:false) \u2014 delivery not measurable; lis live 20/20"
+      "honesty": "Supabase realtime cluster replication_connected:false, WS 400 in this bootstrap \u2014 not measurable (infra, not Librebase)"
+    },
+    "Vector search (exact 10k)": {
+      "librebase_ms": 271.49,
+      "supabase_ms": 8.57,
+      "ratio_lb_over_sb": 31.7,
+      "honesty": "lis O(n) in-process engine; pgvector HNSW is the reference \u2014 vector is a Librebase gap"
     }
   }
 }

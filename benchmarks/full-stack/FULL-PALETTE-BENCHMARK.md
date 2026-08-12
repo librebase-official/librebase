@@ -17,14 +17,30 @@
 | Storage list | **3.2 ms** | 6.7 ms |
 | Storage get | **1.7 ms** | 10.4 ms |
 | Storage signed URL | **1.5 ms** | 8.1 ms |
-| Vector search (exact) | **7.8 ms** (200×64d) | pgvector baseline (see vector.mjs) |
+| Vector search (10k×128d) | exact 271 ms / LSH 106 ms | **pgvector 8.6 ms / HNSW 8.8 ms** |
 | Edge invoke | **65 ms** (lean WASM) | 63 ms (Deno) |
 | Realtime connect | **2.7 ms** | n/a* |
 | Realtime join | **0.9 ms** | n/a* |
 | Realtime event delivery | **48 ms** (20/20) | n/a* |
 
-\* Supabase realtime cluster reports `db_connected:false` in this podman bootstrap
-— its event delivery is not measurable here (documented gap, not a Librebase gap).
+\* Supabase realtime cluster reports `replication_connected:false` and rejects
+all WS connections (HTTP 400) in this podman bootstrap — its event delivery is
+not measurable here (documented infra gap, not a Librebase gap).
+
+## Vector search — honest
+
+Same scale (10k×128d, top-10):
+
+| | Librebase (in-process) | Supabase pgvector |
+|---|---|---|
+| Exact search p50 | 271 ms | **8.6 ms** |
+| Approx search p50 | 106 ms (LSH) | **8.8 ms** (HNSW) |
+| Ingest rows/s | 832 | **1843** |
+
+Honest: lis's lean Python vector engine is an O(n) in-process index — **much
+slower than pgvector HNSW at 10k rows**. This is a real gap: pgvector is the
+reference target for future native lis vector work (see `vector.mjs`).
+(`results/fullpal-vector-{lis,supabase}.json`)
 
 ## Voiceover copy (30 s)
 
@@ -45,7 +61,10 @@ features. Tiny footprint. Librebase — sub-second. Sandbox-sized."
 
 - Supabase measured through the full stack (Kong → PostgREST → Postgres); lis is
   in-process (memory/lidb). REST is a fair HTTP head-to-head.
-- Supabase Realtime delivery not measurable (unhealthy cluster in bootstrap).
+- **Supabase Realtime delivery not measurable** (cluster `replication_connected:
+  false`, WS 400 in this bootstrap — infra issue).
+- **Vector is a Librebase gap**: lis's lean O(n) Python engine is ~30× slower than
+  pgvector HNSW at 10k rows (271 ms vs 8.8 ms). pgvector is the reference target
+  for native lis vector work.
 - Edge runtime differs (Deno vs lean WASM interpreter) — same order of magnitude,
   not a runtime-parity claim.
-- Vector: lis exact in-process engine; Supabase pgvector baseline in `vector.mjs`.

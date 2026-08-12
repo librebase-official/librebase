@@ -1,0 +1,23 @@
+{
+  "stack": "librebase-lis-vector",
+  "dim": 128,
+  "rows": 10000,
+  "k": 10,
+  "ingest_rows_per_sec": 832,
+  "ingest_total_ms": 12022,
+  "exact_search_ms": {
+    "min": 234.07,
+    "p50": 271.49,
+    "p95": 360.86,
+    "max": 401.38,
+    "n": 30
+  },
+  "lsh_approx_ms": {
+    "min": 87.11,
+    "p50": 105.83,
+    "p95": 179.0,
+    "max": 2571.81,
+    "n": 30
+  },
+  "honesty": "lis in-process vector engine (exact + LSH-approx); pgvector baseline is the reference"
+}
