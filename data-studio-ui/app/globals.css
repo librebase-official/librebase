@@ -34,6 +34,7 @@ body {
   background: var(--bg);
   color: var(--text);
   min-height: 100%;
+  overflow-x: hidden;
 }
 
 a {
@@ -826,7 +827,7 @@ button {
   gap: 18px;
   align-items: center;
   padding: 18px 22px;
-  border-radius: 12px;
+  border-radius: var(--radius);
   border: 1px solid var(--lb-line);
   background: rgba(14, 26, 28, 0.6);
 }
@@ -895,7 +896,7 @@ button {
 }
 .lb-cmp-card {
   border: 1px solid var(--lb-line);
-  border-radius: 12px;
+  border-radius: var(--radius);
   background: rgba(14, 26, 28, 0.65);
   padding: 1.1rem 1.2rem;
 }
