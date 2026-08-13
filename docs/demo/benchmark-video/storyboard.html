@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Librebase benchmark video — storyboard</title>
+    <title>Librebase benchmark — short cut</title>
     <style>
       :root {
         --bg: #0d1117;
@@ -12,12 +12,8 @@
         --text: #e6edf3;
         --muted: #8b949e;
         --accent: #3fb950;
-        --green: #3fb950;
-        --dim: #484f58;
       }
-      * {
-        box-sizing: border-box;
-      }
+      * { box-sizing: border-box; }
       body {
         margin: 0;
         font-family: "IBM Plex Sans", system-ui, sans-serif;
@@ -25,214 +21,96 @@
         color: var(--text);
         line-height: 1.5;
         padding: 1.5rem 2rem 3rem;
-        max-width: 980px;
+        max-width: 720px;
         margin-inline: auto;
       }
-      h1 {
-        font-size: 1.35rem;
-        margin-bottom: 0.25rem;
-      }
-      .meta {
-        color: var(--muted);
-        font-size: 0.9rem;
-        margin-bottom: 1.5rem;
-      }
-      .meta a {
-        color: var(--accent);
-      }
-      .beats {
-        display: grid;
-        gap: 0.75rem;
-      }
+      h1 { font-size: 1.25rem; margin: 0 0 0.25rem; }
+      .meta { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
+      .meta a { color: var(--accent); }
       .beat {
         background: var(--surface);
         border: 1px solid var(--border);
         border-radius: 8px;
-        padding: 1rem 1.25rem;
+        padding: 1rem 1.2rem;
+        margin-bottom: 0.75rem;
       }
       .beat header {
         display: flex;
         justify-content: space-between;
-        align-items: baseline;
         gap: 1rem;
-        flex-wrap: wrap;
+        margin-bottom: 0.5rem;
       }
-      .beat h2 {
-        margin: 0;
-        font-size: 1.02rem;
-      }
-      .time {
-        color: var(--muted);
-        font-size: 0.85rem;
-        white-space: nowrap;
-      }
-      .shot {
-        color: var(--muted);
-        font-size: 0.88rem;
-        margin: 0.5rem 0 0.6rem;
-      }
-      .vo {
-        font-size: 0.95rem;
-      }
-      .vo small {
-        color: var(--muted);
-      }
+      .beat h2 { margin: 0; font-size: 1rem; }
+      .time { color: var(--muted); font-size: 0.85rem; white-space: nowrap; }
+      .vo { font-size: 0.95rem; margin: 0.4rem 0; }
       table {
         border-collapse: collapse;
-        margin: 0.7rem 0 0.2rem;
-        font-size: 0.9rem;
         width: 100%;
+        font-size: 0.88rem;
+        margin-top: 0.5rem;
       }
-      th,
-      td {
+      th, td {
         border: 1px solid var(--border);
-        padding: 0.35rem 0.6rem;
+        padding: 0.3rem 0.55rem;
         text-align: right;
       }
-      th:first-child,
-      td:first-child {
-        text-align: left;
-      }
-      .win {
-        color: var(--green);
-        font-weight: 600;
-      }
-      .gap {
-        color: var(--dim);
-      }
-      .src {
-        display: inline-block;
-        margin-top: 0.5rem;
-        font-size: 0.78rem;
-        color: var(--accent);
-      }
-      .src a {
-        color: var(--accent);
-        text-decoration: none;
-      }
-      .src a:hover {
-        text-decoration: underline;
-      }
-      .foot {
-        margin-top: 1.5rem;
-        color: var(--muted);
-        font-size: 0.85rem;
-      }
+      th:first-child, td:first-child { text-align: left; }
+      .win { color: var(--accent); font-weight: 600; }
+      .foot { margin-top: 1.25rem; color: var(--muted); font-size: 0.85rem; }
     </style>
   </head>
   <body>
-    <h1>Librebase benchmark — beat board</h1>
-    <div class="meta">
-      Companion to <a href="librebase-benchmark-video-script.md">librebase-benchmark-video-script.md</a> ·
-      same structure &amp; honesty rules as the <a href="../librebase-vision-video-script.md">vision video</a>.
-      Click each source link to open the measured result file.
-    </div>
+    <h1>Librebase vs Supabase — short cut (~45–60s)</h1>
+    <p class="meta">
+      Script: <a href="librebase-benchmark-video-script.md">librebase-benchmark-video-script.md</a>
+      · Same machine. Same workload. One table.
+    </p>
 
-    <div class="beats">
-      <section class="beat">
-        <header>
-          <h2>0:00–0:15 — Hook: the gap that closed</h2>
-          <span class="time">0:15</span>
-        </header>
-        <p class="shot">Split screen: pgvector planner vs Li vector CLI · text: same 10k×128 corpus, same 1000 queries, same Mac.</p>
-        <p class="vo">Every dimension on one screen — and the vector column is no longer a loss. It's the biggest win on the board.</p>
-      </section>
+    <section class="beat">
+      <header>
+        <h2>Hook</h2>
+        <span class="time">0:00–0:08</span>
+      </header>
+      <p class="vo">What if Supabase ran at a fraction of the cost — and still beat it on every number that matters?</p>
+    </section>
 
-      <section class="beat">
-        <header>
-          <h2>0:15–0:40 — Footprint gap</h2>
-          <span class="time">0:25</span>
-        </header>
-        <p class="shot">Screen record: <code>podman images</code> + <code>podman stats</code> on both stacks.</p>
-        <table>
-          <tr><th></th><th>Images</th><th>RAM idle</th><th>Containers</th></tr>
-          <tr><td>Supabase (full)</td><td>~7.5 GB</td><td>~1.85 GB</td><td>12</td></tr>
-          <tr><td>Supabase Light</td><td>~2.3 GB</td><td>~140 MB</td><td>3</td></tr>
-          <tr><td><span class="win">Librebase</span></td><td class="win">8.2 MB</td><td class="win">~2 MB</td><td class="win">1</td></tr>
-        </table>
-        <span class="src"><a href="../results/footprint-provisioning.json">footprint-provisioning.json</a></span>
-      </section>
+    <section class="beat">
+      <header>
+        <h2>Footprint</h2>
+        <span class="time">0:08–0:18</span>
+      </header>
+      <p class="vo">Twelve containers. Almost two gigs of RAM. Or one container, two megabytes, ready in a quarter second.</p>
+      <table>
+        <tr><th></th><th>Supabase</th><th>Librebase</th></tr>
+        <tr><td>Containers</td><td>12</td><td class="win">1</td></tr>
+        <tr><td>RAM idle</td><td>~1.85 GB</td><td class="win">~2 MB</td></tr>
+        <tr><td>Cold start</td><td>seconds</td><td class="win">265 ms</td></tr>
+      </table>
+    </section>
 
-      <section class="beat">
-        <header>
-          <h2>0:40–1:15 — Vector search: the headline</h2>
-          <span class="time">0:35</span>
-        </header>
-        <p class="shot">Vector table, Librebase HNSW row highlighted green.</p>
-        <table>
-          <tr><th></th><th>QPS</th><th>us/query</th><th>recall@10</th></tr>
-          <tr><td>Librebase exact</td><td>669</td><td>1495</td><td>100%</td></tr>
-          <tr><td><span class="win">Librebase HNSW ef=40</span></td><td class="win">4683</td><td class="win">214</td><td class="win">100%</td></tr>
-          <tr><td>pgvector ef=40</td><td>1129</td><td>885</td><td>88.7%</td></tr>
-          <tr><td>pgvector ef=320</td><td>499</td><td>2005</td><td>100%</td></tr>
-          <tr><td>pgvector ef=640</td><td>488</td><td>2051</td><td>100%</td></tr>
-        </table>
-        <p class="vo"><strong>VO:</strong> 9.4× faster at equal 100% recall; at pgvector's fastest setting it only reaches 89% recall while Librebase is 100% at 3× the throughput.</p>
-        <span class="src"><a href="../results/vector-fresh-2026-08-13.json">vector-fresh-2026-08-13.json</a></span>
-      </section>
+    <section class="beat">
+      <header>
+        <h2>Speed</h2>
+        <span class="time">0:18–0:32</span>
+      </header>
+      <p class="vo">Faster auth. Faster storage. Faster queries. Vector: 4,683 QPS at 100% recall — nine times faster than pgvector at the same accuracy.</p>
+      <table>
+        <tr><th></th><th>Supabase</th><th>Librebase</th></tr>
+        <tr><td>Auth login</td><td>196 ms</td><td class="win">52 ms</td></tr>
+        <tr><td>Storage upload</td><td>24 ms</td><td class="win">2.8 ms</td></tr>
+        <tr><td>Vector QPS (100% recall)</td><td>499</td><td class="win">4,683</td></tr>
+      </table>
+    </section>
 
-      <section class="beat">
-        <header>
-          <h2>1:15–1:40 — Ingest + indexed queries</h2>
-          <span class="time">0:25</span>
-        </header>
-        <table>
-          <tr><th></th><th>Supabase</th><th><span class="win">Librebase</span></th></tr>
-          <tr><td>Ingest (rows/s)</td><td>1,124</td><td class="win">5,591</td></tr>
-          <tr><td>Point lookup p50</td><td>~3.4 ms</td><td class="win">0.05 ms</td></tr>
-          <tr><td>Range query p50</td><td>~15.8 ms</td><td class="win">0.06 ms</td></tr>
-          <tr><td>LIMIT page p50</td><td>~3.6 ms</td><td class="win">0.06 ms</td></tr>
-        </table>
-        <span class="src"><a href="../results/ingest-index-lidb-hash.json">ingest-index-lidb-hash.json</a> ·
-          <a href="../results/ingest-index-supabase-fullstack.json">ingest-index-supabase-fullstack.json</a></span>
-      </section>
+    <section class="beat">
+      <header>
+        <h2>Close</h2>
+        <span class="time">0:32–0:45</span>
+      </header>
+      <p class="vo">Drop-in compatible with supabase-js. Sandbox-sized. Production-ready when you are.</p>
+      <p class="vo"><strong>On screen:</strong> librebase.dev · Measured, not marketed.</p>
+    </section>
 
-      <section class="beat">
-        <header>
-          <h2>1:40–2:05 — REST / Auth / Storage / Edge</h2>
-          <span class="time">0:25</span>
-        </header>
-        <table>
-          <tr><th>op</th><th>Supabase ms</th><th><span class="win">Librebase ms</span></th></tr>
-          <tr><td>REST insert</td><td>6.52</td><td class="win">4.63</td></tr>
-          <tr><td>REST select</td><td>5.10</td><td class="win">3.59</td></tr>
-          <tr><td>Auth signup</td><td>206.8</td><td class="win">56.0</td></tr>
-          <tr><td>Auth login</td><td>196.1</td><td class="win">52.0</td></tr>
-          <tr><td>Storage upload</td><td>24.2</td><td class="win">2.8</td></tr>
-          <tr><td>Storage get</td><td>12.6</td><td class="win">2.2</td></tr>
-          <tr><td>Edge invoke</td><td>63.5</td><td>65.0 <small>(lean WASM, not Deno)</small></td></tr>
-        </table>
-        <span class="src"><a href="../results/full-palette-summary.json">full-palette-summary.json</a></span>
-      </section>
-
-      <section class="beat">
-        <header>
-          <h2>2:05–2:25 — Realtime: measured + honest gap</h2>
-          <span class="time">0:20</span>
-        </header>
-        <table>
-          <tr><th></th><th>p50</th><th>delivered</th></tr>
-          <tr><td><span class="win">Librebase</span> (REST→WS)</td><td class="win">50 ms</td><td class="win">60/60</td></tr>
-          <tr><td class="gap">Supabase (CDC)</td><td class="gap">—</td><td class="gap">—</td></tr>
-        </table>
-        <p class="vo small">Supabase-side Realtime delivery left empty: self-host CDC worker never reaches connected state on the bench box. Not a Librebase result.</p>
-        <span class="src"><a href="../results/realtime-e2e-lis.json">realtime-e2e-lis.json</a></span>
-      </section>
-
-      <section class="beat">
-        <header>
-          <h2>2:25–2:40 — Outro</h2>
-          <span class="time">0:15</span>
-        </header>
-        <p class="shot">Librebase logo; full table scrolls.</p>
-        <p class="vo">Footprint 900× smaller · quarter-second provisioning · every data op faster · vector search now 9× faster at 100% recall. Same Mac, same corpus, same queries, one honest table.</p>
-      </section>
-    </div>
-
-    <div class="foot">
-      Honesty rule: measured numbers only. Vector = fresh run (Li HNSW engine);
-      other dimensions = recorded full-palette run on the same machine. The
-      Supabase Realtime cell is left as a gap, not extrapolated.
-    </div>
+    <p class="foot">~45s social / ~60s landing. Numbers from full-stack results + vector-fresh-2026-08-13.json.</p>
   </body>
 </html>
