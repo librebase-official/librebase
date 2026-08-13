@@ -617,6 +617,68 @@ button {
   animation: lb-reveal-in var(--lb-reveal) var(--lb-ease) 0.35s forwards;
 }
 
+/* Comparison board (vs open stack) */
+.lb-compare {
+  max-width: 1080px;
+}
+.lb-cmp-grid {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  margin: 1.5rem 0 1.25rem;
+}
+.lb-cmp-card {
+  border: 1px solid var(--lb-line);
+  border-radius: 12px;
+  background: rgba(14, 26, 28, 0.65);
+  padding: 1.1rem 1.2rem;
+}
+.lb-cmp-kicker {
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lb-signal);
+  margin-bottom: 0.9rem;
+  font-weight: 600;
+}
+.lb-cmp-rows {
+  margin: 0;
+  display: grid;
+  gap: 0.7rem;
+}
+.lb-cmp-row {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr 0.8fr;
+  gap: 0.6rem;
+  align-items: baseline;
+  font-size: 0.92rem;
+}
+.lb-cmp-row dt {
+  color: var(--lb-paper);
+  font-weight: 500;
+}
+.lb-cmp-os {
+  color: var(--lb-fog);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.lb-cmp-lb {
+  color: var(--lb-signal);
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.lb-cmp-note {
+  font-size: 0.82rem;
+  color: var(--lb-fog);
+  margin: 0;
+}
+.lb-cmp-note code {
+  color: var(--lb-signal);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+}
+
 .lb-steps {
   list-style: none;
   margin: 0;

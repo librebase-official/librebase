@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>Librebase — vs open stack</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        background: #071014;
+      }
+      body {
+        font-family: "Space Grotesk", system-ui, sans-serif;
+        color: #e7f2ec;
+        -webkit-font-smoothing: antialiased;
+      }
+      :root {
+        --ink: #071014;
+        --panel: #0e1a1c;
+        --paper: #e7f2ec;
+        --fog: #9bb0aa;
+        --signal: #2fd4c2;
+        --signal-dim: #1fa89a;
+        --line: rgba(231, 242, 236, 0.12);
+      }
+      #stage {
+        position: relative;
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: var(--ink);
+      }
+      .backdrop {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(circle at 18% 10%, rgba(47, 212, 194, 0.16), transparent 52%),
+          radial-gradient(900px 700px at 108% 96%, rgba(47, 212, 194, 0.06), transparent 58%),
+          linear-gradient(165deg, #0a1618 0%, var(--ink) 48%, #050c0e 100%);
+      }
+      .backdrop::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image: linear-gradient(rgba(231, 242, 236, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(231, 242, 236, 0.03) 1px, transparent 1px);
+        background-size: 96px 96px;
+        mask-image: radial-gradient(1100px 820px at 50% 38%, #000 0%, transparent 72%);
+      }
+      .clip {
+        position: absolute;
+        inset: 0;
+        padding: 160px 80px 200px;
+        display: flex;
+        flex-direction: column;
+      }
+      .eyebrow {
+        font-size: 28px;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--signal);
+        margin-bottom: 32px;
+      }
+      .wordmark {
+        font-family: "Orbitron", sans-serif;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        color: var(--paper);
+        white-space: nowrap;
+        line-height: 1;
+      }
+      .wordmark .base {
+        color: var(--signal);
+      }
+      .wordmark.hero {
+        font-size: 88px;
+      }
+      .wordmark.lockup {
+        font-size: 76px;
+      }
+      .hook {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 36px;
+      }
+      .hook-kicker {
+        font-size: 30px;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--fog);
+      }
+      .hook-line {
+        font-family: "Orbitron", sans-serif;
+        font-size: 64px;
+        font-weight: 700;
+        line-height: 1.18;
+        letter-spacing: -0.01em;
+        color: var(--paper);
+        max-width: 920px;
+      }
+      .hook-line .em {
+        color: var(--signal);
+      }
+      .hook-sub {
+        font-size: 36px;
+        font-weight: 500;
+        color: var(--fog);
+        line-height: 1.35;
+        max-width: 900px;
+      }
+      .stat-main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 40px;
+      }
+      .rows {
+        display: flex;
+        flex-direction: column;
+        gap: 36px;
+      }
+      .row {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .row-top {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 20px;
+        font-size: 32px;
+      }
+      .row-name {
+        font-weight: 600;
+        color: var(--paper);
+      }
+      .row-val {
+        font-variant-numeric: tabular-nums;
+        color: var(--fog);
+        font-weight: 500;
+        white-space: nowrap;
+      }
+      .row.accent .row-name,
+      .row.accent .row-val {
+        color: var(--signal);
+      }
+      .bar-track {
+        display: block;
+        width: 100%;
+        height: 20px;
+        border-radius: 10px;
+        background: rgba(231, 242, 236, 0.06);
+        overflow: hidden;
+      }
+      .bar-fill {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border-radius: 10px;
+        background: #2a3a3c;
+        transform: scaleX(0);
+        transform-origin: left center;
+      }
+      .row.accent .bar-fill {
+        background: var(--signal);
+      }
+      .pill {
+        display: inline-flex;
+        align-self: flex-start;
+        align-items: center;
+        padding: 20px 36px;
+        border-radius: 6px;
+        background: var(--signal);
+        border: 1px solid var(--signal-dim);
+        font-size: 32px;
+        font-weight: 600;
+        color: var(--ink);
+      }
+      .center-block {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 28px;
+      }
+      .num-row {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 14px;
+      }
+      .stat-value {
+        display: inline-block;
+        font-family: "Orbitron", sans-serif;
+        font-variant-numeric: tabular-nums;
+        font-size: 160px;
+        font-weight: 700;
+        line-height: 0.95;
+        letter-spacing: -0.03em;
+        color: var(--paper);
+        transform-origin: 50% 50%;
+      }
+      .stat-unit {
+        font-size: 48px;
+        font-weight: 600;
+        color: var(--signal);
+      }
+      .stat-label {
+        font-size: 36px;
+        font-weight: 500;
+        color: var(--fog);
+        line-height: 1.4;
+        max-width: 860px;
+        text-align: center;
+      }
+      .stat-label strong {
+        color: var(--paper);
+        font-weight: 600;
+      }
+      .compare-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+      }
+      .cmp {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: 16px 24px;
+        align-items: center;
+        padding: 22px 28px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: rgba(14, 26, 28, 0.72);
+      }
+      .cmp-label {
+        font-size: 30px;
+        font-weight: 600;
+        color: var(--paper);
+      }
+      .cmp-os {
+        font-size: 28px;
+        font-variant-numeric: tabular-nums;
+        color: var(--fog);
+        text-align: right;
+      }
+      .cmp-lb {
+        font-size: 30px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        color: var(--signal);
+        text-align: right;
+        min-width: 160px;
+      }
+      .cmp-head {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: 16px 24px;
+        padding: 0 28px 8px;
+        font-size: 22px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--fog);
+      }
+      .cmp-head span:nth-child(2),
+      .cmp-head span:nth-child(3) {
+        text-align: right;
+        min-width: 160px;
+      }
+      .outro {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: flex-start;
+        gap: 40px;
+      }
+      .outro-tag {
+        font-size: 40px;
+        font-weight: 500;
+        color: var(--fog);
+        line-height: 1.35;
+        max-width: 860px;
+      }
+      .url-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 22px 40px;
+        border-radius: 6px;
+        background: var(--signal);
+        border: 1px solid var(--signal-dim);
+        font-family: "Orbitron", sans-serif;
+        font-size: 34px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        color: var(--ink);
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="stage"
+      data-composition-id="librebase-benchmark"
+      data-start="0"
+      data-width="1080"
+      data-height="1920"
+      data-duration="28"
+      data-fps="30"
+      data-bg="#071014"
+    >
+      <div class="backdrop"></div>
+
+      <!-- Hook 0–5s -->
+      <section id="sc-hook" class="clip" data-start="0" data-duration="5" data-track-index="0">
+        <div class="hook">
+          <div class="hook-kicker" id="hook-kicker">Benchmark</div>
+          <div class="wordmark hero" id="hook-mark">Libre<span class="base">base</span></div>
+          <div class="hook-sub" id="hook-tag">vs open stack</div>
+          <div class="hook-line" id="hook-line">
+            Same machine.<br />Same tests.<br /><span class="em">Honest numbers.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Footprint 5–11s -->
+      <section id="sc-foot" class="clip" data-start="5" data-duration="6" data-track-index="0">
+        <div class="stat-main">
+          <div class="eyebrow" id="fp-eyebrow">Footprint</div>
+          <div class="rows">
+            <div class="row" id="fp-r0">
+              <div class="row-top">
+                <span class="row-name">Open stack</span>
+                <span class="row-val">~1.85 GB · 12 ctr</span>
+              </div>
+              <div class="bar-track"><div class="bar-fill" id="fp-b0"></div></div>
+            </div>
+            <div class="row accent" id="fp-r1">
+              <div class="row-top">
+                <span class="row-name">Librebase</span>
+                <span class="row-val">~2 MB · 1 ctr</span>
+              </div>
+              <div class="bar-track"><div class="bar-fill" id="fp-b1"></div></div>
+            </div>
+          </div>
+          <div class="pill" id="fp-pill">Cold start 265 ms</div>
+        </div>
+      </section>
+
+      <!-- Vector headline 11–18s -->
+      <section id="sc-vec" class="clip" data-start="11" data-duration="7" data-track-index="0">
+        <div class="stat-main">
+          <div class="eyebrow" id="vec-eyebrow">Vector search · 100% recall</div>
+          <div class="center-block">
+            <div class="num-row" id="vec-num">
+              <span class="stat-value" id="vec-value">0</span>
+              <span class="stat-unit" id="vec-unit">QPS</span>
+            </div>
+            <div class="stat-label" id="vec-label">
+              Librebase HNSW · <strong>9.4×</strong> the open stack<br />at the same accuracy
+            </div>
+          </div>
+          <div class="rows" style="gap: 20px">
+            <div class="row" id="vec-r0">
+              <div class="row-top">
+                <span class="row-name">Open stack best @ 100%</span>
+                <span class="row-val">499 QPS</span>
+              </div>
+              <div class="bar-track"><div class="bar-fill" id="vec-b0"></div></div>
+            </div>
+            <div class="row accent" id="vec-r1">
+              <div class="row-top">
+                <span class="row-name">Librebase ef=40</span>
+                <span class="row-val">4,683 QPS</span>
+              </div>
+              <div class="bar-track"><div class="bar-fill" id="vec-b1"></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Speed board 18–23.5s -->
+      <section id="sc-speed" class="clip" data-start="18" data-duration="5.5" data-track-index="0">
+        <div class="stat-main">
+          <div class="eyebrow" id="sp-eyebrow">Across the board</div>
+          <div class="cmp-head">
+            <span></span>
+            <span>Open stack</span>
+            <span>Librebase</span>
+          </div>
+          <div class="compare-grid">
+            <div class="cmp" id="sp-c0">
+              <span class="cmp-label">Auth login</span>
+              <span class="cmp-os">196 ms</span>
+              <span class="cmp-lb">52 ms</span>
+            </div>
+            <div class="cmp" id="sp-c1">
+              <span class="cmp-label">Storage upload</span>
+              <span class="cmp-os">24 ms</span>
+              <span class="cmp-lb">2.8 ms</span>
+            </div>
+            <div class="cmp" id="sp-c2">
+              <span class="cmp-label">Ingest</span>
+              <span class="cmp-os">1.1k rows/s</span>
+              <span class="cmp-lb">5.6k rows/s</span>
+            </div>
+            <div class="cmp" id="sp-c3">
+              <span class="cmp-label">Point lookup</span>
+              <span class="cmp-os">3.4 ms</span>
+              <span class="cmp-lb">0.05 ms</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Outro 23.5–28s -->
+      <section id="sc-out" class="clip" data-start="23.5" data-duration="4.5" data-track-index="0">
+        <div class="outro">
+          <div class="wordmark lockup" id="out-mark">Libre<span class="base">base</span></div>
+          <div class="outro-tag" id="out-tag">
+            Drop-in for open-stack clients.<br />Sandbox-sized. Production-ready when you are.
+          </div>
+          <div class="url-pill" id="out-url">librebase.xyz</div>
+          <div class="hook-sub" id="out-honest" style="font-size: 28px">Measured, not marketed.</div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      const count = (el, to, at, dur, ease) => {
+        const s = { v: 0 };
+        tl.to(
+          s,
+          {
+            v: to,
+            duration: dur,
+            ease,
+            onUpdate: () => {
+              el.textContent = Math.round(s.v).toLocaleString("en-US");
+            },
+          },
+          at,
+        );
+      };
+
+      // Hook
+      tl.from("#hook-kicker", { y: 28, opacity: 0, duration: 0.45, ease: "power3.out" }, 0.12);
+      tl.fromTo(
+        "#hook-mark",
+        { y: 36, opacity: 0, scale: 0.94 },
+        { y: 0, opacity: 1, scale: 1, duration: 0.65, ease: "power3.out" },
+        0.35,
+      );
+      tl.fromTo(
+        "#hook-tag",
+        { y: 22, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.45, ease: "power3.out" },
+        0.9,
+      );
+      tl.fromTo(
+        "#hook-line",
+        { y: 36, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" },
+        1.25,
+      );
+
+      // Footprint
+      tl.from("#fp-eyebrow", { y: 22, opacity: 0, duration: 0.4, ease: "power3.out" }, 5.1);
+      tl.fromTo(
+        ["#fp-r0", "#fp-r1"],
+        { y: 28, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.5, ease: "power3.out", stagger: 0.14 },
+        5.4,
+      );
+      tl.to("#fp-b0", { scaleX: 1, duration: 0.85, ease: "power2.out" }, 5.95);
+      tl.to("#fp-b1", { scaleX: 0.012, duration: 0.85, ease: "power2.out" }, 6.1);
+      tl.fromTo(
+        "#fp-pill",
+        { y: 16, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.45, ease: "power3.out" },
+        7.1,
+      );
+
+      // Vector
+      tl.from("#vec-eyebrow", { y: 22, opacity: 0, duration: 0.4, ease: "power3.out" }, 11.15);
+      count(document.getElementById("vec-value"), 4683, 11.45, 1.35, "power3.out");
+      tl.fromTo("#vec-value", { scale: 0.42 }, { scale: 1, duration: 1.35, ease: "power3.out" }, 11.45);
+      tl.fromTo(
+        "#vec-unit",
+        { y: 16, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.4, ease: "power3.out" },
+        12.5,
+      );
+      tl.fromTo(
+        "#vec-label",
+        { y: 20, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" },
+        12.85,
+      );
+      tl.fromTo(
+        ["#vec-r0", "#vec-r1"],
+        { y: 24, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.45, ease: "power3.out", stagger: 0.12 },
+        13.5,
+      );
+      tl.to("#vec-b0", { scaleX: 0.11, duration: 0.75, ease: "power2.out" }, 14.0);
+      tl.to("#vec-b1", { scaleX: 1, duration: 0.85, ease: "power2.out" }, 14.15);
+
+      // Speed board
+      tl.from("#sp-eyebrow", { y: 22, opacity: 0, duration: 0.4, ease: "power3.out" }, 18.15);
+      tl.fromTo(
+        [".cmp-head", "#sp-c0", "#sp-c1", "#sp-c2", "#sp-c3"],
+        { y: 26, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.45, ease: "power3.out", stagger: 0.1 },
+        18.5,
+      );
+
+      // Outro
+      tl.fromTo(
+        "#out-mark",
+        { y: 26, opacity: 0, scale: 0.94 },
+        { y: 0, opacity: 1, scale: 1, duration: 0.6, ease: "power3.out" },
+        23.7,
+      );
+      tl.fromTo(
+        "#out-tag",
+        { y: 22, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" },
+        24.25,
+      );
+      tl.fromTo(
+        "#out-url",
+        { y: 14, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.45, ease: "power3.out" },
+        24.8,
+      );
+      tl.fromTo(
+        "#out-honest",
+        { y: 12, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.4, ease: "power3.out" },
+        25.35,
+      );
+
+      window.__timelines["librebase-benchmark"] = tl;
+    </script>
+  </body>
+</html>

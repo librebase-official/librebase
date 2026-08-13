@@ -60,7 +60,7 @@
     </style>
   </head>
   <body>
-    <h1>Librebase vs Supabase — short cut (~45–60s)</h1>
+    <h1>Librebase vs open stack — short cut (~45–60s)</h1>
     <p class="meta">
       Script: <a href="librebase-benchmark-video-script.md">librebase-benchmark-video-script.md</a>
       · Same machine. Same workload. One table.
@@ -71,7 +71,7 @@
         <h2>Hook</h2>
         <span class="time">0:00–0:08</span>
       </header>
-      <p class="vo">What if Supabase ran at a fraction of the cost — and still beat it on every number that matters?</p>
+      <p class="vo">What if the open stack ran at a fraction of the cost — and still beat it on every number that matters?</p>
     </section>
 
     <section class="beat">
@@ -81,7 +81,7 @@
       </header>
       <p class="vo">Twelve containers. Almost two gigs of RAM. Or one container, two megabytes, ready in a quarter second.</p>
       <table>
-        <tr><th></th><th>Supabase</th><th>Librebase</th></tr>
+        <tr><th></th><th>Open stack</th><th>Librebase</th></tr>
         <tr><td>Containers</td><td>12</td><td class="win">1</td></tr>
         <tr><td>RAM idle</td><td>~1.85 GB</td><td class="win">~2 MB</td></tr>
         <tr><td>Cold start</td><td>seconds</td><td class="win">265 ms</td></tr>
@@ -93,9 +93,9 @@
         <h2>Speed</h2>
         <span class="time">0:18–0:32</span>
       </header>
-      <p class="vo">Faster auth. Faster storage. Faster queries. Vector: 4,683 QPS at 100% recall — nine times faster than pgvector at the same accuracy.</p>
+      <p class="vo">Faster auth. Faster storage. Faster queries. Vector: 4,683 QPS at 100% recall — nine times faster than the open stack's vector path at the same accuracy.</p>
       <table>
-        <tr><th></th><th>Supabase</th><th>Librebase</th></tr>
+        <tr><th></th><th>Open stack</th><th>Librebase</th></tr>
         <tr><td>Auth login</td><td>196 ms</td><td class="win">52 ms</td></tr>
         <tr><td>Storage upload</td><td>24 ms</td><td class="win">2.8 ms</td></tr>
         <tr><td>Vector QPS (100% recall)</td><td>499</td><td class="win">4,683</td></tr>
@@ -107,10 +107,10 @@
         <h2>Close</h2>
         <span class="time">0:32–0:45</span>
       </header>
-      <p class="vo">Drop-in compatible with supabase-js. Sandbox-sized. Production-ready when you are.</p>
+      <p class="vo">Drop-in for apps built on the open stack client. Sandbox-sized. Production-ready when you are.</p>
       <p class="vo"><strong>On screen:</strong> librebase.dev · Measured, not marketed.</p>
     </section>
 
-    <p class="foot">~45s social / ~60s landing. Numbers from full-stack results + vector-fresh-2026-08-13.json.</p>
+    <p class="foot">~45s social / ~60s landing. Competitor label: open stack. Numbers from full-stack results + vector-fresh-2026-08-13.json.</p>
   </body>
 </html>

@@ -68,6 +68,85 @@ export function LandingPage() {
         </p>
       </section>
 
+      <section className="lb-band lb-compare lb-reveal" id="compare" aria-label="Benchmark comparison">
+        <h2>Measured against the open stack</h2>
+        <p>
+          Same machine, same workload, one table. A lean instance measures about 2&nbsp;MB
+          resident and cold-starts in about a quarter second; every row below is a measured
+          number from the published full-stack benchmark.
+        </p>
+
+        <div className="lb-cmp-grid">
+          <div className="lb-cmp-card">
+            <div className="lb-cmp-kicker">Footprint</div>
+            <dl className="lb-cmp-rows">
+              <div className="lb-cmp-row">
+                <dt>RAM idle</dt>
+                <dd className="lb-cmp-os">~1.85 GB</dd>
+                <dd className="lb-cmp-lb">~2 MB</dd>
+              </div>
+              <div className="lb-cmp-row">
+                <dt>Containers</dt>
+                <dd className="lb-cmp-os">12</dd>
+                <dd className="lb-cmp-lb">1</dd>
+              </div>
+              <div className="lb-cmp-row">
+                <dt>Cold start</dt>
+                <dd className="lb-cmp-os">seconds</dd>
+                <dd className="lb-cmp-lb">265 ms</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div className="lb-cmp-card">
+            <div className="lb-cmp-kicker">Vector search · 100% recall</div>
+            <dl className="lb-cmp-rows">
+              <div className="lb-cmp-row">
+                <dt>QPS @ recall</dt>
+                <dd className="lb-cmp-os">499</dd>
+                <dd className="lb-cmp-lb">4,683</dd>
+              </div>
+              <div className="lb-cmp-row">
+                <dt>vs best open-stack @ 100%</dt>
+                <dd className="lb-cmp-os">1×</dd>
+                <dd className="lb-cmp-lb">9.4×</dd>
+              </div>
+              <div className="lb-cmp-row">
+                <dt>Engine</dt>
+                <dd className="lb-cmp-os">external</dd>
+                <dd className="lb-cmp-lb">pure Li</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div className="lb-cmp-card">
+            <div className="lb-cmp-kicker">Speed</div>
+            <dl className="lb-cmp-rows">
+              <div className="lb-cmp-row">
+                <dt>Auth login</dt>
+                <dd className="lb-cmp-os">196 ms</dd>
+                <dd className="lb-cmp-lb">52 ms</dd>
+              </div>
+              <div className="lb-cmp-row">
+                <dt>Storage upload</dt>
+                <dd className="lb-cmp-os">24 ms</dd>
+                <dd className="lb-cmp-lb">2.8 ms</dd>
+              </div>
+              <div className="lb-cmp-row">
+                <dt>Ingest</dt>
+                <dd className="lb-cmp-os">1.1k rows/s</dd>
+                <dd className="lb-cmp-lb">5.6k rows/s</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+
+        <p className="lb-cmp-note">
+          Sources: <code>benchmarks/full-stack/results/</code> in the Librebase repo — measured,
+          not marketed.
+        </p>
+      </section>
+
       <section className="lb-band lb-reveal" id="promise">
         <h2>Apps and agents need a database that keeps up.</h2>
         <p>
