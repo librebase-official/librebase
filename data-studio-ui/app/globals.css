@@ -713,15 +713,6 @@ button {
   transform: none;
 }
 
-.lb-cin-kicker {
-  position: relative;
-  font-size: clamp(12px, 1.3vw, 14px);
-  font-weight: 600;
-  letter-spacing: 0.32em;
-  text-transform: uppercase;
-  color: var(--lb-signal);
-  margin-bottom: var(--space-5);
-}
 .lb-cin-wordmark {
   position: relative;
   font-family: var(--font-display), "Orbitron", sans-serif;

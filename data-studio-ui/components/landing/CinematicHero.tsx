@@ -107,7 +107,6 @@ export function CinematicHero() {
           <span className="lb-cin-orb lb-cin-orb-b" />
         </div>
 
-        <Reveal className="lb-cin-kicker">Benchmark · same machine · same tests</Reveal>
         <Reveal className="lb-cin-wordmark" delay={80}>
           Libre<span className="lb-cin-base">base</span>
         </Reveal>

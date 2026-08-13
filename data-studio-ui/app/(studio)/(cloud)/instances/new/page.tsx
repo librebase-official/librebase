@@ -1,10 +1,11 @@
 "use client";
 
+import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Host, Instance } from "@/lib/types";
 
-export default function NewInstancePage() {
+function NewInstancePageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [name, setName] = useState("");
@@ -141,5 +142,13 @@ export default function NewInstancePage() {
         </button>
       </form>
     </>
+  );
+}
+
+export default function NewInstancePage() {
+  return (
+    <Suspense fallback={null}>
+      <NewInstancePageInner />
+    </Suspense>
   );
 }
