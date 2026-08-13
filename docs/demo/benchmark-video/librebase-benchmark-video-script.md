@@ -42,9 +42,9 @@ Same machine. Same workload. One table.
 
 ## 0:32–0:45 — Close
 
-**VO:** "Drop-in for apps built on the open stack client. Sandbox-sized. Production-ready when you are. That's Librebase."
+**VO:** "Drop-in for apps built on the open stack client. Sandbox-sized. Production-ready when you are. Join the waitlist."
 
-**On screen:** librebase.dev · *Measured, not marketed.*
+**On screen:** Librebase wordmark + **Join the waitlist** pill.
 
 ---
 
