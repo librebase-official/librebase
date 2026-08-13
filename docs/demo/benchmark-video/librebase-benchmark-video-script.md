@@ -42,9 +42,9 @@ Same machine. Same workload. One table.
 
 ## 0:32–0:45 — Close
 
-**VO:** "Drop-in for apps built on the open stack client. Sandbox-sized. Production-ready when you are. Join the waitlist."
+**VO:** "Librebase — tiny, high-performance backend as a service for AI. Join the waitlist."
 
-**On screen:** Librebase wordmark + **Join the waitlist** pill.
+**On screen:** Librebase wordmark · *Tiny, high-performance backend as a service for AI* · **Join the waitlist** pill.
 
 ---
 
