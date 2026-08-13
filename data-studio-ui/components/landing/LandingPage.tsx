@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { CinematicHero } from "./CinematicHero";
+
 /** Primary conversion goal: waitlist email for early access. */
 const PRIMARY_CTA = "Join the waitlist for early access";
 
@@ -38,114 +40,7 @@ export function LandingPage() {
         </div>
       </header>
 
-      <section className="lb-hero" aria-label="Hero">
-        <div className="lb-hero-copy">
-          <p className="lb-brand-signal">Librebase</p>
-          <h1 className="lb-hero-title">A PostgreSQL platform that stays small and honest.</h1>
-          <p className="lb-hero-sub">
-            Sign-in by default. Usual database connection, web interfaces, and live updates. Built
-            for apps and for AI tools that query your data.
-          </p>
-          <div className="lb-cta-row">
-            <a className="lb-btn lb-btn-primary lb-btn-lg" href="#waitlist">
-              {PRIMARY_CTA}
-            </a>
-            <Link className="lb-btn lb-btn-ghost lb-btn-lg" href="/projects">
-              Open the console
-            </Link>
-          </div>
-        </div>
-        <div className="lb-hero-visual" aria-hidden="true">
-          <ProductMesh />
-        </div>
-      </section>
-
-      <section className="lb-proof" aria-label="Proof">
-        <p>
-          The engine is written in Li and compiles to machine code. A lean instance measures
-          about 3.8&nbsp;MB of RAM resident, and indexed lookups and range scans benchmark at or
-          better than Postgres on our published OLTP comparison. The console shows real health.
-        </p>
-      </section>
-
-      <section className="lb-band lb-compare lb-reveal" id="compare" aria-label="Benchmark comparison">
-        <h2>Measured against the open stack</h2>
-        <p>
-          Same machine, same workload, one table. A lean instance measures about 2&nbsp;MB
-          resident and cold-starts in about a quarter second; every row below is a measured
-          number from the published full-stack benchmark.
-        </p>
-
-        <div className="lb-cmp-grid">
-          <div className="lb-cmp-card">
-            <div className="lb-cmp-kicker">Footprint</div>
-            <dl className="lb-cmp-rows">
-              <div className="lb-cmp-row">
-                <dt>RAM idle</dt>
-                <dd className="lb-cmp-os">~1.85 GB</dd>
-                <dd className="lb-cmp-lb">~2 MB</dd>
-              </div>
-              <div className="lb-cmp-row">
-                <dt>Containers</dt>
-                <dd className="lb-cmp-os">12</dd>
-                <dd className="lb-cmp-lb">1</dd>
-              </div>
-              <div className="lb-cmp-row">
-                <dt>Cold start</dt>
-                <dd className="lb-cmp-os">seconds</dd>
-                <dd className="lb-cmp-lb">265 ms</dd>
-              </div>
-            </dl>
-          </div>
-
-          <div className="lb-cmp-card">
-            <div className="lb-cmp-kicker">Vector search · 100% recall</div>
-            <dl className="lb-cmp-rows">
-              <div className="lb-cmp-row">
-                <dt>QPS @ recall</dt>
-                <dd className="lb-cmp-os">499</dd>
-                <dd className="lb-cmp-lb">4,683</dd>
-              </div>
-              <div className="lb-cmp-row">
-                <dt>vs best open-stack @ 100%</dt>
-                <dd className="lb-cmp-os">1×</dd>
-                <dd className="lb-cmp-lb">9.4×</dd>
-              </div>
-              <div className="lb-cmp-row">
-                <dt>Engine</dt>
-                <dd className="lb-cmp-os">external</dd>
-                <dd className="lb-cmp-lb">pure Li</dd>
-              </div>
-            </dl>
-          </div>
-
-          <div className="lb-cmp-card">
-            <div className="lb-cmp-kicker">Speed</div>
-            <dl className="lb-cmp-rows">
-              <div className="lb-cmp-row">
-                <dt>Auth login</dt>
-                <dd className="lb-cmp-os">196 ms</dd>
-                <dd className="lb-cmp-lb">52 ms</dd>
-              </div>
-              <div className="lb-cmp-row">
-                <dt>Storage upload</dt>
-                <dd className="lb-cmp-os">24 ms</dd>
-                <dd className="lb-cmp-lb">2.8 ms</dd>
-              </div>
-              <div className="lb-cmp-row">
-                <dt>Ingest</dt>
-                <dd className="lb-cmp-os">1.1k rows/s</dd>
-                <dd className="lb-cmp-lb">5.6k rows/s</dd>
-              </div>
-            </dl>
-          </div>
-        </div>
-
-        <p className="lb-cmp-note">
-          Sources: <code>benchmarks/full-stack/results/</code> in the Librebase repo — measured,
-          not marketed.
-        </p>
-      </section>
+      <CinematicHero />
 
       <section className="lb-band lb-reveal" id="promise">
         <h2>Apps and agents need a database that keeps up.</h2>
@@ -304,44 +199,6 @@ export function LandingPage() {
           <a href="https://github.com/librebase-official/librebase">GitHub</a>
         </div>
       </footer>
-    </div>
-  );
-}
-
-function ProductMesh() {
-  return (
-    <div className="lb-mesh">
-      <div className="lb-mesh-glow" />
-      <svg className="lb-mesh-svg" viewBox="0 0 960 720" role="presentation">
-        <defs>
-          <linearGradient id="lbStream" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#2FD4C2" stopOpacity="0" />
-            <stop offset="45%" stopColor="#2FD4C2" stopOpacity="0.85" />
-            <stop offset="100%" stopColor="#2FD4C2" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        <rect x="72" y="88" width="520" height="360" rx="18" className="lb-panel-a" />
-        <rect x="120" y="140" width="180" height="14" rx="4" className="lb-row" />
-        <rect x="120" y="172" width="420" height="14" rx="4" className="lb-row" />
-        <rect x="120" y="204" width="360" height="14" rx="4" className="lb-row" />
-        <rect x="120" y="236" width="400" height="14" rx="4" className="lb-row" />
-        <rect x="120" y="268" width="280" height="14" rx="4" className="lb-row" />
-        <rect x="340" y="220" width="420" height="320" rx="18" className="lb-panel-b" />
-        <text x="372" y="268" className="lb-sql">
-          select * from parity_items
-        </text>
-        <text x="372" y="304" className="lb-sql lb-sql-dim">
-          where owner_id = auth.uid()
-        </text>
-        <path
-          d="M180 520 C 320 460, 520 600, 760 420"
-          fill="none"
-          stroke="url(#lbStream)"
-          strokeWidth="3"
-          className="lb-stream"
-        />
-        <circle cx="760" cy="420" r="8" className="lb-pulse" />
-      </svg>
     </div>
   );
 }

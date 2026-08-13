@@ -618,7 +618,273 @@ button {
 }
 
 /* Comparison board (vs open stack) */
-.lb-compare {
+
+/* ===== Cinematic hero + benchmark (LandingPage / CinematicHero) ===== */
+.lb-cin-hero {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 110px 24px 70px;
+  overflow: hidden;
+  background:
+    radial-gradient(60% 45% at 18% 8%, rgba(47, 212, 194, 0.14), transparent 60%),
+    radial-gradient(50% 40% at 96% 4%, rgba(47, 212, 194, 0.08), transparent 55%),
+    radial-gradient(70% 60% at 50% 110%, rgba(47, 212, 194, 0.06), transparent 60%),
+    linear-gradient(170deg, #0a1618 0%, var(--lb-ink) 46%, #04090b 100%);
+}
+.lb-cin-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(231, 242, 236, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(231, 242, 236, 0.035) 1px, transparent 1px);
+  background-size: 88px 88px;
+  -webkit-mask-image: radial-gradient(1200px 900px at 50% 20%, #000 0%, transparent 75%);
+  mask-image: radial-gradient(1200px 900px at 50% 20%, #000 0%, transparent 75%);
+  pointer-events: none;
+}
+.lb-cin-orbs {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.lb-cin-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.5;
+}
+.lb-cin-orb-a {
+  width: 520px;
+  height: 520px;
+  left: -160px;
+  top: 8%;
+  background: radial-gradient(circle, rgba(47, 212, 194, 0.28), transparent 70%);
+  animation: lb-cin-drift-a 14s ease-in-out infinite alternate;
+}
+.lb-cin-orb-b {
+  width: 420px;
+  height: 420px;
+  right: -120px;
+  top: 42%;
+  background: radial-gradient(circle, rgba(47, 212, 194, 0.18), transparent 70%);
+  animation: lb-cin-drift-b 18s ease-in-out infinite alternate;
+}
+@keyframes lb-cin-drift-a {
+  from {
+    transform: translate(0, 0);
+  }
+  to {
+    transform: translate(60px, 40px);
+  }
+}
+@keyframes lb-cin-drift-b {
+  from {
+    transform: translate(0, 0);
+  }
+  to {
+    transform: translate(-50px, -30px);
+  }
+}
+
+.lb-cin-reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition:
+    opacity 0.8s var(--lb-ease),
+    transform 0.8s var(--lb-ease);
+}
+.lb-cin-reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+.lb-cin-kicker {
+  position: relative;
+  font-size: clamp(12px, 1.3vw, 14px);
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--lb-signal);
+  margin-bottom: 22px;
+}
+.lb-cin-wordmark {
+  position: relative;
+  font-family: var(--font-display), "Orbitron", sans-serif;
+  font-weight: 700;
+  font-size: clamp(56px, 12vw, 150px);
+  line-height: 0.94;
+  letter-spacing: -0.02em;
+  color: var(--lb-paper);
+  filter: drop-shadow(0 0 34px rgba(47, 212, 194, 0.22));
+}
+.lb-cin-wordmark .lb-cin-base {
+  color: var(--lb-signal);
+}
+.lb-cin-title {
+  position: relative;
+  margin-top: 6px;
+  font-family: var(--font-display), "Orbitron", sans-serif;
+  font-weight: 700;
+  font-size: clamp(26px, 4.6vw, 54px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--lb-paper);
+}
+.lb-cin-title .lb-cin-em {
+  color: var(--lb-signal);
+}
+.lb-cin-sub {
+  position: relative;
+  margin-top: 20px;
+  max-width: 640px;
+  font-size: clamp(15px, 1.9vw, 19px);
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--lb-fog);
+}
+.lb-cin-cta {
+  position: relative;
+  margin-top: 30px;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.lb-cin-herostat {
+  position: relative;
+  margin-top: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.lb-cin-herostat-label {
+  font-size: 11px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--lb-fog);
+}
+.lb-cin-herostat-value {
+  font-family: var(--font-display), "Orbitron", sans-serif;
+  font-weight: 700;
+  font-size: clamp(52px, 9vw, 108px);
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  color: var(--lb-paper);
+  font-variant-numeric: tabular-nums;
+}
+.lb-cin-herostat-value .lb-cin-unit {
+  font-size: 0.45em;
+  color: var(--lb-signal);
+}
+.lb-cin-herostat-sub {
+  font-size: 15px;
+  color: var(--lb-fog);
+}
+.lb-cin-herostat-sub strong {
+  color: var(--lb-signal);
+}
+
+/* benchmark board */
+.lb-cin-bench {
+  padding: clamp(80px, 12vh, 130px) clamp(20px, 5vw, 60px);
+  max-width: 1080px;
+  margin: 0 auto;
+}
+.lb-cin-bench-title {
+  font-family: var(--font-display), "Orbitron", sans-serif;
+  font-size: clamp(28px, 4.6vw, 52px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  max-width: 720px;
+  color: var(--lb-paper);
+}
+.lb-cin-bench-sub {
+  margin-top: 16px;
+  max-width: 560px;
+  font-size: 17px;
+  color: var(--lb-fog);
+  line-height: 1.55;
+}
+.lb-cin-rows {
+  margin-top: 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.lb-cin-row {
+  display: grid;
+  grid-template-columns: 240px 1fr auto auto;
+  gap: 18px;
+  align-items: center;
+  padding: 18px 22px;
+  border-radius: 12px;
+  border: 1px solid var(--lb-line);
+  background: rgba(14, 26, 28, 0.6);
+}
+.lb-cin-row-label {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--lb-paper);
+}
+.lb-cin-bar {
+  position: relative;
+  height: 14px;
+  border-radius: 7px;
+  background: rgba(231, 242, 236, 0.07);
+  overflow: hidden;
+}
+.lb-cin-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left;
+  transform: scaleX(0);
+  transition: transform 1.1s var(--lb-ease) 0.25s;
+}
+.lb-cin-row.is-in .lb-cin-fill {
+  transform: scaleX(var(--fill, 1));
+}
+.lb-cin-fill-os {
+  background: #2a3a3c;
+}
+.lb-cin-fill-os.lb-cin-fill-lb {
+  background: linear-gradient(90deg, var(--lb-signal-dim), var(--lb-signal));
+}
+.lb-cin-val {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  min-width: 96px;
+  font-size: 15px;
+  color: var(--lb-fog);
+}
+.lb-cin-val-lb {
+  color: var(--lb-signal);
+  font-weight: 700;
+  font-size: 17px;
+  min-width: 120px;
+}
+@media (max-width: 760px) {
+  .lb-cin-row {
+    grid-template-columns: 1fr auto;
+    gap: 10px 14px;
+  }
+  .lb-cin-bar {
+    grid-column: 1 / -1;
+  }
+  .lb-cin-hero {
+    min-height: auto;
+  }
+}
+
+/* Comparison board (vs open stack) */.lb-compare {
   max-width: 1080px;
 }
 .lb-cmp-grid {
