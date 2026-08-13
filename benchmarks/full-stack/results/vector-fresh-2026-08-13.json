@@ -1,0 +1,28 @@
+{
+  "benchmark": "Librebase vs Supabase vector search — fresh run (Li HNSW engine, hnswlib-faithful, binary-heap ef search, normalized vectors)",
+  "date": "2026-08-13",
+  "corpus": {"dim": 128, "rows": 10000, "queries": 1000, "seed": 42, "metric": "cosine"},
+  "method": "warm index, sustained query stream; QPS excludes index build + payload I/O; ground truth = exact numpy top-10",
+  "librebase_li": {
+    "engine": "Li vector CLI (exact + HNSW), zero external deps",
+    "exact": {"qps": 669, "us_per_query": 1495, "recall10": 1.0, "top1": 1.0},
+    "hnsw": {
+      "ef40":  {"qps": 4683, "us_per_query": 214, "recall10": 1.0, "top1": 1.0},
+      "ef80":  {"qps": 2746, "us_per_query": 364, "recall10": 1.0, "top1": 1.0},
+      "ef160": {"qps": 1500, "us_per_query": 667, "recall10": 1.0, "top1": 1.0},
+      "ef320": {"qps": 823,  "us_per_query": 1214, "recall10": 1.0, "top1": 1.0},
+      "ef640": {"qps": 581,  "us_per_query": 1721, "recall10": 1.0, "top1": 1.0}
+    }
+  },
+  "supabase_pgvector": {
+    "engine": "Postgres 17 + pgvector HNSW (vector_cosine_ops)",
+    "hnsw": {
+      "ef40":  {"qps": 1129, "us_per_query": 885, "recall10": 0.887},
+      "ef80":  {"qps": 853,  "us_per_query": 1172, "recall10": 0.925},
+      "ef160": {"qps": 543,  "us_per_query": 1842, "recall10": 0.969},
+      "ef320": {"qps": 499,  "us_per_query": 2005, "recall10": 1.0},
+      "ef640": {"qps": 488,  "us_per_query": 2051, "recall10": 1.0}
+    }
+  },
+  "headline": "At equal 100% recall@10, Li HNSW ef=40 = 4683 QPS vs pgvector ef=320/640 = 499/488 QPS (9.4x faster). Li maintains 100% recall at every ef; pgvector must raise ef (and lose QPS) to approach it. Li also beats pgvector at every ef level."
+}
