@@ -64,6 +64,30 @@ export default function LoginPage() {
           {pending ? "Signing in…" : "Sign in"}
         </button>
       </form>
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "0.75rem",
+          margin: "1.25rem 0 0.75rem",
+          color: "var(--muted, #8b949e)",
+          fontSize: "0.85rem",
+        }}
+      >
+        <span style={{ flex: 1, height: 1, background: "var(--border, #30363d)" }} />
+        or
+        <span style={{ flex: 1, height: 1, background: "var(--border, #30363d)" }} />
+      </div>
+      <div style={{ display: "grid", gap: "0.6rem" }}>
+        <a className="btn" href="/api/admin/oauth/start?provider=github">
+          Continue with GitHub
+        </a>
+        <a className="btn" href="/api/admin/oauth/start?provider=google">
+          Continue with Google
+        </a>
+      </div>
+
       <p className="muted" style={{ marginTop: "1.5rem" }}>
         First run? <Link href="/setup">Create organization</Link>
       </p>

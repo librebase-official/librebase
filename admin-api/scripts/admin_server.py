@@ -24,7 +24,7 @@ from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, quote, urlparse
+from urllib.parse import parse_qs, quote, urlencode, urlparse
 
 ROOT = Path(__file__).resolve().parent.parent
 MIGRATIONS = ROOT / "migrations"
@@ -181,6 +181,159 @@ def user_mfa_ok(db: "LiorgDb", user_id: str, code: str) -> bool:
 
 # --- KMS client (seal/unseal provider secrets) ---
 OAUTH_PROVIDERS = {"github", "google"}
+
+# --- Console SSO (operator sign-in via GitHub/Google) ---
+OAUTH_CONSOLE_URL = os.environ.get("LIBREBASE_CONSOLE_URL", "").strip().rstrip("/") or (
+    "https://app.librebase.xyz"
+)
+
+
+def oauth_provider_config(provider: str) -> dict[str, str] | None:
+    if provider == "github":
+        cid = os.environ.get("LIBREBASE_GITHUB_CLIENT_ID", "").strip()
+        secret = os.environ.get("LIBREBASE_GITHUB_CLIENT_SECRET", "").strip()
+        if not cid or not secret:
+            return None
+        return {
+            "id": cid,
+            "secret": secret,
+            "authorize": "https://github.com/login/oauth/authorize",
+            "token": "https://github.com/login/oauth/access_token",
+            "scope": "read:user user:email",
+        }
+    if provider == "google":
+        cid = os.environ.get("LIBREBASE_GOOGLE_CLIENT_ID", "").strip()
+        secret = os.environ.get("LIBREBASE_GOOGLE_CLIENT_SECRET", "").strip()
+        if not cid or not secret:
+            return None
+        return {
+            "id": cid,
+            "secret": secret,
+            "authorize": "https://accounts.google.com/o/oauth2/v2/auth",
+            "token": "https://oauth2.googleapis.com/token",
+            "scope": "openid email profile",
+        }
+    return None
+
+
+def oauth_redirect_uri() -> str:
+    return f"{OAUTH_CONSOLE_URL}/api/admin/oauth/callback"
+
+
+def oauth_authorize_url(provider: str, state: str) -> str | None:
+    cfg = oauth_provider_config(provider)
+    if not cfg:
+        return None
+    redirect = oauth_redirect_uri()
+    if provider == "github":
+        return (
+            f"{cfg['authorize']}?client_id={quote(cfg['id'])}"
+            f"&redirect_uri={quote(redirect)}&scope={quote(cfg['scope'])}"
+            f"&state={quote(state)}&allow_signup=false"
+        )
+    return (
+        f"{cfg['authorize']}?client_id={quote(cfg['id'])}"
+        f"&redirect_uri={quote(redirect)}&response_type=code"
+        f"&scope={quote(cfg['scope'])}&state={quote(state)}"
+        f"&access_type=online&prompt=select_account"
+    )
+
+
+def _oauth_http_json(url: str, data: bytes | None = None, headers: dict[str, str] | None = None):
+    req = urllib.request.Request(
+        url, data=data, headers=headers or {}, method="POST" if data else "GET"
+    )
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def oauth_fetch_identity(provider: str, code: str) -> tuple[str, str] | None:
+    """Exchange code for tokens and return (sub, email)."""
+    cfg = oauth_provider_config(provider)
+    if not cfg:
+        return None
+    redirect = oauth_redirect_uri()
+    try:
+        if provider == "github":
+            tok = _oauth_http_json(
+                cfg["token"],
+                data=urlencode(
+                    {
+                        "client_id": cfg["id"],
+                        "client_secret": cfg["secret"],
+                        "code": code,
+                        "redirect_uri": redirect,
+                    }
+                ).encode(),
+                headers={"Accept": "application/json"},
+            )
+            access = tok.get("access_token")
+            if not access:
+                return None
+            user = _oauth_http_json(
+                "https://api.github.com/user",
+                headers={
+                    "Authorization": f"Bearer {access}",
+                    "User-Agent": "librebase-console",
+                    "Accept": "application/json",
+                },
+            )
+            sub = str(user.get("id", ""))
+            email = user.get("email") or ""
+            if not email:
+                emails = _oauth_http_json(
+                    "https://api.github.com/user/emails",
+                    headers={
+                        "Authorization": f"Bearer {access}",
+                        "User-Agent": "librebase-console",
+                        "Accept": "application/json",
+                    },
+                )
+                if isinstance(emails, list) and emails:
+                    for e in emails:
+                        if e.get("primary"):
+                            email = e.get("email", "")
+                            break
+                    if not email:
+                        email = emails[0].get("email", "")
+            return (sub, email)
+        # google
+        tok = _oauth_http_json(
+            cfg["token"],
+            data=urlencode(
+                {
+                    "code": code,
+                    "client_id": cfg["id"],
+                    "client_secret": cfg["secret"],
+                    "redirect_uri": redirect,
+                    "grant_type": "authorization_code",
+                }
+            ).encode(),
+        )
+        access = tok.get("access_token")
+        if not access:
+            return None
+        info = _oauth_http_json(
+            "https://openidconnect.googleapis.com/v1/userinfo",
+            headers={"Authorization": f"Bearer {access}"},
+        )
+        return (str(info.get("sub", "")), info.get("email", "") or "")
+    except Exception:  # noqa: BLE001 - any provider/network error → None
+        return None
+
+
+def oauth_find_or_link_user(db: "LiorgDb", provider: str, sub: str, email: str):
+    oauth_sub = f"{provider}:{sub}"
+    user = db.fetchone("SELECT * FROM users WHERE oauth_sub = ?", (oauth_sub,))
+    if user:
+        return user
+    if email:
+        user = db.fetchone("SELECT * FROM users WHERE email = ?", (email,))
+        if user:
+            db.execute("UPDATE users SET oauth_sub = ? WHERE id = ?", (oauth_sub, user["id"]))
+            return user
+    return None
+
 
 
 def kms_configured() -> bool:
@@ -649,6 +802,12 @@ class LiorgHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def send_redirect(self, url: str) -> None:
+        self.send_response(302)
+        self.send_header("Location", url)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
     def read_json(self) -> dict[str, Any]:
         length = int(self.headers.get("Content-Length", "0"))
         if length == 0:
@@ -757,6 +916,75 @@ class LiorgHandler(BaseHTTPRequestHandler):
 
         if path == "/health":
             self.send_json(200, {"ok": True})
+            return
+
+        if path == "/org/v1/auth/oauth/start":
+            q = parse_qs(parsed.query)
+            provider = (q.get("provider", [""])[0]).strip().lower()
+            if provider not in OAUTH_PROVIDERS:
+                self.send_json(400, {"error": f"unsupported provider={provider}"})
+                return
+            if not oauth_provider_config(provider):
+                self.send_json(503, {"error": f"{provider} OAuth not configured"})
+                return
+            next_path = (q.get("next", ["/projects"])[0]).strip() or "/projects"
+            state = (
+                base64.urlsafe_b64encode(json.dumps({"next": next_path}).encode())
+                .decode()
+                .rstrip("=")
+            )
+            url = oauth_authorize_url(provider, state)
+            if not url:
+                self.send_json(503, {"error": "authorize URL failed"})
+                return
+            self.send_redirect(url)
+            return
+
+        if path == "/org/v1/auth/oauth/callback":
+            q = parse_qs(parsed.query)
+            provider = (q.get("provider", [""])[0]).strip().lower()
+            code = q.get("code", [""])[0]
+            state = q.get("state", [""])[0]
+            next_path = "/projects"
+            if state:
+                try:
+                    decoded = base64.urlsafe_b64decode(state + "=" * (-len(state) % 4))
+                    next_path = json.loads(decoded.decode()).get("next", "/projects") or "/projects"
+                except Exception:  # noqa: BLE001
+                    next_path = "/projects"
+            if provider not in OAUTH_PROVIDERS or not code:
+                self.send_json(401, {"error": "invalid oauth request"})
+                return
+            identity = oauth_fetch_identity(provider, code)
+            if not identity:
+                self.send_json(401, {"error": "oauth exchange failed"})
+                return
+            sub, email = identity
+            user = oauth_find_or_link_user(self.db, provider, sub, email)
+            if not user:
+                self.send_json(403, {"error": "no account for this identity; request an invite"})
+                return
+            member = self.db.fetchone(
+                "SELECT org_id, role FROM members WHERE user_id = ? ORDER BY created_at LIMIT 1",
+                (user["id"],),
+            )
+            if not member:
+                self.send_json(403, {"error": "no organization membership"})
+                return
+            edition = self.org_edition(member["org_id"])
+            token, refresh_token = issue_session(
+                self.db, self.jwt_secret, user["id"], member["org_id"], member["role"], edition
+            )
+            self.send_json(
+                200,
+                {
+                    "token": token,
+                    "refreshToken": refresh_token,
+                    "orgId": member["org_id"],
+                    "email": user["email"],
+                    "next": next_path,
+                },
+            )
             return
 
         if path == "/org/v1/me":

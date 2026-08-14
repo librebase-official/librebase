@@ -114,6 +114,39 @@ export async function adminLogin(
   });
 }
 
+export function adminOAuthStartUrl(provider: string, next = "/projects"): string {
+  return `${adminBaseUrl()}/org/v1/auth/oauth/start?provider=${encodeURIComponent(
+    provider,
+  )}&next=${encodeURIComponent(next)}`;
+}
+
+export async function adminOAuthCallback(
+  provider: string,
+  code: string,
+): Promise<{ token: string; refreshToken: string; orgId: string; next: string }> {
+  const res = await fetch(
+    `${adminBaseUrl()}/org/v1/auth/oauth/callback?provider=${encodeURIComponent(
+      provider,
+    )}&code=${encodeURIComponent(code)}`,
+  );
+  const data = (await res.json().catch(() => ({}))) as {
+    token?: string;
+    refreshToken?: string;
+    orgId?: string;
+    next?: string;
+    error?: string;
+  };
+  if (!res.ok || !data.token) {
+    throw new Error(data.error ?? `oauth callback ${res.status}`);
+  }
+  return {
+    token: data.token,
+    refreshToken: data.refreshToken ?? "",
+    orgId: data.orgId ?? "",
+    next: data.next ?? "/projects",
+  };
+}
+
 export async function adminRefresh(
   refreshToken: string,
 ): Promise<{ token: string; orgId: string; refreshToken: string }> {
