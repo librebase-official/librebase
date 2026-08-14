@@ -929,7 +929,9 @@ class LiorgHandler(BaseHTTPRequestHandler):
                 return
             next_path = (q.get("next", ["/projects"])[0]).strip() or "/projects"
             state = (
-                base64.urlsafe_b64encode(json.dumps({"next": next_path}).encode())
+                base64.urlsafe_b64encode(
+                    json.dumps({"provider": provider, "next": next_path}).encode()
+                )
                 .decode()
                 .rstrip("=")
             )

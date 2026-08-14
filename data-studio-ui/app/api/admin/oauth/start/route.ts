@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { adminApiEnabled, adminOAuthStart } from "@/lib/librebase-admin-client";
+import { SITE_URL } from "@/lib/site";
 
 export async function GET(request: Request) {
+  const fail = (reason: string) =>
+    NextResponse.redirect(new URL(`/login?error=${reason}`, SITE_URL));
+
   if (!adminApiEnabled()) {
-    return NextResponse.redirect(new URL("/login?error=disabled", request.url));
+    return fail("disabled");
   }
   const url = new URL(request.url);
   const provider = (url.searchParams.get("provider") ?? "").toLowerCase();
@@ -15,6 +19,6 @@ export async function GET(request: Request) {
     const authorizeUrl = await adminOAuthStart(provider, next);
     return NextResponse.redirect(authorizeUrl);
   } catch {
-    return NextResponse.redirect(new URL("/login?error=oauth", request.url));
+    return fail("oauth");
   }
 }
