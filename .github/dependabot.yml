@@ -1,0 +1,18 @@
+# Keep the Studio on the latest Next.js / React. Weekly version updates with
+# grouped PRs so the app tracks the newest releases (including majors) without
+# manual bumps.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/data-studio-ui"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      nextjs:
+        patterns:
+          - "next"
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
