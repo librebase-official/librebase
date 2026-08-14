@@ -37,9 +37,16 @@ class TestEntitlements(unittest.TestCase):
     def test_cloud_free_limits(self) -> None:
         ent = self.mod.entitlement_for_edition
         self.assertEqual(ent("cloud-free", "project.create"), 2)  # limited
-        self.assertEqual(ent("cloud-free", "instance.launch"), 1)
-        self.assertEqual(ent("cloud-free", "host.create"), 1)
+        self.assertEqual(ent("cloud-free", "instance.launch"), 0)  # no free compute
+        self.assertEqual(ent("cloud-free", "host.create"), 0)
         self.assertEqual(ent("cloud-free", "branching.pitr"), 0)
+
+    def test_suspended_blocks_compute(self) -> None:
+        ent = self.mod.entitlement_for_edition
+        self.assertEqual(ent("suspended", "project.create"), 0)
+        self.assertEqual(ent("suspended", "instance.launch"), 0)
+        self.assertEqual(ent("suspended", "host.create"), 0)
+        self.assertEqual(ent("suspended", "k8s.provision"), 0)
 
     def test_cloud_paid_opens_advanced(self) -> None:
         ent = self.mod.entitlement_for_edition

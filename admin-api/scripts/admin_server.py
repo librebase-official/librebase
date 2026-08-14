@@ -536,10 +536,10 @@ def entitlement_for_edition(edition: str, feature_key: str) -> int:
             return 1
         return 0
     if edition == "cloud-free":
+        # No free cloud: a free org may create a project (limited) but cannot
+        # launch instances or hosts; that requires cloud-paid.
         if feature_key == "project.create":
             return 2
-        if feature_key in ("instance.launch", "host.create"):
-            return 1
         return 0
     if edition == "cloud-paid":
         if feature_key in (
@@ -551,6 +551,7 @@ def entitlement_for_edition(edition: str, feature_key: str) -> int:
         ):
             return 1
         return 0
+    # "suspended" (default for new cloud orgs) and unknown editions: nothing.
     return 0
 
 
@@ -1139,7 +1140,10 @@ class LiorgHandler(BaseHTTPRequestHandler):
                 self.send_json(401, {"error": "unauthorized"})
                 return
             name = str(body.get("name", "")).strip()
-            edition = str(body.get("edition", "cloud-free")).strip()
+            # Default-closed: new cloud orgs are "suspended" (no compute).
+            # cloud-paid is granted only via billing (Stripe) later; never
+            # trust a client-supplied edition.
+            edition = "suspended"
             slug = str(body.get("slug", slugify(name))).strip()
             if not name:
                 self.send_json(400, {"error": "name required"})

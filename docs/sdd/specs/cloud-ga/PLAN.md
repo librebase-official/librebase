@@ -21,7 +21,7 @@ and let project owners configure OAuth providers (Supabase parity). Greenfield
 | Domain | always-on `<project>.librebase.xyz`; optional custom domain |
 | Control plane | Librebase-hosted (`admin-api`, interim Python, later Li) |
 | Language | **everything ships in Li** — Python/JS surfaces are interim bridges, ported to Li once `lic` P0 + `li-crypto` high-level ops land |
-| Billing | Stripe (checkout + metering) |
+| Billing | Stripe (checkout + metering) — **last phase**; **default-closed** (no free cloud) |
 
 ## Architecture
 
@@ -98,9 +98,12 @@ Assumptions (flagged): console SSO later; no magic link; multi-org picker deferr
 - Project → **Auth → Providers**, **Domains**, **KMS keys**, **Create VM/instance
   (region)**; instance health/logs; console login/setup/org screens.
 
-### 7. Billing
-- Stripe checkout + metering (per-VM, per-instance mem/uptime);
-  `cloud-free` vs `cloud-paid` gating on `instance.launch`/`host.create`.
+### 7. Billing (last phase; default-closed)
+- **Default-closed:** new orgs are `suspended` (no compute). `cloud-paid` is
+  granted only via Stripe; no free cloud tier. The `edition`/`org_entitlements`
+  seam and the `instance.launch`/`host.create` gates already exist — billing
+  just flips `edition` to `cloud-paid` on checkout/webhook.
+- Stripe checkout + metering (per-VM, per-instance mem/uptime).
 
 ### 8. Ops/security
 - KEK rotation, secret audit, host monitoring, VM decommission (drain), login audit.
