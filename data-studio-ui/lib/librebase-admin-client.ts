@@ -42,6 +42,7 @@ function adminSessionEnv(): string | undefined {
 }
 
 const SESSION_COOKIE = "librebase_admin_session";
+const REFRESH_COOKIE = "librebase_admin_refresh";
 
 async function resolveAdminSession(): Promise<string | undefined> {
   const fromEnv = adminSessionEnv();
@@ -96,7 +97,7 @@ export async function adminSetup(input: {
   ownerEmail: string;
   password: string;
   slug?: string;
-}): Promise<{ orgId: string; token: string }> {
+}): Promise<{ orgId: string; token: string; refreshToken: string }> {
   return adminFetch("/org/v1/setup", {
     method: "POST",
     body: JSON.stringify(input),
@@ -106,10 +107,28 @@ export async function adminSetup(input: {
 export async function adminLogin(
   email: string,
   password: string,
-): Promise<{ token: string; orgId: string }> {
+): Promise<{ token: string; orgId: string; refreshToken: string }> {
   return adminFetch("/org/v1/auth/login", {
     method: "POST",
     body: JSON.stringify({ email, password }),
+  });
+}
+
+export async function adminRefresh(
+  refreshToken: string,
+): Promise<{ token: string; orgId: string; refreshToken: string }> {
+  return adminFetch("/org/v1/auth/refresh", {
+    method: "POST",
+    body: JSON.stringify({ refreshToken }),
+  });
+}
+
+export async function adminLogout(
+  refreshToken: string,
+): Promise<{ ok: boolean }> {
+  return adminFetch("/org/v1/auth/logout", {
+    method: "POST",
+    body: JSON.stringify({ refreshToken }),
   });
 }
 
@@ -271,4 +290,4 @@ export async function adminCreateHost(
   });
 }
 
-export { SESSION_COOKIE };
+export { SESSION_COOKIE, REFRESH_COOKIE };

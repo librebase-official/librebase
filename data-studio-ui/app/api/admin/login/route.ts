@@ -3,6 +3,7 @@ import {
   adminLogin,
   adminApiEnabled,
   SESSION_COOKIE,
+  REFRESH_COOKIE,
 } from "@/lib/librebase-admin-client";
 
 export async function POST(request: Request) {
@@ -34,7 +35,13 @@ export async function POST(request: Request) {
       httpOnly: true,
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60 * 24 * 7,
+      maxAge: 60 * 15,
+    });
+    res.cookies.set(REFRESH_COOKIE, result.refreshToken, {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
     });
     return res;
   } catch (error) {

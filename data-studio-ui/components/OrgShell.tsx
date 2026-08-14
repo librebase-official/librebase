@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
 
 function navClass(pathname: string, href: string): string {
   const active =
@@ -19,6 +20,19 @@ export function OrgShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [signingOut, setSigningOut] = useState(false);
+
+  async function signOut() {
+    setSigningOut(true);
+    try {
+      await fetch("/api/admin/logout", { method: "POST" });
+    } catch {
+      // ignore network errors — still clear the local session below
+    }
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <div className="app-shell">
@@ -65,6 +79,16 @@ export function OrgShell({
             Setup
           </Link>
         </nav>
+
+        <div className="sidebar-spacer" />
+        <button
+          type="button"
+          className="btn btn-ghost sign-out"
+          onClick={signOut}
+          disabled={signingOut}
+        >
+          {signingOut ? "Signing out…" : "Sign out"}
+        </button>
       </aside>
       <main className="main">{children}</main>
     </div>
