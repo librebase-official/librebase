@@ -26,28 +26,14 @@ const plexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Librebase",
+    default: "Librebase Console",
     template: "%s | Librebase",
   },
   description:
-    "PostgreSQL platform for apps and AI tools. Low memory, honest health status, and a console that shows real state.",
-  openGraph: {
-    siteName: "Librebase",
-    type: "website",
-    locale: "en_US",
-    images: [
-      {
-        url: "/og.png",
-        width: 1200,
-        height: 630,
-        alt: "Librebase",
-        type: "image/png",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    images: ["/og.png"],
+    "Librebase console — manage your PostgreSQL projects, instances, and providers.",
+  robots: {
+    index: false,
+    follow: false,
   },
 };
 

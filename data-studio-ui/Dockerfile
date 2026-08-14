@@ -10,7 +10,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV NEXT_PUBLIC_SITE_URL=https://librebase.xyz
+ENV NEXT_PUBLIC_SITE_URL=https://app.librebase.xyz
 RUN npm run build
 
 FROM docker.io/node:22-alpine AS runner

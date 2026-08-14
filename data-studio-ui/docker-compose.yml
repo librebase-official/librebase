@@ -8,7 +8,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3005
-      - NEXT_PUBLIC_SITE_URL=https://librebase.xyz
+      - NEXT_PUBLIC_SITE_URL=https://app.librebase.xyz
       - LIBREBASE_SUPABASE_URL=${LIBREBASE_SUPABASE_URL}
       - LIBREBASE_SUPABASE_SERVICE_ROLE_KEY=${LIBREBASE_SUPABASE_SERVICE_ROLE_KEY}
     mem_limit: 384m
