@@ -9,6 +9,13 @@ services:
       - NODE_ENV=production
       - PORT=3005
       - NEXT_PUBLIC_SITE_URL=https://app.librebase.xyz
+      - LIBREBASE_ADMIN_URL=${LIBREBASE_ADMIN_URL:-http://librebase_admin_1:54330}
       - LIBREBASE_SUPABASE_URL=${LIBREBASE_SUPABASE_URL}
       - LIBREBASE_SUPABASE_SERVICE_ROLE_KEY=${LIBREBASE_SUPABASE_SERVICE_ROLE_KEY}
     mem_limit: 384m
+    networks:
+      - librebase-net
+
+networks:
+  librebase-net:
+    external: true

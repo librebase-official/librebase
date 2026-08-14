@@ -114,10 +114,23 @@ export async function adminLogin(
   });
 }
 
-export function adminOAuthStartUrl(provider: string, next = "/projects"): string {
-  return `${adminBaseUrl()}/org/v1/auth/oauth/start?provider=${encodeURIComponent(
-    provider,
-  )}&next=${encodeURIComponent(next)}`;
+export async function adminOAuthStart(
+  provider: string,
+  next = "/projects",
+): Promise<string> {
+  const res = await fetch(
+    `${adminBaseUrl()}/org/v1/auth/oauth/start?provider=${encodeURIComponent(
+      provider,
+    )}&next=${encodeURIComponent(next)}`,
+  );
+  const data = (await res.json().catch(() => ({}))) as {
+    url?: string;
+    error?: string;
+  };
+  if (!res.ok || !data.url) {
+    throw new Error(data.error ?? `oauth start ${res.status}`);
+  }
+  return data.url;
 }
 
 export async function adminOAuthCallback(

@@ -937,7 +937,7 @@ class LiorgHandler(BaseHTTPRequestHandler):
             if not url:
                 self.send_json(503, {"error": "authorize URL failed"})
                 return
-            self.send_redirect(url)
+            self.send_json(200, {"url": url})
             return
 
         if path == "/org/v1/auth/oauth/callback":

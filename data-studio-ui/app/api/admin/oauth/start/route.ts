@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { adminApiEnabled, adminOAuthStartUrl } from "@/lib/librebase-admin-client";
+import { adminApiEnabled, adminOAuthStart } from "@/lib/librebase-admin-client";
 
 export async function GET(request: Request) {
   if (!adminApiEnabled()) {
@@ -11,5 +11,10 @@ export async function GET(request: Request) {
   if (provider !== "github" && provider !== "google") {
     return NextResponse.json({ error: "unsupported provider" }, { status: 400 });
   }
-  return NextResponse.redirect(adminOAuthStartUrl(provider, next));
+  try {
+    const authorizeUrl = await adminOAuthStart(provider, next);
+    return NextResponse.redirect(authorizeUrl);
+  } catch {
+    return NextResponse.redirect(new URL("/login?error=oauth", request.url));
+  }
 }
