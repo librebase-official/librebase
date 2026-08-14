@@ -485,6 +485,13 @@ class LiorgDb:
         self.conn.commit()
 
 
+ROLE_LEVEL = {"member": 0, "developer": 0, "viewer": 0, "admin": 1, "owner": 2}
+
+
+def role_at_least(role: str, minimum: str) -> bool:
+    return ROLE_LEVEL.get(role, 0) >= ROLE_LEVEL.get(minimum, 0)
+
+
 def entitlement_for_edition(edition: str, feature_key: str) -> int:
     if edition == "self-host":
         if feature_key in ("project.create", "instance.launch", "host.create"):
@@ -636,6 +643,32 @@ class LiorgHandler(BaseHTTPRequestHandler):
         )
         if not row:
             self.send_json(403, {"error": "forbidden"})
+            return None
+        return claims
+
+    def org_role(self, org_id: str, user_id: str) -> str | None:
+        row = self.db.fetchone(
+            "SELECT role FROM members WHERE org_id = ? AND user_id = ?",
+            (org_id, user_id),
+        )
+        return row["role"] if row else None
+
+    def require_org_role(self, org_id: str, minimum: str) -> dict[str, Any] | None:
+        """Return JWT claims if the caller holds >= `minimum` role in org_id."""
+        claims = self.bearer_claims()
+        if not claims:
+            self.send_json(401, {"error": "unauthorized"})
+            return None
+        user_id = claims.get("sub")
+        if not user_id:
+            self.send_json(401, {"error": "unauthorized"})
+            return None
+        role = self.org_role(org_id, user_id)
+        if role is None:
+            self.send_json(403, {"error": "forbidden"})
+            return None
+        if not role_at_least(role, minimum):
+            self.send_json(403, {"error": "insufficient role"})
             return None
         return claims
 
@@ -1070,7 +1103,7 @@ class LiorgHandler(BaseHTTPRequestHandler):
         org_hosts = re.fullmatch(r"/org/v1/orgs/([^/]+)/hosts", path)
         if org_hosts:
             org_id = org_hosts.group(1)
-            if not self.require_org_member(org_id):
+            if not self.require_org_role(org_id, "admin"):
                 return
             gate = self.check_entitlement(org_id, "host.create")
             if gate["code"] == 0:
@@ -1100,7 +1133,7 @@ class LiorgHandler(BaseHTTPRequestHandler):
         org_instances = re.fullmatch(r"/org/v1/orgs/([^/]+)/instances", path)
         if org_instances:
             org_id = org_instances.group(1)
-            if not self.require_org_member(org_id):
+            if not self.require_org_role(org_id, "admin"):
                 return
             gate = self.check_entitlement(org_id, "instance.launch")
             if gate["code"] == 0:
@@ -1186,9 +1219,7 @@ class LiorgHandler(BaseHTTPRequestHandler):
         org_invites = re.fullmatch(r"/org/v1/orgs/([^/]+)/invites", path)
         if org_invites:
             org_id = org_invites.group(1)
-            claims = self.bearer_claims()
-            if not claims or claims.get("org_id") != org_id:
-                self.send_json(403, {"error": "forbidden"})
+            if not self.require_org_role(org_id, "owner"):
                 return
             email = str(body.get("email", "")).strip()
             role = str(body.get("role", "developer")).strip()
@@ -1225,7 +1256,7 @@ class LiorgHandler(BaseHTTPRequestHandler):
             if not row:
                 self.send_json(404, {"error": "member not found"})
                 return
-            if not self.require_org_member(row["org_id"]):
+            if not self.require_org_role(row["org_id"], "owner"):
                 return
             self.db.execute(
                 "UPDATE members SET role = ? WHERE org_id = ? AND user_id = ?",

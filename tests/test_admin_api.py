@@ -399,5 +399,24 @@ class TestTotp(unittest.TestCase):
         self._tmp.cleanup()
 
 
+class TestRoles(unittest.TestCase):
+    def setUp(self) -> None:
+        self.mod = load_server()
+
+    def test_role_at_least(self) -> None:
+        ra = self.mod.role_at_least
+        self.assertTrue(ra("owner", "owner"))
+        self.assertTrue(ra("owner", "admin"))
+        self.assertTrue(ra("admin", "member"))
+        self.assertTrue(ra("developer", "member"))  # developer == member level
+        self.assertFalse(ra("member", "admin"))
+        self.assertFalse(ra("developer", "owner"))
+        self.assertFalse(ra("viewer", "admin"))
+
+    def test_unknown_role_is_lowest(self) -> None:
+        self.assertTrue(self.mod.role_at_least("garbage", "member"))
+        self.assertFalse(self.mod.role_at_least("garbage", "admin"))
+
+
 if __name__ == "__main__":
     unittest.main()
