@@ -49,9 +49,47 @@ _SCRYPT_P = 1
 RESET_TTL_SECONDS = 60 * 60  # password reset link lifetime (1h)
 VERIFY_TTL_SECONDS = 60 * 60 * 24 * 7  # email verification link lifetime (7d)
 
+MAX_LOGIN_ATTEMPTS = 5  # failed attempts before account lockout
+LOCKOUT_SECONDS = 15 * 60  # lockout duration (15 min)
+IP_WINDOW_SECONDS = 60  # per-IP login rate-limit window
+IP_MAX_ATTEMPTS = 20  # max login POSTs per IP per window
+
 
 def admin_dev_mode() -> bool:
     return os.environ.get("LIBREBASE_ADMIN_DEV", "").strip().lower() in ("1", "true", "yes")
+
+
+def login_locked(db: "LiorgDb", email: str) -> bool:
+    row = db.fetchone("SELECT * FROM login_attempts WHERE email = ?", (email,))
+    if not row or not row["locked_until"]:
+        return False
+    return row["locked_until"] > utc_now()
+
+
+def record_login_failure(db: "LiorgDb", email: str) -> None:
+    now = utc_now()
+    row = db.fetchone("SELECT * FROM login_attempts WHERE email = ?", (email,))
+    if row:
+        count = row["failed_count"] + 1
+        locked_until = None
+        if count >= MAX_LOGIN_ATTEMPTS:
+            locked_until = utc_now_offset(LOCKOUT_SECONDS)
+            count = 0  # reset so post-expiry gets a fresh budget
+        db.execute(
+            "UPDATE login_attempts SET failed_count = ?, last_failed_at = ?, locked_until = ? "
+            "WHERE email = ?",
+            (count, now, locked_until, email),
+        )
+    else:
+        db.execute(
+            "INSERT INTO login_attempts (email, failed_count, last_failed_at, locked_until) "
+            "VALUES (?, ?, ?, NULL)",
+            (email, 1, now),
+        )
+
+
+def clear_login_failures(db: "LiorgDb", email: str) -> None:
+    db.execute("DELETE FROM login_attempts WHERE email = ?", (email,))
 
 
 def utc_now() -> str:
@@ -447,6 +485,7 @@ def row_instance(row: sqlite3.Row) -> dict[str, Any]:
 class LiorgHandler(BaseHTTPRequestHandler):
     db: LiorgDb
     jwt_secret: str
+    _ip_attempts: dict[str, list[float]] = {}
 
     def log_message(self, fmt: str, *args: Any) -> None:
         sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
@@ -465,6 +504,27 @@ class LiorgHandler(BaseHTTPRequestHandler):
             return {}
         raw = self.rfile.read(length)
         return json.loads(raw.decode("utf-8"))
+
+    def client_ip(self) -> str:
+        xff = self.headers.get("X-Forwarded-For", "")
+        if xff:
+            return xff.split(",")[0].strip()
+        return self.client_address[0]
+
+    def rate_limited(self) -> bool:
+        """In-memory per-IP sliding window for the login endpoint."""
+        ip = self.client_ip()
+        now = time.time()
+        attempts = [
+            t for t in LiorgHandler._ip_attempts.get(ip, [])
+            if now - t < IP_WINDOW_SECONDS
+        ]
+        if len(attempts) >= IP_MAX_ATTEMPTS:
+            LiorgHandler._ip_attempts[ip] = attempts
+            return True
+        attempts.append(now)
+        LiorgHandler._ip_attempts[ip] = attempts
+        return False
 
     def bearer_claims(self) -> dict[str, Any] | None:
         auth = self.headers.get("Authorization", "")
@@ -715,10 +775,21 @@ class LiorgHandler(BaseHTTPRequestHandler):
         if path == "/org/v1/auth/login":
             email = str(body.get("email", "")).strip()
             password = str(body.get("password", ""))
+            if self.rate_limited():
+                self.send_json(429, {"error": "too many attempts; try again shortly"})
+                return
+            if login_locked(self.db, email):
+                self.send_json(
+                    429,
+                    {"error": "account temporarily locked; try again later"},
+                )
+                return
             user = self.db.fetchone("SELECT * FROM users WHERE email = ?", (email,))
             if not user or not verify_password(password, user["password_hash"] or ""):
+                record_login_failure(self.db, email)
                 self.send_json(401, {"error": "invalid credentials"})
                 return
+            clear_login_failures(self.db, email)
             member = self.db.fetchone(
                 "SELECT org_id, role FROM members WHERE user_id = ? ORDER BY created_at LIMIT 1",
                 (user["id"],),

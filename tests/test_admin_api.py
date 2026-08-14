@@ -325,5 +325,35 @@ class TestEmailVerification(unittest.TestCase):
         self.assertFalse(self.mod.verify_email(self.db, "bogus"))
 
 
+class TestLoginLockout(unittest.TestCase):
+    def setUp(self) -> None:
+        self.mod = load_server()
+        self._tmp = tempfile.TemporaryDirectory()
+        self.db = self.mod.LiorgDb(Path(self._tmp.name) / "org.db")
+
+    def tearDown(self) -> None:
+        self.db.close()
+        self._tmp.cleanup()
+
+    def test_locks_after_max_attempts(self) -> None:
+        email = "a@b.c"
+        self.assertFalse(self.mod.login_locked(self.db, email))
+        for _ in range(self.mod.MAX_LOGIN_ATTEMPTS - 1):
+            self.mod.record_login_failure(self.db, email)
+            self.assertFalse(self.mod.login_locked(self.db, email))
+        self.mod.record_login_failure(self.db, email)  # the MAX-th
+        self.assertTrue(self.mod.login_locked(self.db, email))
+        row = self.db.fetchone("SELECT * FROM login_attempts WHERE email = ?", (email,))
+        self.assertIsNotNone(row["locked_until"])
+
+    def test_clear_resets_lockout(self) -> None:
+        email = "a@b.c"
+        for _ in range(self.mod.MAX_LOGIN_ATTEMPTS):
+            self.mod.record_login_failure(self.db, email)
+        self.assertTrue(self.mod.login_locked(self.db, email))
+        self.mod.clear_login_failures(self.db, email)
+        self.assertFalse(self.mod.login_locked(self.db, email))
+
+
 if __name__ == "__main__":
     unittest.main()
