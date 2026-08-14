@@ -30,7 +30,9 @@ export default async function ProjectDatabasePage({ params }: PageProps) {
           Settings
         </Link>
       </nav>
-      <div className="empty">Table browser stub — launch database first.</div>
+      <div className="empty">
+        Table browser — launch the database to browse tables, rows, and indexes.
+      </div>
     </>
   );
 }

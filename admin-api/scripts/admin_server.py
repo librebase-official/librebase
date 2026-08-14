@@ -639,6 +639,30 @@ def slugify(name: str) -> str:
     return slug or "org"
 
 
+def issue_mcp_key(db: "LiorgDb", org_id: str) -> str:
+    """Issue a new MCP key (revokes any prior active key). Returns plaintext."""
+    key = "lb_mcp_" + secrets.token_urlsafe(32)
+    now = utc_now()
+    db.execute(
+        "UPDATE mcp_keys SET revoked_at = ? WHERE org_id = ? AND revoked_at IS NULL",
+        (now, org_id),
+    )
+    db.execute(
+        "INSERT INTO mcp_keys (id, org_id, key_hash, created_at) VALUES (?, ?, ?, ?)",
+        (new_id("mcpk"), org_id, hash_token(key), now),
+    )
+    return key
+
+
+def row_mcp_key(row: sqlite3.Row) -> dict[str, Any]:
+    return {
+        "id": row["id"],
+        "orgId": row["org_id"],
+        "createdAt": row["created_at"],
+        "revoked": bool(row["revoked_at"]),
+    }
+
+
 class LiorgDb:
     def __init__(self, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -1037,6 +1061,20 @@ class LiorgHandler(BaseHTTPRequestHandler):
             )
             return
 
+        mcp_keys_match = re.fullmatch(r"/org/v1/orgs/([^/]+)/mcp-keys", path)
+        if mcp_keys_match:
+            org_id = mcp_keys_match.group(1)
+            claims = self.bearer_claims()
+            if not claims or claims.get("org_id") != org_id:
+                self.send_json(403, {"error": "forbidden"})
+                return
+            rows = self.db.fetchall(
+                "SELECT * FROM mcp_keys WHERE org_id = ? ORDER BY created_at DESC",
+                (org_id,),
+            )
+            self.send_json(200, [row_mcp_key(r) for r in rows])
+            return
+
         members_match = re.fullmatch(r"/org/v1/orgs/([^/]+)/members", path)
         if members_match:
             org_id = members_match.group(1)
@@ -1218,15 +1256,26 @@ class LiorgHandler(BaseHTTPRequestHandler):
             token, refresh_token = issue_session(
                 self.db, self.jwt_secret, user_id, org_id, "owner", "self-host"
             )
+            mcp_key = issue_mcp_key(self.db, org_id)
             self.send_json(
                 201,
                 {
                     "orgId": org_id,
                     "token": token,
                     "refreshToken": refresh_token,
+                    "mcpKey": mcp_key,
                     "expiresIn": ACCESS_TTL_SECONDS,
                 },
             )
+            return
+
+        mcp_rotate = re.fullmatch(r"/org/v1/orgs/([^/]+)/mcp-keys/rotate", path)
+        if mcp_rotate:
+            org_id = mcp_rotate.group(1)
+            if not self.require_org_role(org_id, "admin"):
+                return
+            mcp_key = issue_mcp_key(self.db, org_id)
+            self.send_json(200, {"mcpKey": mcp_key})
             return
 
         if path == "/org/v1/auth/login":

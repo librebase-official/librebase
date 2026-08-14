@@ -30,7 +30,7 @@ export default async function ProjectSqlPage({ params }: PageProps) {
           Settings
         </Link>
       </nav>
-      <div className="empty">SQL editor stub — coming in a later phase.</div>
+      <div className="empty">SQL editor — coming soon.</div>
     </>
   );
 }

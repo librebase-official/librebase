@@ -10,6 +10,8 @@ export default function SetupPage() {
   const [name, setName] = useState("Local Org");
   const [ownerEmail, setOwnerEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [done, setDone] = useState<{ orgId: string; mcpKey: string } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -20,14 +22,63 @@ export default function SetupPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, ownerEmail, password }),
       });
-      const body = (await res.json()) as { error?: string; orgId?: string };
+      const body = (await res.json()) as {
+        error?: string;
+        orgId?: string;
+        mcpKey?: string;
+      };
       if (!res.ok) {
         setError(body.error ?? `Setup failed (${res.status})`);
         return;
       }
-      router.push("/");
-      router.refresh();
+      setDone({ orgId: body.orgId ?? "", mcpKey: body.mcpKey ?? "" });
     });
+  }
+
+  async function copyKey() {
+    if (!done?.mcpKey) return;
+    try {
+      await navigator.clipboard.writeText(done.mcpKey);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard unavailable */
+    }
+  }
+
+  if (done) {
+    return (
+      <div className="auth-page">
+        <div className="auth-card">
+          <h1>Organization created</h1>
+          <p className="muted">
+            Save your MCP key now — it is shown only once.
+          </p>
+          <code
+            style={{
+              display: "block",
+              wordBreak: "break-all",
+              padding: "0.7rem",
+              margin: "1rem 0",
+              background: "var(--bg)",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius)",
+              color: "var(--accent)",
+            }}
+          >
+            {done.mcpKey}
+          </code>
+          <div style={{ display: "flex", gap: "0.6rem" }}>
+            <button className="btn btn-primary" onClick={copyKey}>
+              {copied ? "Copied" : "Copy key"}
+            </button>
+            <button className="btn" onClick={() => router.push("/")}>
+              Go to console
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -35,8 +86,8 @@ export default function SetupPage() {
       <div className="auth-card">
         <h1>Librebase Admin setup</h1>
         <p className="muted">
-          Create the first operator account for this console. Use the same email
-          you sign in with via GitHub or Google.
+          Create the first operator account. You&apos;ll get an MCP key for AI
+          tool access.
         </p>
 
         <form className="form" onSubmit={onSubmit}>
@@ -81,3 +132,4 @@ export default function SetupPage() {
     </div>
   );
 }
+

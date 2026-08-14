@@ -2,9 +2,11 @@ import Link from "next/link";
 import {
   adminApiEnabled,
   adminHealth,
+  adminListMcpKeys,
   adminListMembers,
   adminMe,
 } from "@/lib/librebase-admin-client";
+import { McpKeys } from "@/components/McpKeys";
 import { resolveStudioOrgId } from "@/lib/org-context";
 
 export const dynamic = "force-dynamic";
@@ -17,10 +19,12 @@ export default async function AdminPage() {
   let me: Awaited<ReturnType<typeof adminMe>> | null = null;
   let meError: string | null = null;
   let members: Awaited<ReturnType<typeof adminListMembers>> = [];
+  let mcpKeys: Awaited<ReturnType<typeof adminListMcpKeys>> = [];
   if (enabled && healthy) {
     try {
       me = await adminMe();
       members = await adminListMembers(me.activeOrgId || orgId);
+      mcpKeys = await adminListMcpKeys(me.activeOrgId || orgId);
     } catch (e) {
       meError = e instanceof Error ? e.message : "Could not load /org/v1/me";
     }
@@ -107,6 +111,8 @@ export default async function AdminPage() {
           </ul>
         </section>
       )}
+
+      {me && <McpKeys orgId={me.activeOrgId || orgId} initial={mcpKeys} />}
 
       <p style={{ marginTop: "2rem" }}>
         <Link href="/">← Projects</Link>

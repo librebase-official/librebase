@@ -97,7 +97,7 @@ export async function adminSetup(input: {
   ownerEmail: string;
   password: string;
   slug?: string;
-}): Promise<{ orgId: string; token: string; refreshToken: string }> {
+}): Promise<{ orgId: string; token: string; refreshToken: string; mcpKey: string }> {
   return adminFetch("/org/v1/setup", {
     method: "POST",
     body: JSON.stringify(input),
@@ -175,6 +175,26 @@ export async function adminLogout(
   return adminFetch("/org/v1/auth/logout", {
     method: "POST",
     body: JSON.stringify({ refreshToken }),
+  });
+}
+
+export type McpKey = {
+  id: string;
+  orgId: string;
+  createdAt: string;
+  revoked: boolean;
+};
+
+export async function adminListMcpKeys(orgId: string): Promise<McpKey[]> {
+  return adminFetch(`/org/v1/orgs/${orgId}/mcp-keys`);
+}
+
+export async function adminRotateMcpKey(
+  orgId: string,
+): Promise<{ mcpKey: string }> {
+  return adminFetch(`/org/v1/orgs/${orgId}/mcp-keys/rotate`, {
+    method: "POST",
+    body: "{}",
   });
 }
 
