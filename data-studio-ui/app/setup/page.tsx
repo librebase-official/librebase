@@ -8,7 +8,7 @@ export default function SetupPage() {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState("Local Org");
-  const [ownerEmail, setOwnerEmail] = useState("owner@localhost");
+  const [ownerEmail, setOwnerEmail] = useState("");
   const [password, setPassword] = useState("");
 
   function onSubmit(e: React.FormEvent) {
@@ -31,41 +31,53 @@ export default function SetupPage() {
   }
 
   return (
-    <div className="main" style={{ maxWidth: 420, margin: "4rem auto" }}>
-      <h1>Librebase Admin setup</h1>
-      <p className="muted">
-        First-run operator account for this Studio. Requires Admin API (
-        <code>LIBREBASE_ADMIN_URL</code>).
-      </p>
-      <form onSubmit={onSubmit} style={{ display: "grid", gap: "0.75rem", marginTop: "1.5rem" }}>
-        <label>
-          Organization name
-          <input value={name} onChange={(e) => setName(e.target.value)} required />
-        </label>
-        <label>
-          Owner email
-          <input
-            type="email"
-            value={ownerEmail}
-            onChange={(e) => setOwnerEmail(e.target.value)}
-            required
-          />
-        </label>
-        <label>
-          Password
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={6}
-          />
-        </label>
-        {error && <p style={{ color: "var(--danger)" }}>{error}</p>}
-        <button type="submit" className="btn btn-primary" disabled={pending}>
-          {pending ? "Creating…" : "Create organization"}
-        </button>
-      </form>
+    <div className="auth-page">
+      <div className="auth-card">
+        <h1>Librebase Admin setup</h1>
+        <p className="muted">
+          Create the first operator account for this console. Use the same email
+          you sign in with via GitHub or Google.
+        </p>
+
+        <form className="form" onSubmit={onSubmit}>
+          <div className="field">
+            <label htmlFor="setup-name">Organization name</label>
+            <input
+              id="setup-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="setup-email">Owner email</label>
+            <input
+              id="setup-email"
+              type="email"
+              value={ownerEmail}
+              onChange={(e) => setOwnerEmail(e.target.value)}
+              autoComplete="email"
+              required
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="setup-password">Password</label>
+            <input
+              id="setup-password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+              required
+              minLength={6}
+            />
+          </div>
+          {error ? <p className="auth-error">{error}</p> : null}
+          <button type="submit" className="btn btn-primary" disabled={pending}>
+            {pending ? "Creating…" : "Create organization"}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
