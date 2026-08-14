@@ -322,7 +322,9 @@ def oauth_fetch_identity(provider: str, code: str) -> tuple[str, str] | None:
         return None
 
 
-def oauth_find_or_link_user(db: "LiorgDb", provider: str, sub: str, email: str):
+def oauth_find_or_create_user(db: "LiorgDb", provider: str, sub: str, email: str):
+    """Sign-in-or-sign-up: link an existing account, or provision a new user
+    with a personal (suspended) org so OAuth works on first click."""
     oauth_sub = f"{provider}:{sub}"
     user = db.fetchone("SELECT * FROM users WHERE oauth_sub = ?", (oauth_sub,))
     if user:
@@ -332,7 +334,26 @@ def oauth_find_or_link_user(db: "LiorgDb", provider: str, sub: str, email: str):
         if user:
             db.execute("UPDATE users SET oauth_sub = ? WHERE id = ?", (oauth_sub, user["id"]))
             return user
-    return None
+    if not email:
+        return None
+    user_id = new_id("user")
+    org_id = new_id("org")
+    now = utc_now()
+    local = email.split("@")[0].lower() if "@" in email else email.lower()
+    slug = f"{slugify(local) or 'user'}-{org_id[-6:]}"
+    db.execute(
+        "INSERT INTO users (id, email, password_hash, oauth_sub, created_at) VALUES (?, ?, ?, ?, ?)",
+        (user_id, email, None, oauth_sub, now),
+    )
+    db.execute(
+        "INSERT INTO organizations (id, name, slug, edition, created_at) VALUES (?, ?, ?, ?, ?)",
+        (org_id, email, slug, "suspended", now),
+    )
+    db.execute(
+        "INSERT INTO members (org_id, user_id, role, created_at) VALUES (?, ?, ?, ?)",
+        (org_id, user_id, "owner", now),
+    )
+    return db.fetchone("SELECT * FROM users WHERE id = ?", (user_id,))
 
 
 
@@ -962,9 +983,9 @@ class LiorgHandler(BaseHTTPRequestHandler):
                 self.send_json(401, {"error": "oauth exchange failed"})
                 return
             sub, email = identity
-            user = oauth_find_or_link_user(self.db, provider, sub, email)
+            user = oauth_find_or_create_user(self.db, provider, sub, email)
             if not user:
-                self.send_json(403, {"error": "no account for this identity; request an invite"})
+                self.send_json(400, {"error": "provider did not return an email"})
                 return
             member = self.db.fetchone(
                 "SELECT org_id, role FROM members WHERE user_id = ? ORDER BY created_at LIMIT 1",
