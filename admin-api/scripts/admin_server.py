@@ -17,6 +17,8 @@ import sqlite3
 import struct
 import sys
 import time
+import urllib.error
+import urllib.request
 import uuid
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -175,6 +177,42 @@ def user_mfa_ok(db: "LiorgDb", user_id: str, code: str) -> bool:
     if secret and totp_verify(secret, code):
         return True
     return verify_recovery_code(db, user_id, code)
+
+
+# --- KMS client (seal/unseal provider secrets) ---
+OAUTH_PROVIDERS = {"github", "google"}
+
+
+def kms_configured() -> bool:
+    return bool(os.environ.get("LIBREBASE_KMS_URL", "").strip())
+
+
+def _kms_post(path: str, payload: dict[str, Any]) -> dict[str, Any]:
+    url = os.environ.get("LIBREBASE_KMS_URL", "").strip().rstrip("/")
+    if not url:
+        raise RuntimeError("LIBREBASE_KMS_URL not configured")
+    role = os.environ.get("LIBREBASE_KMS_SERVICE_ROLE", "").strip()
+    req = urllib.request.Request(
+        url + path,
+        data=json.dumps(payload).encode(),
+        headers={"Content-Type": "application/json", "Authorization": f"Bearer {role}"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"kms HTTP {e.code}: {e.read().decode()[:200]}") from e
+
+
+def kms_seal(project_id: str, plaintext: str) -> tuple[str, str]:
+    data = _kms_post("/v1/internal/seal", {"project_id": project_id, "plaintext": plaintext})
+    return data.get("ciphertext", ""), data.get("keyId", "")
+
+
+def kms_unseal(key_id: str, ciphertext: str) -> str:
+    data = _kms_post("/v1/internal/unseal", {"key_id": key_id, "ciphertext": ciphertext})
+    return data.get("plaintext", "")
 
 
 def utc_now() -> str:
@@ -574,6 +612,26 @@ def row_instance(row: sqlite3.Row) -> dict[str, Any]:
     return payload
 
 
+def row_provider(row: sqlite3.Row) -> dict[str, Any]:
+    """Public (masked) view — never exposes the client secret."""
+    redirects = json.loads(row["redirect_uris"]) if row["redirect_uris"] else []
+    return {
+        "provider": row["provider"],
+        "clientId": row["client_id"],
+        "redirectUris": redirects,
+        "enabled": bool(row["enabled"]),
+        "updatedAt": row["updated_at"],
+    }
+
+
+def row_provider_full(row: sqlite3.Row) -> dict[str, Any]:
+    """Admin/runtime view — includes the KMS-sealed secret reference."""
+    payload = row_provider(row)
+    payload["clientSecretEnc"] = row["client_secret_enc"]
+    payload["kmsKeyId"] = row["kms_key_id"]
+    return payload
+
+
 class LiorgHandler(BaseHTTPRequestHandler):
     db: LiorgDb
     jwt_secret: str
@@ -779,6 +837,35 @@ class LiorgHandler(BaseHTTPRequestHandler):
                 self.send_json(404, {"error": "project not found"})
                 return
             self.send_json(200, row_project(row))
+            return
+
+        providers_list = re.fullmatch(r"/org/v1/orgs/([^/]+)/projects/([^/]+)/providers", path)
+        if providers_list:
+            org_id, project_id = providers_list.groups()
+            if not self.require_org_member(org_id):
+                return
+            rows = self.db.fetchall(
+                "SELECT * FROM auth_providers WHERE project_id = ? ORDER BY provider",
+                (project_id,),
+            )
+            self.send_json(200, [row_provider(r) for r in rows])
+            return
+
+        provider_one = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/projects/([^/]+)/providers/([^/]+)", path
+        )
+        if provider_one:
+            org_id, project_id, provider = provider_one.groups()
+            if not self.require_org_role(org_id, "admin"):
+                return
+            row = self.db.fetchone(
+                "SELECT * FROM auth_providers WHERE project_id = ? AND provider = ?",
+                (project_id, provider),
+            )
+            if not row:
+                self.send_json(404, {"error": "provider not found"})
+                return
+            self.send_json(200, row_provider_full(row))
             return
 
         instances_match = re.fullmatch(r"/org/v1/orgs/([^/]+)/instances", path)
@@ -1100,6 +1187,63 @@ class LiorgHandler(BaseHTTPRequestHandler):
             self.send_json(201, row_project(row))
             return
 
+        providers_upsert = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/projects/([^/]+)/providers", path
+        )
+        if providers_upsert:
+            org_id, project_id = providers_upsert.groups()
+            if not self.require_org_role(org_id, "admin"):
+                return
+            provider = str(body.get("provider", "")).strip().lower()
+            client_id = str(body.get("clientId", body.get("client_id", ""))).strip()
+            client_secret = str(body.get("clientSecret", body.get("client_secret", "")))
+            redirect_uris = body.get("redirectUris", body.get("redirect_uris", []))
+            enabled = bool(body.get("enabled", True))
+            if provider not in OAUTH_PROVIDERS:
+                self.send_json(400, {"error": f"unsupported provider={provider}"})
+                return
+            if not client_id or not client_secret:
+                self.send_json(400, {"error": "clientId and clientSecret required"})
+                return
+            if not isinstance(redirect_uris, list) or not redirect_uris:
+                self.send_json(400, {"error": "redirectUris (non-empty list) required"})
+                return
+            if not kms_configured():
+                self.send_json(503, {"error": "KMS not configured (set LIBREBASE_KMS_URL)"})
+                return
+            try:
+                ciphertext, key_id = kms_seal(project_id, client_secret)
+            except RuntimeError as exc:
+                self.send_json(502, {"error": str(exc)})
+                return
+            now = utc_now()
+            self.db.execute(
+                "INSERT INTO auth_providers "
+                "(project_id, provider, client_id, client_secret_enc, kms_key_id, redirect_uris, enabled, created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                "ON CONFLICT(project_id, provider) DO UPDATE SET "
+                "client_id = excluded.client_id, client_secret_enc = excluded.client_secret_enc, "
+                "kms_key_id = excluded.kms_key_id, redirect_uris = excluded.redirect_uris, "
+                "enabled = excluded.enabled, updated_at = excluded.updated_at",
+                (
+                    project_id,
+                    provider,
+                    client_id,
+                    ciphertext,
+                    key_id,
+                    json.dumps(redirect_uris),
+                    1 if enabled else 0,
+                    now,
+                    now,
+                ),
+            )
+            row = self.db.fetchone(
+                "SELECT * FROM auth_providers WHERE project_id = ? AND provider = ?",
+                (project_id, provider),
+            )
+            self.send_json(200, row_provider(row))
+            return
+
         org_hosts = re.fullmatch(r"/org/v1/orgs/([^/]+)/hosts", path)
         if org_hosts:
             org_id = org_hosts.group(1)
@@ -1232,6 +1376,26 @@ class LiorgHandler(BaseHTTPRequestHandler):
                 (org_id, email, role, token, "2099-01-01T00:00:00Z"),
             )
             self.send_json(201, {"token": token, "email": email, "role": role})
+            return
+
+        self.send_json(404, {"error": "not found"})
+
+    def do_DELETE(self) -> None:  # noqa: N802
+        parsed = urlparse(self.path)
+        path = parsed.path.rstrip("/") or "/"
+
+        provider_del = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/projects/([^/]+)/providers/([^/]+)", path
+        )
+        if provider_del:
+            org_id, project_id, provider = provider_del.groups()
+            if not self.require_org_role(org_id, "admin"):
+                return
+            self.db.execute(
+                "DELETE FROM auth_providers WHERE project_id = ? AND provider = ?",
+                (project_id, provider),
+            )
+            self.send_json(200, {"ok": True})
             return
 
         self.send_json(404, {"error": "not found"})
