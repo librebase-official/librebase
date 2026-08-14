@@ -20,6 +20,7 @@ and let project owners configure OAuth providers (Supabase parity). Greenfield
 | Console auth | email/password + reset + TOTP + roles; console SSO (GitHub/Google) as follow-on |
 | Domain | always-on `<project>.librebase.xyz`; optional custom domain |
 | Control plane | Librebase-hosted (`admin-api`, interim Python, later Li) |
+| Language | **everything ships in Li** — Python/JS surfaces are interim bridges, ported to Li once `lic` P0 + `li-crypto` high-level ops land |
 | Billing | Stripe (checkout + metering) |
 
 ## Architecture
@@ -108,6 +109,34 @@ Assumptions (flagged): console SSO later; no magic link; multi-org picker deferr
 `2 KMS` feeds `4 OAuth` and `5 console` (secrets + JWT keys). `1 substrate` feeds
 `3 lifecycle`. `3` is a prerequisite for `4` (a project needs a running instance
 for OAuth redirects). `6 UI` spans `2/3/4/5`. `7 billing` parallelizable.
+
+## Li-first mandate (interim Python/JS → pure Li)
+
+Everything ships in **Li**. The Python/JS surfaces below are bridges to keep
+the product shippable now; each is ported to Li as the compiler/runtime matures.
+
+| Surface | Interim | Li target | Blocker to port |
+|---|---|---|---|
+| Control plane | `admin-api` (Python + SQLite) | li-httpd + lic + lidb (src/seam.li) | lic P0 (bytes, async) |
+| KMS | `kms/` (Python + `cryptography`) | `li-kms` on `li-crypto` | li-crypto high-level seal/open + Ed25519 sign/verify not yet exposed; lic P0 for HTTP |
+| Runtime auth | `lis/routes/auth/*` (Python) | same in Li | lic P0 (`.li` server code blocked) |
+| Host agent | — (pure Li from day one) | pure Li `lic` binary | none (unblocks with Phase 1) |
+| SDK / Studio | JS / Next.js | — (clients stay in JS; engine-side is Li) | n/a |
+
+When porting, keep the HTTP surface + on-disk formats stable so the swap is
+drop-in (same endpoints, same `*.db`/JSON shapes).
+
+## Progress
+
+- ✅ Phase 5 — console auth (Argon2id/scrypt, sessions+refresh, reset, lockout,
+  TOTP MFA, roles) — `admin-api` on main.
+- ✅ Phase 4 — OAuth provider registry (GitHub + Google) — `lis` PR
+  `feat/oauth-provider-registry`.
+- ✅ Phase 2 — KMS interim Python (envelope + Ed25519 + HTTP API) — `kms/` on main.
+- ⏸️ Phase 1/3 — Hetzner substrate + instance lifecycle (account unlock pending).
+- ⏸️ Phases 6/7 — Studio UI + billing.
+- ⏳ Follow-ups — admin-api ↔ KMS provider-secret seal; console SSO; SMTP for
+  forgot-password; pure-Li ports (blocked as noted above).
 
 ## Touch points (repo → file)
 
