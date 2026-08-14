@@ -27,6 +27,27 @@ NONCE_BYTES = 12
 ED25519_SK_BYTES = 32
 ED25519_PK_BYTES = 32
 
+_ED25519_P = 2**255 - 19
+
+# Canonical encodings of the 8 low-order ("torsion") points on edwards25519.
+# The cofactor is 8, so the group = <prime-order subgroup> x <these 8 points>.
+# `cryptography`'s Ed25519 accepts all of them as public keys and, for the
+# order-4/order-8 points, lets a forged (R=low-order, S=0) signature verify
+# (small-subgroup / "torsion key" attack).  Reject them up-front in verify.
+_ED25519_LOW_ORDER_POINTS = frozenset(
+    bytes.fromhex(h)
+    for h in (
+        "0100000000000000000000000000000000000000000000000000000000000000",
+        "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+        "0000000000000000000000000000000000000000000000000000000000000000",
+        "0000000000000000000000000000000000000000000000000000000000000080",
+        "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a",
+        "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa",
+        "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05",
+        "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc85",
+    )
+)
+
 
 def b64e(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
@@ -77,8 +98,17 @@ def ed25519_sign(sk_raw: bytes, message: bytes) -> bytes:
 
 
 def ed25519_verify(pk_raw: bytes, message: bytes, signature: bytes) -> bool:
+    # Small-subgroup + non-canonical-encoding defense.
+    #  * reject the 8 canonical low-order points (small-subgroup attack);
+    #  * reject non-canonical encodings (y >= p), which `cryptography` accepts
+    #    and which map onto the same torsion points (e.g. y=p == order-4).
+    if len(pk_raw) != ED25519_PK_BYTES or pk_raw in _ED25519_LOW_ORDER_POINTS:
+        return False
+    y = int.from_bytes(pk_raw, "little") & ((1 << 255) - 1)
+    if y >= _ED25519_P:
+        return False
     try:
         Ed25519PublicKey.from_public_bytes(pk_raw).verify(signature, message)
         return True
-    except InvalidSignature:
+    except (InvalidSignature, ValueError):
         return False
