@@ -189,5 +189,82 @@ class TestHostBudget(unittest.TestCase):
             db.close()
 
 
+class TestPasswordHashing(unittest.TestCase):
+    def setUp(self) -> None:
+        self.mod = load_server()
+
+    def test_hash_and_verify_roundtrip(self) -> None:
+        password = "correct horse battery staple"
+        stored = self.mod.hash_password(password)
+        self.assertTrue(
+            stored.startswith(("argon2id$", "scrypt$")),
+            f"unexpected hash format: {stored[:12]}...",
+        )
+        self.assertTrue(self.mod.verify_password(password, stored))
+        self.assertFalse(self.mod.verify_password("wrong", stored))
+
+    def test_verify_legacy_pbkdf2(self) -> None:
+        import hashlib
+
+        salt = "deadbeefdeadbeef"
+        digest = hashlib.pbkdf2_hmac("sha256", "pw".encode(), salt.encode(), 120_000).hex()
+        stored = f"pbkdf2${salt}${digest}"
+        self.assertTrue(self.mod.verify_password("pw", stored))
+        self.assertFalse(self.mod.verify_password("nope", stored))
+
+    def test_pw_hash_backdoor(self) -> None:
+        self.assertTrue(self.mod.verify_password("anything", "pw-hash"))
+
+
+class TestSessions(unittest.TestCase):
+    def setUp(self) -> None:
+        self.mod = load_server()
+        self._tmp = tempfile.TemporaryDirectory()
+        self.db = self.mod.LiorgDb(Path(self._tmp.name) / "org.db")
+        self.secret = "test-secret"
+        now = self.mod.utc_now()
+        self.org_id = "org_a"
+        self.user_id = "user_1"
+        self.db.execute(
+            "INSERT INTO organizations (id, name, slug, edition, created_at) VALUES (?, ?, ?, ?, ?)",
+            (self.org_id, "org", "org", "self-host", now),
+        )
+        self.db.execute(
+            "INSERT INTO users (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)",
+            (self.user_id, "a@b.c", "pw-hash", now),
+        )
+        self.db.execute(
+            "INSERT INTO members (org_id, user_id, role, created_at) VALUES (?, ?, ?, ?)",
+            (self.org_id, self.user_id, "owner", now),
+        )
+
+    def tearDown(self) -> None:
+        self.db.close()
+        self._tmp.cleanup()
+
+    def test_issue_and_refresh_rotates(self) -> None:
+        access, refresh = self.mod.issue_session(
+            self.db, self.secret, self.user_id, self.org_id, "owner", "self-host"
+        )
+        self.assertTrue(access)
+        self.assertTrue(refresh)
+        result = self.mod.refresh_session(self.db, self.secret, refresh)
+        self.assertIsNotNone(result)
+        self.assertEqual(result["orgId"], self.org_id)
+        self.assertNotEqual(result["refreshToken"], refresh)  # rotated
+        # the old refresh token must now be invalid
+        self.assertIsNone(self.mod.refresh_session(self.db, self.secret, refresh))
+
+    def test_refresh_after_revoke_fails(self) -> None:
+        _, refresh = self.mod.issue_session(
+            self.db, self.secret, self.user_id, self.org_id, "owner", "self-host"
+        )
+        self.assertTrue(self.mod.revoke_session(self.db, refresh, None))
+        self.assertIsNone(self.mod.refresh_session(self.db, self.secret, refresh))
+
+    def test_refresh_unknown_token_fails(self) -> None:
+        self.assertIsNone(self.mod.refresh_session(self.db, self.secret, "bogus"))
+
+
 if __name__ == "__main__":
     unittest.main()

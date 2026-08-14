@@ -1,6 +1,6 @@
 # Librebase Admin API — product management backend (not a linative lip package)
 FROM alpine:3.21
-RUN apk add --no-cache python3 wget
+RUN apk add --no-cache python3 py3-argon2-cffi wget
 WORKDIR /app
 COPY migrations/ ./migrations/
 COPY scripts/admin_server.py ./scripts/admin_server.py

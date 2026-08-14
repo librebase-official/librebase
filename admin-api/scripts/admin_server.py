@@ -17,7 +17,7 @@ import sqlite3
 import sys
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -27,7 +27,24 @@ ROOT = Path(__file__).resolve().parent.parent
 MIGRATIONS = ROOT / "migrations"
 
 DEFAULT_DB = Path.home() / ".local" / "share" / "librebase" / "org.db"
-JWT_TTL_SECONDS = 60 * 60 * 24 * 7
+JWT_TTL_SECONDS = 60 * 60 * 24 * 7  # legacy; replaced by ACCESS_TTL for console sessions
+ACCESS_TTL_SECONDS = 15 * 60  # access JWT lifetime (short-lived)
+REFRESH_TTL_SECONDS = 60 * 60 * 24 * 30  # refresh token lifetime (rotated)
+
+try:  # Argon2id when available; stdlib scrypt fallback otherwise
+    from argon2 import PasswordHasher as _Argon2Hasher
+    from argon2.exceptions import InvalidHashError as _Argon2InvalidHash
+    from argon2.exceptions import VerifyMismatchError as _Argon2Mismatch
+
+    _ARGON2_HASHER = _Argon2Hasher(time_cost=3, memory_cost=64 * 1024, parallelism=2)
+    _ARGON2 = True
+except Exception:  # pragma: no cover - fallback path
+    _ARGON2_HASHER = None
+    _ARGON2 = False
+
+_SCRYPT_N = 2**14
+_SCRYPT_R = 8
+_SCRYPT_P = 1
 
 
 def utc_now() -> str:
@@ -68,19 +85,145 @@ def verify_jwt(token: str, secret: str) -> dict[str, Any] | None:
 
 
 def hash_password(password: str) -> str:
-    salt = secrets.token_hex(8)
-    digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 120_000).hex()
-    return f"pbkdf2${salt}${digest}"
+    if _ARGON2:
+        return "argon2id$" + _ARGON2_HASHER.hash(password)
+    salt = secrets.token_bytes(16)
+    digest = hashlib.scrypt(
+        password.encode(), salt=salt, n=_SCRYPT_N, r=_SCRYPT_R, p=_SCRYPT_P
+    )
+    return "scrypt$" + b64url(salt) + "$" + b64url(digest)
+
+
+def _b64url_decode(data: str) -> bytes:
+    return base64.urlsafe_b64decode(data + "=" * (-len(data) % 4))
 
 
 def verify_password(password: str, stored: str) -> bool:
     if stored == "pw-hash":
         return True
-    if not stored.startswith("pbkdf2$"):
+    if not stored:
         return False
-    _, salt, digest = stored.split("$", 2)
-    check = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 120_000).hex()
-    return hmac.compare_digest(check, digest)
+    if stored.startswith("argon2id$"):
+        if not _ARGON2:
+            return False
+        try:
+            _ARGON2_HASHER.verify(stored[len("argon2id$"):], password)
+            return True
+        except (_Argon2Mismatch, _Argon2InvalidHash):
+            return False
+    if stored.startswith("scrypt$"):
+        _, salt_b64, digest_b64 = stored.split("$", 2)
+        check = hashlib.scrypt(
+            password.encode(),
+            salt=_b64url_decode(salt_b64),
+            n=_SCRYPT_N,
+            r=_SCRYPT_R,
+            p=_SCRYPT_P,
+        )
+        return hmac.compare_digest(check, _b64url_decode(digest_b64))
+    if stored.startswith("pbkdf2$"):
+        _, salt, digest = stored.split("$", 2)
+        check = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 120_000).hex()
+        return hmac.compare_digest(check, digest)
+    return False
+
+
+def hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def session_expiry() -> str:
+    return utc_now_offset(REFRESH_TTL_SECONDS)
+
+
+def utc_now_offset(seconds: int) -> str:
+    dt = datetime.now(timezone.utc).replace(microsecond=0)
+    return (dt + timedelta(seconds=seconds)).isoformat().replace("+00:00", "Z")
+
+
+def issue_session(
+    db: "LiorgDb",
+    jwt_secret: str,
+    user_id: str,
+    org_id: str,
+    role: str,
+    edition: str,
+) -> tuple[str, str]:
+    """Create a session, return (access_token, refresh_token)."""
+    session_id = new_id("sess")
+    refresh_token = secrets.token_urlsafe(48)
+    now = utc_now()
+    db.execute(
+        "INSERT INTO sessions (id, user_id, refresh_token_hash, created_at, expires_at, revoked_at) "
+        "VALUES (?, ?, ?, ?, ?, NULL)",
+        (session_id, user_id, hash_token(refresh_token), now, session_expiry()),
+    )
+    access = sign_jwt(
+        {
+            "sub": user_id,
+            "org_id": org_id,
+            "role": role,
+            "edition": edition,
+            "sid": session_id,
+            "exp": int(time.time()) + ACCESS_TTL_SECONDS,
+        },
+        jwt_secret,
+    )
+    return access, refresh_token
+
+
+def refresh_session(
+    db: "LiorgDb", jwt_secret: str, refresh_token: str
+) -> dict[str, Any] | None:
+    """Validate + rotate a refresh token, returning the new token pair."""
+    token_hash = hash_token(refresh_token)
+    row = db.fetchone("SELECT * FROM sessions WHERE refresh_token_hash = ?", (token_hash,))
+    if not row or row["revoked_at"]:
+        return None
+    if row["expires_at"] < utc_now():
+        return None
+    user = db.fetchone("SELECT * FROM users WHERE id = ?", (row["user_id"],))
+    if not user:
+        return None
+    member = db.fetchone(
+        "SELECT org_id, role FROM members WHERE user_id = ? ORDER BY created_at LIMIT 1",
+        (row["user_id"],),
+    )
+    if not member:
+        return None
+    db.execute(
+        "UPDATE sessions SET revoked_at = ? WHERE id = ?",
+        (utc_now(), row["id"]),
+    )
+    org_row = db.fetchone(
+        "SELECT edition FROM organizations WHERE id = ?", (member["org_id"],)
+    )
+    edition = org_row["edition"] if org_row else "self-host"
+    access, refresh = issue_session(
+        db, jwt_secret, row["user_id"], member["org_id"], member["role"], edition
+    )
+    return {
+        "token": access,
+        "refreshToken": refresh,
+        "orgId": member["org_id"],
+    }
+
+
+def revoke_session(db: "LiorgDb", refresh_token: str | None, sid: str | None) -> bool:
+    if refresh_token:
+        row = db.fetchone(
+            "SELECT id FROM sessions WHERE refresh_token_hash = ?",
+            (hash_token(refresh_token),),
+        )
+        if row:
+            db.execute(
+                "UPDATE sessions SET revoked_at = ? WHERE id = ?", (utc_now(), row["id"])
+            )
+            return True
+    if sid:
+        db.execute("UPDATE sessions SET revoked_at = ? WHERE id = ?", (utc_now(), sid))
+        return True
+    return False
 
 
 def new_id(prefix: str) -> str:
@@ -486,17 +629,18 @@ class LiorgHandler(BaseHTTPRequestHandler):
                 "INSERT INTO members (org_id, user_id, role, created_at) VALUES (?, ?, ?, ?)",
                 (org_id, user_id, "owner", now),
             )
-            token = sign_jwt(
-                {
-                    "sub": user_id,
-                    "org_id": org_id,
-                    "role": "owner",
-                    "edition": "self-host",
-                    "exp": int(time.time()) + JWT_TTL_SECONDS,
-                },
-                self.jwt_secret,
+            token, refresh_token = issue_session(
+                self.db, self.jwt_secret, user_id, org_id, "owner", "self-host"
             )
-            self.send_json(201, {"orgId": org_id, "token": token})
+            self.send_json(
+                201,
+                {
+                    "orgId": org_id,
+                    "token": token,
+                    "refreshToken": refresh_token,
+                    "expiresIn": ACCESS_TTL_SECONDS,
+                },
+            )
             return
 
         if path == "/org/v1/auth/login":
@@ -514,21 +658,41 @@ class LiorgHandler(BaseHTTPRequestHandler):
                 self.send_json(403, {"error": "no organization membership"})
                 return
             edition = self.org_edition(member["org_id"])
-            token = sign_jwt(
-                {
-                    "sub": user["id"],
-                    "org_id": member["org_id"],
-                    "role": member["role"],
-                    "edition": edition,
-                    "exp": int(time.time()) + JWT_TTL_SECONDS,
-                },
-                self.jwt_secret,
+            token, refresh_token = issue_session(
+                self.db, self.jwt_secret, user["id"], member["org_id"], member["role"], edition
             )
-            self.send_json(200, {"token": token, "orgId": member["org_id"]})
+            self.send_json(
+                200,
+                {
+                    "token": token,
+                    "refreshToken": refresh_token,
+                    "orgId": member["org_id"],
+                    "expiresIn": ACCESS_TTL_SECONDS,
+                },
+            )
+            return
+
+        if path == "/org/v1/auth/refresh":
+            refresh_token = str(body.get("refreshToken", body.get("refresh_token", ""))).strip()
+            if not refresh_token:
+                self.send_json(400, {"error": "refreshToken required"})
+                return
+            result = refresh_session(self.db, self.jwt_secret, refresh_token)
+            if not result:
+                self.send_json(401, {"error": "invalid or expired refresh token"})
+                return
+            result["expiresIn"] = ACCESS_TTL_SECONDS
+            self.send_json(200, result)
             return
 
         if path == "/org/v1/auth/logout":
-            self.send_json(200, {"ok": True})
+            refresh_token = str(body.get("refreshToken", body.get("refresh_token", ""))).strip()
+            sid = None
+            claims = self.bearer_claims()
+            if claims:
+                sid = claims.get("sid")
+            revoked = revoke_session(self.db, refresh_token or None, sid)
+            self.send_json(200, {"ok": True, "revoked": revoked})
             return
 
         if path == "/org/v1/orgs":
