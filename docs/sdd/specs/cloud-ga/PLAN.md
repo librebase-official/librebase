@@ -118,7 +118,7 @@ the product shippable now; each is ported to Li as the compiler/runtime matures.
 | Surface | Interim | Li target | Blocker to port |
 |---|---|---|---|
 | Control plane | `admin-api` (Python + SQLite) | li-httpd + lic + lidb (src/seam.li) | lic P0 (bytes, async) |
-| KMS | `kms/` (Python + `cryptography`) | `li-kms` on `li-crypto` | li-crypto high-level seal/open + Ed25519 sign/verify not yet exposed; lic P0 for HTTP |
+| KMS | `kms/` (Python + `cryptography`) | `li-kms` core on Monocypher externs | crypto **done** (`feat/li-kms-crypto`); HTTP server pending lic P0 |
 | Runtime auth | `lis/routes/auth/*` (Python) | same in Li | lic P0 (`.li` server code blocked) |
 | Host agent | — (pure Li from day one) | pure Li `lic` binary | none (unblocks with Phase 1) |
 | SDK / Studio | JS / Next.js | — (clients stay in JS; engine-side is Li) | n/a |
@@ -133,6 +133,9 @@ drop-in (same endpoints, same `*.db`/JSON shapes).
 - ✅ Phase 4 — OAuth provider registry (GitHub + Google) — `lis` PR
   `feat/oauth-provider-registry`.
 - ✅ Phase 2 — KMS interim Python (envelope + Ed25519 + HTTP API) — `kms/` on main.
+- ✅ Phase 2 — pure-Li KMS crypto unblocked: Monocypher vendored into the runtime
+  (`li_rt_crypto_*` Ed25519 + XChaCha20-Poly1305 externs, `feat/li-kms-crypto` branch)
+  with a passing Li selftest (`examples/kms_core.li`). Remaining: Li HTTP server (lic P0).
 - ⏸️ Phase 1/3 — Hetzner substrate + instance lifecycle (account unlock pending).
 - ⏸️ Phases 6/7 — Studio UI + billing.
 - ⏳ Follow-ups — admin-api ↔ KMS provider-secret seal; console SSO; SMTP for
