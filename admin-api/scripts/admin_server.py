@@ -46,6 +46,13 @@ _SCRYPT_N = 2**14
 _SCRYPT_R = 8
 _SCRYPT_P = 1
 
+RESET_TTL_SECONDS = 60 * 60  # password reset link lifetime (1h)
+VERIFY_TTL_SECONDS = 60 * 60 * 24 * 7  # email verification link lifetime (7d)
+
+
+def admin_dev_mode() -> bool:
+    return os.environ.get("LIBREBASE_ADMIN_DEV", "").strip().lower() in ("1", "true", "yes")
+
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -224,6 +231,68 @@ def revoke_session(db: "LiorgDb", refresh_token: str | None, sid: str | None) ->
         db.execute("UPDATE sessions SET revoked_at = ? WHERE id = ?", (utc_now(), sid))
         return True
     return False
+
+
+def request_password_reset(db: "LiorgDb", email: str) -> tuple[str, bool]:
+    """Create a reset token for `email`. Returns (token, user_exists)."""
+    user = db.fetchone("SELECT * FROM users WHERE email = ?", (email,))
+    if not user:
+        return "", False
+    token = secrets.token_urlsafe(32)
+    now = utc_now()
+    db.execute(
+        "INSERT INTO password_reset_tokens (token_hash, user_id, created_at, expires_at, used_at) "
+        "VALUES (?, ?, ?, ?, NULL)",
+        (hash_token(token), user["id"], now, utc_now_offset(RESET_TTL_SECONDS)),
+    )
+    return token, True
+
+
+def reset_password(db: "LiorgDb", token: str, new_password: str) -> bool:
+    row = db.fetchone(
+        "SELECT * FROM password_reset_tokens WHERE token_hash = ?", (hash_token(token),)
+    )
+    if not row or row["used_at"]:
+        return False
+    if row["expires_at"] < utc_now():
+        return False
+    db.execute(
+        "UPDATE users SET password_hash = ? WHERE id = ?",
+        (hash_password(new_password), row["user_id"]),
+    )
+    db.execute(
+        "UPDATE password_reset_tokens SET used_at = ? WHERE token_hash = ?",
+        (utc_now(), hash_token(token)),
+    )
+    return True
+
+
+def issue_email_verification(db: "LiorgDb", user_id: str) -> str:
+    token = secrets.token_urlsafe(32)
+    db.execute(
+        "INSERT INTO email_verification_tokens (token_hash, user_id, created_at, expires_at, used_at) "
+        "VALUES (?, ?, ?, ?, NULL)",
+        (hash_token(token), user_id, utc_now(), utc_now_offset(VERIFY_TTL_SECONDS)),
+    )
+    return token
+
+
+def verify_email(db: "LiorgDb", token: str) -> bool:
+    row = db.fetchone(
+        "SELECT * FROM email_verification_tokens WHERE token_hash = ?", (hash_token(token),)
+    )
+    if not row or row["used_at"]:
+        return False
+    if row["expires_at"] < utc_now():
+        return False
+    db.execute(
+        "UPDATE users SET email_verified = 1 WHERE id = ?", (row["user_id"],)
+    )
+    db.execute(
+        "UPDATE email_verification_tokens SET used_at = ? WHERE token_hash = ?",
+        (utc_now(), hash_token(token)),
+    )
+    return True
 
 
 def new_id(prefix: str) -> str:
@@ -693,6 +762,43 @@ class LiorgHandler(BaseHTTPRequestHandler):
                 sid = claims.get("sid")
             revoked = revoke_session(self.db, refresh_token or None, sid)
             self.send_json(200, {"ok": True, "revoked": revoked})
+            return
+
+        if path == "/org/v1/auth/forgot-password":
+            email = str(body.get("email", "")).strip()
+            if not email:
+                self.send_json(400, {"error": "email required"})
+                return
+            token, exists = request_password_reset(self.db, email)
+            # Always 200 to avoid user enumeration. In dev the reset token is
+            # returned directly; production sends it via email (SMTP, TODO).
+            payload: dict[str, Any] = {"ok": True}
+            if exists and admin_dev_mode():
+                payload["resetToken"] = token
+            self.send_json(200, payload)
+            return
+
+        if path == "/org/v1/auth/reset-password":
+            token = str(body.get("token", "")).strip()
+            password = str(body.get("password", ""))
+            if not token or not password:
+                self.send_json(400, {"error": "token and password required"})
+                return
+            if not reset_password(self.db, token, password):
+                self.send_json(400, {"error": "invalid or expired token"})
+                return
+            self.send_json(200, {"ok": True})
+            return
+
+        if path == "/org/v1/auth/verify-email":
+            token = str(body.get("token", "")).strip()
+            if not token:
+                self.send_json(400, {"error": "token required"})
+                return
+            if not verify_email(self.db, token):
+                self.send_json(400, {"error": "invalid or expired token"})
+                return
+            self.send_json(200, {"ok": True})
             return
 
         if path == "/org/v1/orgs":

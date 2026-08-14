@@ -266,5 +266,64 @@ class TestSessions(unittest.TestCase):
         self.assertIsNone(self.mod.refresh_session(self.db, self.secret, "bogus"))
 
 
+class TestPasswordReset(unittest.TestCase):
+    def setUp(self) -> None:
+        self.mod = load_server()
+        self._tmp = tempfile.TemporaryDirectory()
+        self.db = self.mod.LiorgDb(Path(self._tmp.name) / "org.db")
+        now = self.mod.utc_now()
+        self.db.execute(
+            "INSERT INTO users (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)",
+            ("u1", "a@b.c", "pw-hash", now),
+        )
+
+    def tearDown(self) -> None:
+        self.db.close()
+        self._tmp.cleanup()
+
+    def test_request_and_reset_single_use(self) -> None:
+        token, exists = self.mod.request_password_reset(self.db, "a@b.c")
+        self.assertTrue(exists)
+        self.assertTrue(token)
+        self.assertTrue(self.mod.reset_password(self.db, token, "new-password-123"))
+        self.assertFalse(self.mod.reset_password(self.db, token, "again"))  # single-use
+        user = self.db.fetchone("SELECT * FROM users WHERE id = ?", ("u1",))
+        self.assertTrue(self.mod.verify_password("new-password-123", user["password_hash"]))
+
+    def test_request_unknown_email(self) -> None:
+        token, exists = self.mod.request_password_reset(self.db, "nope@x.c")
+        self.assertFalse(exists)
+        self.assertEqual(token, "")
+
+    def test_reset_unknown_token(self) -> None:
+        self.assertFalse(self.mod.reset_password(self.db, "bogus", "pw"))
+
+
+class TestEmailVerification(unittest.TestCase):
+    def setUp(self) -> None:
+        self.mod = load_server()
+        self._tmp = tempfile.TemporaryDirectory()
+        self.db = self.mod.LiorgDb(Path(self._tmp.name) / "org.db")
+        now = self.mod.utc_now()
+        self.db.execute(
+            "INSERT INTO users (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)",
+            ("u1", "a@b.c", "pw-hash", now),
+        )
+
+    def tearDown(self) -> None:
+        self.db.close()
+        self._tmp.cleanup()
+
+    def test_verify_marks_user_and_is_single_use(self) -> None:
+        token = self.mod.issue_email_verification(self.db, "u1")
+        self.assertTrue(self.mod.verify_email(self.db, token))
+        user = self.db.fetchone("SELECT * FROM users WHERE id = ?", ("u1",))
+        self.assertEqual(user["email_verified"], 1)
+        self.assertFalse(self.mod.verify_email(self.db, token))  # single-use
+
+    def test_verify_unknown_token(self) -> None:
+        self.assertFalse(self.mod.verify_email(self.db, "bogus"))
+
+
 if __name__ == "__main__":
     unittest.main()
