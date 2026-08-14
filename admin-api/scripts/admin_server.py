@@ -14,6 +14,7 @@ import os
 import re
 import secrets
 import sqlite3
+import struct
 import sys
 import time
 import uuid
@@ -21,7 +22,7 @@ from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, urlparse
 
 ROOT = Path(__file__).resolve().parent.parent
 MIGRATIONS = ROOT / "migrations"
@@ -90,6 +91,90 @@ def record_login_failure(db: "LiorgDb", email: str) -> None:
 
 def clear_login_failures(db: "LiorgDb", email: str) -> None:
     db.execute("DELETE FROM login_attempts WHERE email = ?", (email,))
+
+
+# --- TOTP (RFC 6238 / HOTP RFC 4226, stdlib-only) + recovery codes ---
+RECOVERY_CODES_COUNT = 8
+TOTP_STEP = 30
+TOTP_DIGITS = 6
+TOTP_ISSUER = "Librebase"
+
+
+def _b32decode(secret: str) -> bytes:
+    return base64.b32decode(secret + "=" * (-len(secret) % 8))
+
+
+def totp_secret() -> str:
+    return base64.b32encode(secrets.token_bytes(20)).decode("ascii").rstrip("=")
+
+
+def totp_code(secret: str, counter: int, digits: int = TOTP_DIGITS) -> str:
+    key = _b32decode(secret)
+    msg = struct.pack(">Q", counter)
+    digest = hmac.new(key, msg, hashlib.sha1).digest()
+    offset = digest[-1] & 0x0F
+    value = (struct.unpack(">I", digest[offset:offset + 4])[0] & 0x7FFFFFFF) % (10**digits)
+    return str(value).zfill(digits)
+
+
+def totp_now(secret: str, step: int = TOTP_STEP, digits: int = TOTP_DIGITS) -> str:
+    return totp_code(secret, int(time.time()) // step, digits)
+
+
+def totp_verify(secret: str, code: str, step: int = TOTP_STEP, window: int = 1) -> bool:
+    if not secret:
+        return False
+    code = code.strip()
+    counter = int(time.time()) // step
+    for w in range(-window, window + 1):
+        if hmac.compare_digest(totp_code(secret, counter + w), code):
+            return True
+    return False
+
+
+def totp_uri(secret: str, email: str, issuer: str = TOTP_ISSUER) -> str:
+    label = quote(f"{issuer}:{email}")
+    return (
+        f"otpauth://totp/{label}?secret={secret}&issuer={quote(issuer)}"
+        f"&algorithm=SHA1&digits={TOTP_DIGITS}&period={TOTP_STEP}"
+    )
+
+
+def generate_recovery_codes(
+    db: "LiorgDb", user_id: str, count: int = RECOVERY_CODES_COUNT
+) -> list[str]:
+    db.execute("DELETE FROM recovery_codes WHERE user_id = ?", (user_id,))
+    codes: list[str] = []
+    now = utc_now()
+    for _ in range(count):
+        code = secrets.token_urlsafe(9)
+        codes.append(code)
+        db.execute(
+            "INSERT INTO recovery_codes (user_id, code_hash, created_at) VALUES (?, ?, ?)",
+            (user_id, hash_token(code), now),
+        )
+    return codes
+
+
+def verify_recovery_code(db: "LiorgDb", user_id: str, code: str) -> bool:
+    code_hash = hash_token(code)
+    row = db.fetchone(
+        "SELECT 1 FROM recovery_codes WHERE user_id = ? AND code_hash = ?",
+        (user_id, code_hash),
+    )
+    if not row:
+        return False
+    db.execute("DELETE FROM recovery_codes WHERE code_hash = ?", (code_hash,))
+    return True
+
+
+def user_mfa_ok(db: "LiorgDb", user_id: str, code: str) -> bool:
+    """MFA passes if TOTP matches, or a single-use recovery code matches."""
+    user = db.fetchone("SELECT mfa_secret FROM users WHERE id = ?", (user_id,))
+    secret = user["mfa_secret"] if user else None
+    if secret and totp_verify(secret, code):
+        return True
+    return verify_recovery_code(db, user_id, code)
 
 
 def utc_now() -> str:
@@ -790,6 +875,11 @@ class LiorgHandler(BaseHTTPRequestHandler):
                 self.send_json(401, {"error": "invalid credentials"})
                 return
             clear_login_failures(self.db, email)
+            if user["mfa_enabled"]:
+                code = str(body.get("code", "")).strip()
+                if not code or not user_mfa_ok(self.db, user["id"], code):
+                    self.send_json(401, {"error": "mfa_required"})
+                    return
             member = self.db.fetchone(
                 "SELECT org_id, role FROM members WHERE user_id = ? ORDER BY created_at LIMIT 1",
                 (user["id"],),
@@ -869,6 +959,57 @@ class LiorgHandler(BaseHTTPRequestHandler):
             if not verify_email(self.db, token):
                 self.send_json(400, {"error": "invalid or expired token"})
                 return
+            self.send_json(200, {"ok": True})
+            return
+
+        if path == "/org/v1/auth/mfa/setup":
+            claims = self.bearer_claims()
+            if not claims:
+                self.send_json(401, {"error": "unauthorized"})
+                return
+            user = self.db.fetchone("SELECT * FROM users WHERE id = ?", (claims.get("sub"),))
+            if not user:
+                self.send_json(401, {"error": "unauthorized"})
+                return
+            secret = totp_secret()
+            self.db.execute(
+                "UPDATE users SET mfa_secret = ? WHERE id = ?", (secret, user["id"])
+            )
+            self.send_json(200, {"secret": secret, "uri": totp_uri(secret, user["email"])})
+            return
+
+        if path == "/org/v1/auth/mfa/enable":
+            claims = self.bearer_claims()
+            if not claims:
+                self.send_json(401, {"error": "unauthorized"})
+                return
+            user_id = claims.get("sub")
+            code = str(body.get("code", "")).strip()
+            user = self.db.fetchone("SELECT * FROM users WHERE id = ?", (user_id,))
+            if not user or not user["mfa_secret"] or not totp_verify(user["mfa_secret"], code):
+                self.send_json(400, {"error": "invalid code"})
+                return
+            self.db.execute("UPDATE users SET mfa_enabled = 1 WHERE id = ?", (user_id,))
+            codes = generate_recovery_codes(self.db, user_id)
+            self.send_json(200, {"ok": True, "recoveryCodes": codes})
+            return
+
+        if path == "/org/v1/auth/mfa/disable":
+            claims = self.bearer_claims()
+            if not claims:
+                self.send_json(401, {"error": "unauthorized"})
+                return
+            user_id = claims.get("sub")
+            code = str(body.get("code", "")).strip()
+            user = self.db.fetchone("SELECT * FROM users WHERE id = ?", (user_id,))
+            if not user or not user["mfa_secret"] or not totp_verify(user["mfa_secret"], code):
+                self.send_json(400, {"error": "invalid code"})
+                return
+            self.db.execute(
+                "UPDATE users SET mfa_enabled = 0, mfa_secret = NULL WHERE id = ?",
+                (user_id,),
+            )
+            self.db.execute("DELETE FROM recovery_codes WHERE user_id = ?", (user_id,))
             self.send_json(200, {"ok": True})
             return
 

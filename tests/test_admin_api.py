@@ -355,5 +355,49 @@ class TestLoginLockout(unittest.TestCase):
         self.assertFalse(self.mod.login_locked(self.db, email))
 
 
+class TestTotp(unittest.TestCase):
+    def setUp(self) -> None:
+        self.mod = load_server()
+
+    def test_totp_roundtrip(self) -> None:
+        secret = self.mod.totp_secret()
+        code = self.mod.totp_now(secret)
+        self.assertEqual(len(code), 6)
+        self.assertTrue(self.mod.totp_verify(secret, code))
+        self.assertFalse(self.mod.totp_verify(secret, "000000" if code != "000000" else "000001"))
+
+    def test_totp_uri_contains_secret(self) -> None:
+        secret = self.mod.totp_secret()
+        uri = self.mod.totp_uri(secret, "a@b.c")
+        self.assertIn("otpauth://totp/", uri)
+        self.assertIn(secret, uri)
+
+    def test_recovery_codes_single_use(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.db = self.mod.LiorgDb(Path(self._tmp.name) / "org.db")
+        codes = self.mod.generate_recovery_codes(self.db, "u1")
+        self.assertEqual(len(codes), self.mod.RECOVERY_CODES_COUNT)
+        self.assertTrue(self.mod.verify_recovery_code(self.db, "u1", codes[0]))
+        self.assertFalse(self.mod.verify_recovery_code(self.db, "u1", codes[0]))  # single-use
+        self.db.close()
+        self._tmp.cleanup()
+
+    def test_user_mfa_ok(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.db = self.mod.LiorgDb(Path(self._tmp.name) / "org.db")
+        now = self.mod.utc_now()
+        secret = self.mod.totp_secret()
+        self.db.execute(
+            "INSERT INTO users (id, email, password_hash, created_at, mfa_secret) "
+            "VALUES (?, ?, ?, ?, ?)",
+            ("u1", "a@b.c", "pw-hash", now, secret),
+        )
+        self.assertTrue(self.mod.user_mfa_ok(self.db, "u1", self.mod.totp_now(secret)))
+        code = self.mod.generate_recovery_codes(self.db, "u1", 1)[0]
+        self.assertTrue(self.mod.user_mfa_ok(self.db, "u1", code))
+        self.db.close()
+        self._tmp.cleanup()
+
+
 if __name__ == "__main__":
     unittest.main()
