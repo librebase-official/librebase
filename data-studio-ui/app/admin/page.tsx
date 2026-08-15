@@ -7,6 +7,7 @@ import {
   adminMe,
 } from "@/lib/librebase-admin-client";
 import { McpKeys } from "@/components/McpKeys";
+import { ChangePassword } from "@/components/ChangePassword";
 import { resolveStudioOrgId } from "@/lib/org-context";
 
 export const dynamic = "force-dynamic";
@@ -113,6 +114,8 @@ export default async function AdminPage() {
       )}
 
       {me && <McpKeys orgId={me.activeOrgId || orgId} initial={mcpKeys} />}
+
+      {me && <ChangePassword />}
 
       <p style={{ marginTop: "2rem" }}>
         <Link href="/">← Projects</Link>

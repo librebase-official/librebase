@@ -198,6 +198,16 @@ export async function adminRotateMcpKey(
   });
 }
 
+export async function adminChangePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<{ ok: boolean }> {
+  return adminFetch("/org/v1/me/password", {
+    method: "POST",
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+}
+
 export async function adminMe(): Promise<AdminMe> {
   return adminFetch<AdminMe>("/org/v1/me");
 }

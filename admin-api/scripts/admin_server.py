@@ -1278,6 +1278,30 @@ class LiorgHandler(BaseHTTPRequestHandler):
             self.send_json(200, {"mcpKey": mcp_key})
             return
 
+        if path == "/org/v1/me/password":
+            claims = self.bearer_claims()
+            if not claims:
+                self.send_json(401, {"error": "unauthorized"})
+                return
+            user = self.db.fetchone("SELECT * FROM users WHERE id = ?", (claims["sub"],))
+            if not user:
+                self.send_json(401, {"error": "user not found"})
+                return
+            current = str(body.get("currentPassword", body.get("current_password", "")))
+            new_password = str(body.get("newPassword", body.get("new_password", "")))
+            if len(new_password) < 6:
+                self.send_json(400, {"error": "new password must be at least 6 characters"})
+                return
+            if user["password_hash"] and not verify_password(current, user["password_hash"]):
+                self.send_json(401, {"error": "current password is incorrect"})
+                return
+            self.db.execute(
+                "UPDATE users SET password_hash = ? WHERE id = ?",
+                (hash_password(new_password), user["id"]),
+            )
+            self.send_json(200, {"ok": True})
+            return
+
         if path == "/org/v1/auth/login":
             email = str(body.get("email", "")).strip()
             password = str(body.get("password", ""))
