@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { adminChangePassword } from "@/lib/librebase-admin-client";
 
 export function ChangePassword() {
   const [current, setCurrent] = useState("");
@@ -16,7 +15,15 @@ export function ChangePassword() {
     setError(null);
     setDone(false);
     try {
-      await adminChangePassword(current, next);
+      const res = await fetch("/api/admin/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword: current, newPassword: next }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        throw new Error(data.error ?? `Failed (${res.status})`);
+      }
       setDone(true);
       setCurrent("");
       setNext("");

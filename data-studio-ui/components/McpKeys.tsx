@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { adminListMcpKeys, adminRotateMcpKey, type McpKey } from "@/lib/librebase-admin-client";
+import type { McpKey } from "@/lib/librebase-admin-client";
 
 export function McpKeys({ orgId, initial }: { orgId: string; initial: McpKey[] }) {
   const [keys, setKeys] = useState<McpKey[]>(initial);
@@ -10,15 +10,32 @@ export function McpKeys({ orgId, initial }: { orgId: string; initial: McpKey[] }
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  async function listKeys(): Promise<McpKey[]> {
+    const res = await fetch(`/api/admin/mcp-keys?orgId=${encodeURIComponent(orgId)}`);
+    const data = (await res.json().catch(() => ({}))) as McpKey[] | { error?: string };
+    if (!res.ok) {
+      throw new Error((data as { error?: string }).error ?? `Failed (${res.status})`);
+    }
+    return data as McpKey[];
+  }
+
   async function rotate() {
     setBusy(true);
     setError(null);
     setNewKey(null);
     setCopied(false);
     try {
-      const result = await adminRotateMcpKey(orgId);
-      setNewKey(result.mcpKey);
-      setKeys(await adminListMcpKeys(orgId));
+      const res = await fetch("/api/admin/mcp-keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orgId }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { mcpKey?: string; error?: string };
+      if (!res.ok || !data.mcpKey) {
+        throw new Error(data.error ?? `Failed (${res.status})`);
+      }
+      setNewKey(data.mcpKey);
+      setKeys(await listKeys());
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not rotate key");
     } finally {
