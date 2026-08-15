@@ -888,8 +888,36 @@ class LiorgHandler(BaseHTTPRequestHandler):
         token = auth[7:].strip()
         return verify_jwt(token, self.jwt_secret)
 
+    def mcp_key_org(self) -> str | None:
+        """Return the org scoped to a valid MCP key (lb_mcp_...) or None."""
+        auth = self.headers.get("Authorization", "")
+        if not auth.startswith("Bearer "):
+            return None
+        token = auth[7:].strip()
+        if not token.startswith("lb_mcp_"):
+            return None
+        row = self.db.fetchone(
+            "SELECT org_id FROM mcp_keys WHERE key_hash = ? AND revoked_at IS NULL",
+            (hash_token(token),),
+        )
+        return row["org_id"] if row else None
+
+    def mcp_claims(self) -> dict[str, Any] | None:
+        """MCP-key identity: admin-scoped to the key's org, or None."""
+        org_id = self.mcp_key_org()
+        if not org_id:
+            return None
+        return {"sub": "mcp", "org_id": org_id, "role": "admin", "via": "mcp"}
+
+
     def require_org_member(self, org_id: str) -> dict[str, Any] | None:
-        """Return JWT claims if caller is a member of org_id; else send 401/403 and None."""
+        """Return claims if caller is a member of org_id (JWT or MCP key)."""
+        mcp = self.mcp_claims()
+        if mcp:
+            if mcp.get("org_id") != org_id:
+                self.send_json(403, {"error": "forbidden"})
+                return None
+            return mcp
         claims = self.bearer_claims()
         if not claims:
             self.send_json(401, {"error": "unauthorized"})
@@ -917,7 +945,13 @@ class LiorgHandler(BaseHTTPRequestHandler):
         return row["role"] if row else None
 
     def require_org_role(self, org_id: str, minimum: str) -> dict[str, Any] | None:
-        """Return JWT claims if the caller holds >= `minimum` role in org_id."""
+        """Return claims if the caller holds >= `minimum` role in org_id (JWT or MCP key)."""
+        mcp = self.mcp_claims()
+        if mcp:
+            if mcp.get("org_id") != org_id:
+                self.send_json(403, {"error": "forbidden"})
+                return None
+            return mcp
         claims = self.bearer_claims()
         if not claims:
             self.send_json(401, {"error": "unauthorized"})
@@ -1034,6 +1068,23 @@ class LiorgHandler(BaseHTTPRequestHandler):
             )
             return
 
+        if path == "/org/v1/mcp/org":
+            mcp = self.mcp_claims()
+            if not mcp:
+                self.send_json(401, {"error": "invalid or missing MCP key"})
+                return
+            org_id = mcp["org_id"]
+            org = self.db.fetchone("SELECT * FROM organizations WHERE id = ?", (org_id,))
+            self.send_json(
+                200,
+                {
+                    "orgId": org_id,
+                    "name": org["name"] if org else "",
+                    "edition": org["edition"] if org else "",
+                },
+            )
+            return
+
         if path == "/org/v1/me":
             claims = self.bearer_claims()
             if not claims:
@@ -1078,9 +1129,7 @@ class LiorgHandler(BaseHTTPRequestHandler):
         members_match = re.fullmatch(r"/org/v1/orgs/([^/]+)/members", path)
         if members_match:
             org_id = members_match.group(1)
-            claims = self.bearer_claims()
-            if not claims or claims.get("org_id") != org_id:
-                self.send_json(403, {"error": "forbidden"})
+            if not self.require_org_member(org_id):
                 return
             rows = self.db.fetchall(
                 "SELECT m.user_id, u.email, m.role, m.created_at "
