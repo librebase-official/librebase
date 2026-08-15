@@ -753,6 +753,28 @@ def entitlement_for_edition(edition: str, feature_key: str) -> int:
     return 0
 
 
+# --- Billing plans (instance quotas; projects are unlimited) ---
+PLANS = {
+    "self-host": {"price": 0, "instance_limit": None},  # self-hosted, unlimited
+    "suspended": {"price": 0, "instance_limit": 0},
+    "starter": {"price": 29, "instance_limit": 1},
+    "pro": {"price": 69, "instance_limit": 3},
+    "unlimited": {"price": 0, "instance_limit": None},  # granted via discount code
+}
+
+# Discount codes grant a plan (Stripe coupons map here). Uppercased on lookup.
+DISCOUNT_CODES = {
+    "TEST-UNLIMITED": "unlimited",
+    "EARLY-ADOPTER": "unlimited",
+    "STARTER-PROMO": "starter",
+    "PRO-PROMO": "pro",
+}
+
+
+def plan_instance_limit(plan: str | None) -> int | None:
+    return PLANS.get(plan or "suspended", PLANS["suspended"])["instance_limit"]
+
+
 def row_project(row: sqlite3.Row) -> dict[str, Any]:
     return {
         "id": row["id"],
@@ -973,6 +995,19 @@ class LiorgHandler(BaseHTTPRequestHandler):
         row = self.db.fetchone("SELECT edition FROM organizations WHERE id = ?", (org_id,))
         return row["edition"] if row else "self-host"
 
+    def org_plan(self, org_id: str) -> str:
+        row = self.db.fetchone("SELECT plan FROM organizations WHERE id = ?", (org_id,))
+        return row["plan"] if row else "suspended"
+
+    def instance_quota_exceeded(self, org_id: str) -> bool:
+        limit = plan_instance_limit(self.org_plan(org_id))
+        if limit is None:
+            return False
+        row = self.db.fetchone(
+            "SELECT COUNT(*) AS n FROM instances WHERE org_id = ?", (org_id,)
+        )
+        return (row["n"] if row else 0) >= limit
+
     def check_entitlement(self, org_id: str, feature_key: str) -> dict[str, Any]:
         override = self.db.fetchone(
             "SELECT enabled FROM org_entitlements WHERE org_id = ? AND feature_key = ?",
@@ -1075,12 +1110,19 @@ class LiorgHandler(BaseHTTPRequestHandler):
                 return
             org_id = mcp["org_id"]
             org = self.db.fetchone("SELECT * FROM organizations WHERE id = ?", (org_id,))
+            count = self.db.fetchone(
+                "SELECT COUNT(*) AS n FROM instances WHERE org_id = ?", (org_id,)
+            )
+            limit = plan_instance_limit(org["plan"] if org else "suspended")
             self.send_json(
                 200,
                 {
                     "orgId": org_id,
                     "name": org["name"] if org else "",
                     "edition": org["edition"] if org else "",
+                    "plan": org["plan"] if org else "suspended",
+                    "instanceLimit": limit,
+                    "instanceCount": count["n"] if count else 0,
                 },
             )
             return
@@ -1349,6 +1391,20 @@ class LiorgHandler(BaseHTTPRequestHandler):
                 (hash_password(new_password), user["id"]),
             )
             self.send_json(200, {"ok": True})
+            return
+
+        discount_redeem = re.fullmatch(r"/org/v1/orgs/([^/]+)/discounts/redeem", path)
+        if discount_redeem:
+            org_id = discount_redeem.group(1)
+            if not self.require_org_role(org_id, "admin"):
+                return
+            code = str(body.get("code", "")).strip().upper()
+            plan = DISCOUNT_CODES.get(code)
+            if not plan:
+                self.send_json(400, {"error": "unknown discount code"})
+                return
+            self.db.execute("UPDATE organizations SET plan = ? WHERE id = ?", (plan, org_id))
+            self.send_json(200, {"plan": plan, "instanceLimit": plan_instance_limit(plan)})
             return
 
         if path == "/org/v1/auth/login":
@@ -1659,6 +1715,17 @@ class LiorgHandler(BaseHTTPRequestHandler):
             gate = self.check_entitlement(org_id, "instance.launch")
             if gate["code"] == 0:
                 self.send_json(403, {"error": "entitlement denied", "entitlement": gate})
+                return
+            if self.instance_quota_exceeded(org_id):
+                limit = plan_instance_limit(self.org_plan(org_id))
+                self.send_json(
+                    403,
+                    {
+                        "error": "instance limit reached",
+                        "plan": self.org_plan(org_id),
+                        "limit": limit,
+                    },
+                )
                 return
             name = str(body.get("name", "")).strip()
             if not name:
