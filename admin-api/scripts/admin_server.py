@@ -754,13 +754,69 @@ def entitlement_for_edition(edition: str, feature_key: str) -> int:
 
 
 # --- Billing plans (instance quotas; projects are unlimited) ---
+# price = EUR/month (annual billing, GA 2026-08), matching librebase.xyz/#pricing.
 PLANS = {
-    "self-host": {"price": 0, "instance_limit": None},  # self-hosted, unlimited
-    "suspended": {"price": 0, "instance_limit": 0},
-    "starter": {"price": 29, "instance_limit": 1},
-    "pro": {"price": 69, "instance_limit": 3},
-    "unlimited": {"price": 0, "instance_limit": None},  # granted via discount code
+    # plan: price, instance_limit, compute, memory_mb (per instance), storage_gb, support
+    "self-host": {
+        "price": 0,
+        "instance_limit": None,
+        "compute": "self-hosted",
+        "memory_mb": None,
+        "storage_gb": None,
+        "support": "community",
+    },
+    "sandbox": {
+        "price": 0,
+        "instance_limit": 1,
+        "compute": "shared",
+        "memory_mb": 64,
+        "storage_gb": 1,
+        "support": "community",
+    },
+    "suspended": {
+        "price": 0,
+        "instance_limit": 0,
+        "compute": "none",
+        "memory_mb": None,
+        "storage_gb": None,
+        "support": "none",
+    },
+    "starter": {
+        "price": 9,
+        "instance_limit": 1,
+        "compute": "dedicated",
+        "memory_mb": 256,
+        "storage_gb": 10,
+        "support": "email",
+    },
+    "pro": {
+        "price": 29,
+        "instance_limit": 3,
+        "compute": "dedicated",
+        "memory_mb": 1024,
+        "storage_gb": 50,
+        "support": "priority",
+    },
+    "scale": {
+        "price": 99,
+        "instance_limit": 10,
+        "compute": "dedicated",
+        "memory_mb": 2048,
+        "storage_gb": 200,
+        "support": "slack",
+    },
+    "unlimited": {
+        "price": 0,
+        "instance_limit": None,
+        "compute": "dedicated",
+        "memory_mb": None,
+        "storage_gb": None,
+        "support": "priority",
+    },
 }
+
+# Plans a customer can buy through Stripe checkout.
+BILLABLE_PLANS = ("starter", "pro", "scale")
 
 # Discount codes grant a plan (Stripe coupons map here). Uppercased on lookup.
 DISCOUNT_CODES = {
@@ -768,11 +824,246 @@ DISCOUNT_CODES = {
     "EARLY-ADOPTER": "unlimited",
     "STARTER-PROMO": "starter",
     "PRO-PROMO": "pro",
+    "SCALE-PROMO": "scale",
 }
 
 
 def plan_instance_limit(plan: str | None) -> int | None:
     return PLANS.get(plan or "suspended", PLANS["suspended"])["instance_limit"]
+
+
+# --- Stripe billing (stdlib urllib; no SDK by design) ---
+STRIPE_API_URL = os.environ.get("LIBREBASE_STRIPE_API_URL", "https://api.stripe.com/v1")
+
+
+def stripe_configured() -> bool:
+    return bool(os.environ.get("LIBREBASE_STRIPE_API_KEY", "").strip())
+
+
+def stripe_webhook_secret() -> str:
+    return os.environ.get("LIBREBASE_STRIPE_WEBHOOK_SECRET", "").strip()
+
+
+def stripe_price_for_plan(plan: str) -> str:
+    return {
+        "starter": os.environ.get("LIBREBASE_STRIPE_PRICE_STARTER", "").strip(),
+        "pro": os.environ.get("LIBREBASE_STRIPE_PRICE_PRO", "").strip(),
+        "scale": os.environ.get("LIBREBASE_STRIPE_PRICE_SCALE", "").strip(),
+    }.get(plan, "")
+
+
+def plan_from_price(price_id: str) -> str:
+    prices = {
+        os.environ.get("LIBREBASE_STRIPE_PRICE_STARTER", "").strip(): "starter",
+        os.environ.get("LIBREBASE_STRIPE_PRICE_PRO", "").strip(): "pro",
+        os.environ.get("LIBREBASE_STRIPE_PRICE_SCALE", "").strip(): "scale",
+    }
+    return prices.get(price_id, "")
+
+
+def stripe_success_url() -> str:
+    return os.environ.get(
+        "LIBREBASE_STRIPE_SUCCESS_URL", "https://app.librebase.xyz/admin?billing=success"
+    )
+
+
+def stripe_cancel_url() -> str:
+    return os.environ.get(
+        "LIBREBASE_STRIPE_CANCEL_URL", "https://app.librebase.xyz/admin?billing=cancel"
+    )
+
+
+def stripe_portal_return_url() -> str:
+    return os.environ.get("LIBREBASE_STRIPE_PORTAL_RETURN_URL", "https://app.librebase.xyz/admin")
+
+
+def stripe_metered_price() -> str:
+    return os.environ.get("LIBREBASE_STRIPE_METERED_PRICE", "").strip()
+
+
+def stripe_request(method: str, path: str, params: dict[str, Any]) -> dict[str, Any]:
+    """Raw Stripe API call (form-encoded). Raises RuntimeError on HTTP errors."""
+    api_key = os.environ.get("LIBREBASE_STRIPE_API_KEY", "").strip()
+    if not api_key:
+        raise RuntimeError("Stripe not configured (LIBREBASE_STRIPE_API_KEY)")
+    body = urlencode(params, doseq=True).encode() if params else b""
+    headers = {
+        "Authorization": "Basic " + base64.b64encode(f"{api_key}:".encode()).decode(),
+    }
+    if body:
+        headers["Content-Type"] = "application/x-www-form-urlencoded"
+    req = urllib.request.Request(
+        f"{STRIPE_API_URL}{path}", data=body or None, method=method, headers=headers
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as res:
+            return json.loads(res.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        try:
+            payload = json.loads(exc.read().decode("utf-8"))
+            message = payload["error"]["message"]
+        except Exception:
+            message = f"HTTP {exc.code}"
+        raise RuntimeError(f"stripe {path}: {message}") from exc
+
+
+def stripe_checkout_session(
+    org_id: str, plan: str, email: str, customer_id: str | None
+) -> dict[str, Any]:
+    """Create a Checkout Session; returns {id, url, customer?}."""
+    price = stripe_price_for_plan(plan)
+    if not price:
+        raise RuntimeError(f"no Stripe price configured for plan={plan}")
+    org_id = str(org_id)
+    params: dict[str, Any] = {
+        "mode": "subscription",
+        "client_reference_id": org_id,
+        "metadata[org_id]": org_id,
+        "metadata[plan]": plan,
+        "line_items[0][quantity]": "1",
+        "line_items[0][price]": price,
+        "success_url": stripe_success_url(),
+        "cancel_url": stripe_cancel_url(),
+    }
+    if customer_id:
+        params["customer"] = str(customer_id)
+    elif email:
+        params["customer_email"] = email
+    return stripe_request("POST", "/checkout/sessions", params)
+
+
+def stripe_portal_session(customer_id: str) -> dict[str, Any]:
+    return stripe_request(
+        "POST",
+        "/billing_portal/sessions",
+        {"customer": str(customer_id), "return_url": stripe_portal_return_url()},
+    )
+
+
+def stripe_verify_signature(payload: bytes, header: str) -> bool:
+    """Constant-time Stripe webhook signature check (t + v1) with 5 min drift."""
+    secret = stripe_webhook_secret()
+    if not secret:
+        return False
+    parts: dict[str, str] = {}
+    for chunk in (header or "").split(","):
+        if "=" in chunk:
+            key, _, value = chunk.partition("=")
+            parts[key.strip()] = value.strip()
+    ts, sig = parts.get("t"), parts.get("v1")
+    if not ts or not sig:
+        return False
+    try:
+        if abs(int(ts) - time.time()) > 300:
+            return False
+    except ValueError:
+        return False
+    expected = hmac.new(secret.encode(), f"{ts}.".encode() + payload, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, sig)
+
+
+def billing_apply_checkout(db: "LiorgDb", session: dict[str, Any]) -> bool:
+    """checkout.session.completed → plan + cloud-paid (subscription mode only)."""
+    org_id = session.get("client_reference_id") or (session.get("metadata") or {}).get("org_id")
+    if not org_id:
+        return False
+    if session.get("mode") != "subscription":
+        return False
+    if session.get("payment_status") not in ("paid", "no_payment_required"):
+        return False
+    plan = (session.get("metadata") or {}).get("plan", "")
+    if plan not in PLANS or plan in ("suspended", "self-host", "unlimited"):
+        return False
+    db.execute(
+        "UPDATE organizations SET plan = ?, edition = 'cloud-paid', "
+        "stripe_customer_id = COALESCE(?, stripe_customer_id), "
+        "stripe_subscription_id = ?, stripe_status = 'active' WHERE id = ?",
+        (plan, session.get("customer"), session.get("subscription"), org_id),
+    )
+    return True
+
+
+def billing_apply_subscription(db: "LiorgDb", sub: dict[str, Any]) -> bool:
+    """customer.subscription.* → keep plan in sync with the Stripe subscription."""
+    org = None
+    if sub.get("id"):
+        org = db.fetchone(
+            "SELECT * FROM organizations WHERE stripe_subscription_id = ?", (sub["id"],)
+        )
+    if not org and sub.get("customer"):
+        org = db.fetchone(
+            "SELECT * FROM organizations WHERE stripe_customer_id = ?", (sub["customer"],)
+        )
+    if not org:
+        org_id = (sub.get("metadata") or {}).get("org_id")
+        if org_id:
+            org = db.fetchone("SELECT * FROM organizations WHERE id = ?", (org_id,))
+    if not org:
+        return False
+    status = sub.get("status", "")
+    price_id = ""
+    for item in (sub.get("items") or {}).get("data") or []:
+        pid = (item.get("price") or {}).get("id")
+        if pid:
+            price_id = pid
+            break
+    now = utc_now()
+    if status in ("canceled", "unpaid"):
+        db.execute(
+            "UPDATE organizations SET plan = 'suspended', stripe_status = ?, "
+            "stripe_subscription_id = NULL, stripe_price_id = NULL WHERE id = ?",
+            (status, org["id"]),
+        )
+        return True
+    if sub.get("customer"):
+        db.execute(
+            "UPDATE organizations SET stripe_customer_id = ?, stripe_subscription_id = ? "
+            "WHERE id = ?",
+            (sub["customer"], sub.get("id"), org["id"]),
+        )
+    plan = plan_from_price(price_id)
+    if plan:
+        db.execute(
+            "UPDATE organizations SET plan = ?, edition = 'cloud-paid', "
+            "stripe_price_id = ?, stripe_status = ? WHERE id = ?",
+            (plan, price_id, status, org["id"]),
+        )
+    else:
+        db.execute(
+            "UPDATE organizations SET stripe_status = ? WHERE id = ?", (status, org["id"])
+        )
+    return True
+
+
+def stripe_report_usage(db: "LiorgDb", org_id: str) -> None:
+    """Best-effort metered usage report (instance count) — never raises."""
+    org_id = str(org_id)
+    org = db.fetchone("SELECT * FROM organizations WHERE id = ?", (org_id,))
+    if not org or not org["stripe_subscription_id"]:
+        return
+    price_id = stripe_metered_price()
+    if not price_id:
+        return
+    try:
+        sub = stripe_request("GET", f"/subscriptions/{org['stripe_subscription_id']}", {})
+        item_id = None
+        for item in (sub.get("items") or {}).get("data") or []:
+            if (item.get("price") or {}).get("id") == price_id:
+                item_id = item.get("id")
+                break
+        if not item_id:
+            return
+        count = db.fetchone(
+            "SELECT COUNT(*) AS n FROM instances WHERE org_id = ?", (org_id,)
+        )
+        quantity = count["n"] if count else 0
+        stripe_request(
+            "POST",
+            f"/subscription_items/{item_id}/usage_records",
+            {"quantity": str(quantity), "timestamp": str(int(time.time())), "action": "set"},
+        )
+    except RuntimeError:
+        pass  # metering must never block instance launch
 
 
 def row_project(row: sqlite3.Row) -> dict[str, Any]:
@@ -881,6 +1172,12 @@ class LiorgHandler(BaseHTTPRequestHandler):
             return {}
         raw = self.rfile.read(length)
         return json.loads(raw.decode("utf-8"))
+
+    def read_raw_body(self) -> bytes:
+        length = int(self.headers.get("Content-Length", "0"))
+        if length == 0:
+            return b""
+        return self.rfile.read(length)
 
     def client_ip(self) -> str:
         xff = self.headers.get("X-Forwarded-For", "")
@@ -1127,6 +1424,67 @@ class LiorgHandler(BaseHTTPRequestHandler):
             )
             return
 
+        billing_get = re.fullmatch(r"/org/v1/orgs/([^/]+)/billing", path)
+        if billing_get:
+            org_id = billing_get.group(1)
+            if not self.require_org_member(org_id):
+                return
+            org = self.db.fetchone("SELECT * FROM organizations WHERE id = ?", (org_id,))
+            if not org:
+                self.send_json(404, {"error": "organization not found"})
+                return
+            count = self.db.fetchone(
+                "SELECT COUNT(*) AS n FROM instances WHERE org_id = ?", (org_id,)
+            )
+            plan = org["plan"]
+            plan_info = PLANS.get(plan, {})
+            self.send_json(
+                200,
+                {
+                    "orgId": org_id,
+                    "plan": plan,
+                    "edition": org["edition"],
+                    "price": plan_info.get("price", 0),
+                    "instanceLimit": plan_info.get("instance_limit", 0),
+                    "compute": plan_info.get("compute", "none"),
+                    "memoryMb": plan_info.get("memory_mb"),
+                    "storageGb": plan_info.get("storage_gb"),
+                    "support": plan_info.get("support", "none"),
+                    "instanceCount": count["n"] if count else 0,
+                    "stripeConfigured": stripe_configured(),
+                    "stripeStatus": org["stripe_status"],
+                    "stripePriceId": org["stripe_price_id"],
+                },
+            )
+            return
+
+        invite_preview = re.fullmatch(r"/org/v1/invites/([^/]+)", path)
+        if invite_preview:
+            token = invite_preview.group(1)
+            inv = self.db.fetchone(
+                "SELECT i.org_id, i.email, i.role, i.expires_at, i.accepted_at, "
+                "o.name AS org_name FROM invites i JOIN organizations o ON o.id = i.org_id "
+                "WHERE i.token = ?",
+                (token,),
+            )
+            if not inv:
+                self.send_json(404, {"error": "invite not found"})
+                return
+            if inv["accepted_at"] or utc_now() >= inv["expires_at"]:
+                self.send_json(410, {"error": "invite no longer valid"})
+                return
+            self.send_json(
+                200,
+                {
+                    "orgId": inv["org_id"],
+                    "orgName": inv["org_name"],
+                    "email": inv["email"],
+                    "role": inv["role"],
+                    "expiresAt": inv["expires_at"],
+                },
+            )
+            return
+
         if path == "/org/v1/me":
             claims = self.bearer_claims()
             if not claims:
@@ -1316,6 +1674,32 @@ class LiorgHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/") or "/"
+
+        if path == "/org/v1/billing/webhook":
+            # Stripe verifies the raw bytes of the body, so handle this route
+            # before read_json() consumes the stream.
+            payload = self.read_raw_body()
+            if not stripe_verify_signature(payload, self.headers.get("Stripe-Signature", "")):
+                self.send_json(401, {"error": "invalid stripe signature"})
+                return
+            try:
+                event = json.loads(payload.decode("utf-8"))
+            except ValueError:
+                self.send_json(400, {"error": "invalid JSON payload"})
+                return
+            obj = (event.get("data") or {}).get("object") or {}
+            ev_type = event.get("type", "")
+            if ev_type == "checkout.session.completed":
+                billing_apply_checkout(self.db, obj)
+            elif ev_type in (
+                "customer.subscription.created",
+                "customer.subscription.updated",
+                "customer.subscription.deleted",
+            ):
+                billing_apply_subscription(self.db, obj)
+            self.send_json(200, {"received": True})
+            return
+
         body = self.read_json()
 
         if path == "/org/v1/setup":
@@ -1407,6 +1791,69 @@ class LiorgHandler(BaseHTTPRequestHandler):
             self.send_json(200, {"plan": plan, "instanceLimit": plan_instance_limit(plan)})
             return
 
+        billing_session = re.fullmatch(r"/org/v1/orgs/([^/]+)/billing/session", path)
+        if billing_session:
+            org_id = billing_session.group(1)
+            if not self.require_org_role(org_id, "admin"):
+                return
+            if not stripe_configured():
+                self.send_json(503, {"error": "Stripe not configured"})
+                return
+            plan = str(body.get("plan", "")).strip().lower()
+            if plan not in BILLABLE_PLANS:
+                self.send_json(400, {"error": "plan must be starter, pro, or scale"})
+                return
+            org = self.db.fetchone("SELECT * FROM organizations WHERE id = ?", (org_id,))
+            if not org:
+                self.send_json(404, {"error": "organization not found"})
+                return
+            owner = self.db.fetchone(
+                "SELECT u.email FROM members m JOIN users u ON u.id = m.user_id "
+                "WHERE m.org_id = ? AND m.role = 'owner' ORDER BY m.created_at LIMIT 1",
+                (org_id,),
+            )
+            email = owner["email"] if owner else ""
+            try:
+                session = stripe_checkout_session(
+                    org_id, plan, email, org["stripe_customer_id"]
+                )
+            except RuntimeError as exc:
+                self.send_json(502, {"error": str(exc)})
+                return
+            customer_id = session.get("customer")
+            if customer_id and not org["stripe_customer_id"]:
+                self.db.execute(
+                    "UPDATE organizations SET stripe_customer_id = ? WHERE id = ?",
+                    (customer_id, org_id),
+                )
+            self.send_json(200, {"url": session["url"], "plan": plan})
+            return
+
+        billing_portal = re.fullmatch(r"/org/v1/orgs/([^/]+)/billing/portal", path)
+        if billing_portal:
+            org_id = billing_portal.group(1)
+            if not self.require_org_role(org_id, "admin"):
+                return
+            if not stripe_configured():
+                self.send_json(503, {"error": "Stripe not configured"})
+                return
+            org = self.db.fetchone("SELECT * FROM organizations WHERE id = ?", (org_id,))
+            if not org:
+                self.send_json(404, {"error": "organization not found"})
+                return
+            if not org["stripe_customer_id"]:
+                self.send_json(
+                    409, {"error": "no Stripe customer yet; subscribe via billing/session"}
+                )
+                return
+            try:
+                portal = stripe_portal_session(org["stripe_customer_id"])
+            except RuntimeError as exc:
+                self.send_json(502, {"error": str(exc)})
+                return
+            self.send_json(200, {"url": portal["url"]})
+            return
+
         if path == "/org/v1/auth/login":
             email = str(body.get("email", "")).strip()
             password = str(body.get("password", ""))
@@ -1463,6 +1910,40 @@ class LiorgHandler(BaseHTTPRequestHandler):
                 return
             result["expiresIn"] = ACCESS_TTL_SECONDS
             self.send_json(200, result)
+            return
+
+        if path == "/org/v1/auth/switch-org":
+            target = str(body.get("orgId", "")).strip()
+            claims = self.bearer_claims()
+            if not claims or not claims.get("sub"):
+                self.send_json(401, {"error": "unauthorized"})
+                return
+            user = self.db.fetchone("SELECT id, email FROM users WHERE id = ?", (claims["sub"],))
+            if not user:
+                self.send_json(401, {"error": "user not found"})
+                return
+            member = self.db.fetchone(
+                "SELECT org_id, role FROM members WHERE org_id = ? AND user_id = ?",
+                (target, user["id"]),
+            )
+            if not member:
+                self.send_json(403, {"error": "not a member of target organization"})
+                return
+            edition = self.org_edition(member["org_id"])
+            token, refresh_token = issue_session(
+                self.db, self.jwt_secret, user["id"], member["org_id"], member["role"], edition
+            )
+            self.send_json(
+                200,
+                {
+                    "token": token,
+                    "refreshToken": refresh_token,
+                    "orgId": member["org_id"],
+                    "role": member["role"],
+                    "edition": edition,
+                    "expiresIn": ACCESS_TTL_SECONDS,
+                },
+            )
             return
 
         if path == "/org/v1/auth/logout":
@@ -1800,6 +2281,8 @@ class LiorgHandler(BaseHTTPRequestHandler):
                     "WHERE id = ?",
                     (int(mem_limit_mb), now, host_id),
                 )
+            if stripe_configured() and stripe_metered_price():
+                stripe_report_usage(self.db, org_id)
             row = self.db.fetchone("SELECT * FROM instances WHERE id = ?", (inst_id,))
             self.send_json(201, row_instance(row))
             return
@@ -1820,6 +2303,65 @@ class LiorgHandler(BaseHTTPRequestHandler):
                 (org_id, email, role, token, "2099-01-01T00:00:00Z"),
             )
             self.send_json(201, {"token": token, "email": email, "role": role})
+            return
+
+        invite_accept = re.fullmatch(r"/org/v1/invites/([^/]+)/accept", path)
+        if invite_accept:
+            token = invite_accept.group(1)
+            claims = self.bearer_claims()
+            if not claims:
+                self.send_json(401, {"error": "unauthorized"})
+                return
+            inv = self.db.fetchone(
+                "SELECT org_id, email, role, expires_at, accepted_at FROM invites WHERE token = ?",
+                (token,),
+            )
+            if not inv:
+                self.send_json(404, {"error": "invite not found"})
+                return
+            if inv["accepted_at"] or utc_now() >= inv["expires_at"]:
+                self.send_json(410, {"error": "invite no longer valid"})
+                return
+            user = self.db.fetchone("SELECT id, email FROM users WHERE id = ?", (claims["sub"],))
+            if not user:
+                self.send_json(401, {"error": "user not found"})
+                return
+            if user["email"].lower() != (inv["email"] or "").lower():
+                self.send_json(403, {"error": "invite is for another email address"})
+                return
+            role = inv["role"]
+            if role not in ROLE_LEVEL:
+                role = "developer"
+            existing = self.db.fetchone(
+                "SELECT role FROM members WHERE org_id = ? AND user_id = ?",
+                (inv["org_id"], user["id"]),
+            )
+            now = utc_now()
+            if not existing:
+                self.db.execute(
+                    "INSERT INTO members (org_id, user_id, role, created_at) VALUES (?, ?, ?, ?)",
+                    (inv["org_id"], user["id"], role, now),
+                )
+            else:
+                # Bump to the invite's role if the inviter specified higher access.
+                if ROLE_LEVEL.get(role, 0) > ROLE_LEVEL.get(existing["role"], 0):
+                    self.db.execute(
+                        "UPDATE members SET role = ? WHERE org_id = ? AND user_id = ?",
+                        (role, inv["org_id"], user["id"]),
+                    )
+            self.db.execute(
+                "UPDATE invites SET accepted_at = ? WHERE token = ?", (now, token)
+            )
+            org = self.db.fetchone("SELECT name FROM organizations WHERE id = ?", (inv["org_id"],))
+            self.send_json(
+                200,
+                {
+                    "orgId": inv["org_id"],
+                    "orgName": org["name"] if org else "",
+                    "role": role,
+                    "email": inv["email"],
+                },
+            )
             return
 
         self.send_json(404, {"error": "not found"})

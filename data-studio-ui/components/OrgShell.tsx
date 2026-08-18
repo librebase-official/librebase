@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import OrgSwitcher from "@/components/OrgSwitcher";
 
 function navClass(pathname: string, href: string): string {
   const active =
@@ -40,8 +41,8 @@ export function OrgShell({
         <div className="brand">
           Libre<span>base</span>
         </div>
-        <div className="muted" style={{ fontSize: "0.8rem" }}>
-          Org: {orgId}
+        <div className="muted" style={{ fontSize: "0.8rem", marginBottom: "0.5rem" }}>
+          <OrgSwitcher orgId={orgId} />
         </div>
 
         <nav className="nav-section">

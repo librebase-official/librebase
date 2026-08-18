@@ -212,6 +212,71 @@ export async function adminMe(): Promise<AdminMe> {
   return adminFetch<AdminMe>("/org/v1/me");
 }
 
+export async function adminCreateOrg(input: { name: string; slug?: string }): Promise<{
+  id: string;
+  name: string;
+  slug: string;
+  edition: string;
+}> {
+  return adminFetch("/org/v1/orgs", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function adminSwitchOrg(orgId: string): Promise<{
+  token: string;
+  refreshToken: string;
+  orgId: string;
+  role: string;
+  edition: string;
+}> {
+  return adminFetch("/org/v1/auth/switch-org", {
+    method: "POST",
+    body: JSON.stringify({ orgId }),
+  });
+}
+
+export interface AdminInvite {
+  token: string;
+  email: string;
+  role: string;
+}
+
+export interface AdminInvitePreview {
+  orgId: string;
+  orgName: string;
+  email: string;
+  role: string;
+  expiresAt: string;
+}
+
+export async function adminCreateInvite(
+  orgId: string,
+  input: { email: string; role?: "developer" | "admin" | "owner" },
+): Promise<AdminInvite> {
+  return adminFetch(`/org/v1/orgs/${orgId}/invites`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function adminPreviewInvite(token: string): Promise<AdminInvitePreview> {
+  return adminFetch(`/org/v1/invites/${token}`);
+}
+
+export async function adminAcceptInvite(token: string): Promise<{
+  orgId: string;
+  orgName: string;
+  role: string;
+  email: string;
+}> {
+  return adminFetch(`/org/v1/invites/${token}/accept`, {
+    method: "POST",
+    body: "{}",
+  });
+}
+
 export async function adminListProjects(orgId: string): Promise<Project[]> {
   return adminFetch<Project[]>(`/org/v1/orgs/${orgId}/projects`);
 }

@@ -5,9 +5,11 @@ import {
   adminListMcpKeys,
   adminListMembers,
   adminMe,
+  adminCreateInvite,
 } from "@/lib/librebase-admin-client";
 import { McpKeys } from "@/components/McpKeys";
 import { ChangePassword } from "@/components/ChangePassword";
+import { InviteMembers } from "@/components/InviteMembers";
 import { resolveStudioOrgId } from "@/lib/org-context";
 
 export const dynamic = "force-dynamic";
@@ -111,6 +113,10 @@ export default async function AdminPage() {
             ))}
           </ul>
         </section>
+      )}
+
+      {me && me.role === "owner" && (
+        <InviteMembers orgId={me.activeOrgId || orgId} onInviteSent={adminCreateInvite} />
       )}
 
       {me && <McpKeys orgId={me.activeOrgId || orgId} initial={mcpKeys} />}
