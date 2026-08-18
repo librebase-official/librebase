@@ -116,7 +116,7 @@ export default async function AdminPage() {
       )}
 
       {me && me.role === "owner" && (
-        <InviteMembers orgId={me.activeOrgId || orgId} onInviteSent={adminCreateInvite} />
+        <InviteMembers orgId={me.activeOrgId || orgId} />
       )}
 
       {me && <McpKeys orgId={me.activeOrgId || orgId} initial={mcpKeys} />}

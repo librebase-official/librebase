@@ -3,13 +3,7 @@
 import { useState, useTransition } from "react";
 import { adminCreateInvite, AdminInvite } from "@/lib/librebase-admin-client";
 
-export function InviteMembers({
-  orgId,
-  onInviteSent,
-}: {
-  orgId: string;
-  onInviteSent: (orgId: string, input: { email: string; role?: "developer" | "admin" | "owner" }) => Promise<AdminInvite>;
-}) {
+export function InviteMembers({ orgId }: { orgId: string }) {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"developer" | "admin">("developer");
   const [pending, startTransition] = useTransition();
@@ -20,7 +14,7 @@ export function InviteMembers({
     startTransition(async () => {
       setError(null);
       try {
-        const res = await onInviteSent(orgId, { email, role });
+        const res = await adminCreateInvite(orgId, { email, role });
         setSent(res);
       } catch (e) {
         setError(e instanceof Error ? e.message : "invite failed");
