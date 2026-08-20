@@ -639,27 +639,35 @@ def slugify(name: str) -> str:
     return slug or "org"
 
 
-def issue_mcp_key(db: "LiorgDb", org_id: str) -> str:
-    """Issue a new MCP key (revokes any prior active key). Returns plaintext."""
+def issue_mcp_key(
+    db: "LiorgDb",
+    org_id: str,
+    label: str | None = None,
+    revoke_others: bool = True,
+) -> str:
+    """Issue an MCP key. rotate=True (default) revokes prior active keys."""
     key = "lb_mcp_" + secrets.token_urlsafe(32)
     now = utc_now()
+    if revoke_others:
+        db.execute(
+            "UPDATE mcp_keys SET revoked_at = ? WHERE org_id = ? AND revoked_at IS NULL",
+            (now, org_id),
+        )
     db.execute(
-        "UPDATE mcp_keys SET revoked_at = ? WHERE org_id = ? AND revoked_at IS NULL",
-        (now, org_id),
-    )
-    db.execute(
-        "INSERT INTO mcp_keys (id, org_id, key_hash, created_at) VALUES (?, ?, ?, ?)",
-        (new_id("mcpk"), org_id, hash_token(key), now),
+        "INSERT INTO mcp_keys (id, org_id, key_hash, created_at, label) VALUES (?, ?, ?, ?, ?)",
+        (new_id("mcpk"), org_id, hash_token(key), now, label),
     )
     return key
 
 
 def row_mcp_key(row: sqlite3.Row) -> dict[str, Any]:
+    keys = row.keys()
     return {
         "id": row["id"],
         "orgId": row["org_id"],
         "createdAt": row["created_at"],
         "revoked": bool(row["revoked_at"]),
+        "label": row["label"] if "label" in keys else None,
     }
 
 
@@ -1744,12 +1752,29 @@ class LiorgHandler(BaseHTTPRequestHandler):
             )
             return
 
+        mcp_keys_post = re.fullmatch(r"/org/v1/orgs/([^/]+)/mcp-keys", path)
+        if mcp_keys_post:
+            org_id = mcp_keys_post.group(1)
+            if not self.require_org_role(org_id, "admin"):
+                return
+            label_raw = str(body.get("label") or "").strip()
+            label = label_raw or None
+            rotate = bool(body.get("rotate", False))
+            mcp_key = issue_mcp_key(
+                self.db, org_id, label=label, revoke_others=rotate
+            )
+            self.send_json(200, {"mcpKey": mcp_key, "label": label})
+            return
+
         mcp_rotate = re.fullmatch(r"/org/v1/orgs/([^/]+)/mcp-keys/rotate", path)
         if mcp_rotate:
             org_id = mcp_rotate.group(1)
             if not self.require_org_role(org_id, "admin"):
                 return
-            mcp_key = issue_mcp_key(self.db, org_id)
+            label_raw = str(body.get("label") or "").strip()
+            mcp_key = issue_mcp_key(
+                self.db, org_id, label=label_raw or None, revoke_others=True
+            )
             self.send_json(200, {"mcpKey": mcp_key})
             return
 

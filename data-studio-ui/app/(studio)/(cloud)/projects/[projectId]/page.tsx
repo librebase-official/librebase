@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ConnectAgent } from "@/components/ConnectAgent";
 import { LaunchButton } from "@/components/LaunchButton";
 import { getInstanceAsync } from "@/lib/instances-store";
 import { getProjectAsync } from "@/lib/projects-store";
 import { getProjectUrlsAsync, probeProjectDb } from "@/lib/project-runtime";
+import { SITE_URL } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +28,9 @@ export default async function ProjectHomePage({ params }: PageProps) {
         <div>
           <h1>{project.name}</h1>
           <p className="muted">
-            {project.deploymentMode} · {project.region}
+            {probe.reachable
+              ? `${project.deploymentMode} · ${project.region}`
+              : "Warming up — you can still link an agent."}
           </p>
         </div>
       </div>
@@ -46,7 +50,13 @@ export default async function ProjectHomePage({ params }: PageProps) {
         </Link>
       </nav>
 
-      <div className="card" style={{ marginBottom: "1rem" }}>
+      <ConnectAgent
+        orgId={project.orgId}
+        projectName={project.name}
+        siteUrl={SITE_URL}
+      />
+
+      <div className="card" style={{ margin: "1rem 0" }}>
         <h3>Database runtime</h3>
         <p style={{ margin: "0.5rem 0" }}>
           <span className={`badge ${probe.status}`}>

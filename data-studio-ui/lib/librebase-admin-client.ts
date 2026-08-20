@@ -183,18 +183,33 @@ export type McpKey = {
   orgId: string;
   createdAt: string;
   revoked: boolean;
+  label?: string | null;
 };
 
 export async function adminListMcpKeys(orgId: string): Promise<McpKey[]> {
   return adminFetch(`/org/v1/orgs/${orgId}/mcp-keys`);
 }
 
+export async function adminIssueMcpKey(
+  orgId: string,
+  opts: { rotate?: boolean; label?: string } = {},
+): Promise<{ mcpKey: string }> {
+  return adminFetch(`/org/v1/orgs/${orgId}/mcp-keys`, {
+    method: "POST",
+    body: JSON.stringify({
+      rotate: opts.rotate ?? false,
+      label: opts.label,
+    }),
+  });
+}
+
 export async function adminRotateMcpKey(
   orgId: string,
+  opts: { label?: string } = {},
 ): Promise<{ mcpKey: string }> {
   return adminFetch(`/org/v1/orgs/${orgId}/mcp-keys/rotate`, {
     method: "POST",
-    body: "{}",
+    body: JSON.stringify({ label: opts.label }),
   });
 }
 

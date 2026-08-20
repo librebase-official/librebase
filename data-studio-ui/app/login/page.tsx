@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState, useTransition } from "react";
 
 function GitHubIcon() {
   return (
@@ -35,12 +35,22 @@ function GoogleIcon() {
   );
 }
 
-export default function LoginPage() {
+function safeNext(raw: string | null): string {
+  if (raw && raw.startsWith("/") && !raw.startsWith("//")) return raw;
+  return "/projects";
+}
+
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = safeNext(searchParams.get("next"));
   const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    searchParams.get("error") ? "Sign-in failed. Try again." : null,
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const oauthNext = encodeURIComponent(next);
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -56,7 +66,7 @@ export default function LoginPage() {
         setError(body.error ?? `Login failed (${res.status})`);
         return;
       }
-      router.push("/admin");
+      router.push(next);
       router.refresh();
     });
   }
@@ -64,14 +74,23 @@ export default function LoginPage() {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <h1>Operator login</h1>
-        <p className="muted">Sign in to the Librebase console.</p>
+        <p className="brand" style={{ marginBottom: 12 }}>
+          Libre<span>base</span>
+        </p>
+        <h1>Sign in</h1>
+        <p className="muted">Start a project. Link your agents. Two minutes.</p>
 
         <div className="auth-oauth">
-          <a className="btn oauth-btn" href="/api/admin/oauth/start?provider=github">
+          <a
+            className="btn oauth-btn"
+            href={`/api/admin/oauth/start?provider=github&next=${oauthNext}`}
+          >
             <GitHubIcon /> Continue with GitHub
           </a>
-          <a className="btn oauth-btn" href="/api/admin/oauth/start?provider=google">
+          <a
+            className="btn oauth-btn"
+            href={`/api/admin/oauth/start?provider=google&next=${oauthNext}`}
+          >
             <GoogleIcon /> Continue with Google
           </a>
         </div>
@@ -108,9 +127,26 @@ export default function LoginPage() {
         </form>
 
         <p className="muted auth-foot">
-          First run? <Link href="/setup">Create organization</Link>
+          New here? GitHub or Google creates your account.{" "}
+          <Link href="/setup">Self-host setup</Link>
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="auth-page">
+          <div className="auth-card">
+            <h1>Sign in</h1>
+          </div>
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }

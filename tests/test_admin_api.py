@@ -980,5 +980,53 @@ class TestSwitchOrg(unittest.TestCase):
             db.close(); tmp.cleanup()
 
 
+class TestMcpKeyLabels(unittest.TestCase):
+    def setUp(self) -> None:
+        self.mod = load_server()
+        self._tmp = tempfile.TemporaryDirectory()
+        self.db = self.mod.LiorgDb(Path(self._tmp.name) / "org.db")
+        self.org_id = "org_mcp"
+        now = self.mod.utc_now()
+        self.db.execute(
+            "INSERT INTO organizations (id, name, slug, edition, created_at) VALUES (?, ?, ?, ?, ?)",
+            (self.org_id, "mcp", "mcp", "self-host", now),
+        )
+
+    def tearDown(self) -> None:
+        self.db.close()
+        self._tmp.cleanup()
+
+    def test_issue_without_rotate_keeps_prior_key(self) -> None:
+        a = self.mod.issue_mcp_key(self.db, self.org_id, label="Cursor", revoke_others=False)
+        b = self.mod.issue_mcp_key(self.db, self.org_id, label="Claude", revoke_others=False)
+        self.assertTrue(a.startswith("lb_mcp_"))
+        self.assertTrue(b.startswith("lb_mcp_"))
+        rows = self.db.fetchall(
+            "SELECT * FROM mcp_keys WHERE org_id = ? ORDER BY created_at",
+            (self.org_id,),
+        )
+        self.assertEqual(len(rows), 2)
+        self.assertTrue(all(r["revoked_at"] is None for r in rows))
+        labels = {r["label"] for r in rows}
+        self.assertEqual(labels, {"Cursor", "Claude"})
+
+    def test_rotate_revokes_prior(self) -> None:
+        self.mod.issue_mcp_key(self.db, self.org_id, label="old", revoke_others=False)
+        self.mod.issue_mcp_key(self.db, self.org_id, label="new", revoke_others=True)
+        rows = self.db.fetchall("SELECT * FROM mcp_keys WHERE org_id = ?", (self.org_id,))
+        active = [r for r in rows if r["revoked_at"] is None]
+        revoked = [r for r in rows if r["revoked_at"] is not None]
+        self.assertEqual(len(active), 1)
+        self.assertEqual(active[0]["label"], "new")
+        self.assertEqual(len(revoked), 1)
+
+    def test_row_includes_label(self) -> None:
+        self.mod.issue_mcp_key(self.db, self.org_id, label="Grok", revoke_others=False)
+        row = self.db.fetchone("SELECT * FROM mcp_keys WHERE org_id = ?", (self.org_id,))
+        serialized = self.mod.row_mcp_key(row)
+        self.assertEqual(serialized["label"], "Grok")
+        self.assertFalse(serialized["revoked"])
+
+
 if __name__ == "__main__":
     unittest.main()
