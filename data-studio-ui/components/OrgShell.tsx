@@ -56,7 +56,14 @@ export function OrgShell({
         </nav>
 
         <nav className="nav-section">
-          <div className="nav-label">Cloud</div>
+          <div className="nav-label">Account</div>
+          <Link href="/admin" className={navClass(pathname, "/admin")}>
+            Settings
+          </Link>
+        </nav>
+
+        <nav className="nav-section">
+          <div className="nav-label">Advanced</div>
           <Link href="/hosts" className={navClass(pathname, "/hosts")}>
             VMs / hosts
           </Link>
@@ -65,19 +72,6 @@ export function OrgShell({
           </Link>
           <Link href="/logs" className={navClass(pathname, "/logs")}>
             Logs
-          </Link>
-        </nav>
-
-        <nav className="nav-section">
-          <div className="nav-label">Admin</div>
-          <Link href="/admin" className={navClass(pathname, "/admin")}>
-            Admin
-          </Link>
-          <Link href="/login" className={navClass(pathname, "/login")}>
-            Login
-          </Link>
-          <Link href="/setup" className={navClass(pathname, "/setup")}>
-            Setup
           </Link>
         </nav>
 

@@ -72,8 +72,8 @@ export default function SetupPage() {
             <button className="btn btn-primary" onClick={copyKey}>
               {copied ? "Copied" : "Copy key"}
             </button>
-            <button className="btn" onClick={() => router.push("/")}>
-              Go to console
+            <button className="btn" onClick={() => router.push("/projects/new")}>
+              Start a project
             </button>
           </div>
         </div>
@@ -84,10 +84,9 @@ export default function SetupPage() {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <h1>Librebase Admin setup</h1>
+        <h1>Create your organization</h1>
         <p className="muted">
-          Create the first operator account. You&apos;ll get an MCP key for AI
-          tool access.
+          Self-host first boot. SaaS users should sign in with GitHub or Google.
         </p>
 
         <form className="form" onSubmit={onSubmit}>

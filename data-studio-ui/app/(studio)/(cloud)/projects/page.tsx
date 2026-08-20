@@ -32,7 +32,7 @@ export default async function ProjectsHomePage() {
       <div className="page-header">
         <div>
           <h1>Projects</h1>
-          <p className="muted">Organization workspace — dedicated or shared runtimes</p>
+          <p className="muted">Name a project. Link an agent. That is the product.</p>
         </div>
         <Link href="/projects/new" className="btn btn-primary">
           New project
@@ -41,8 +41,10 @@ export default async function ProjectsHomePage() {
 
       {rows.length === 0 ? (
         <div className="empty">
-          <p>No projects yet.</p>
-          <Link href="/projects/new">Create your first project</Link>
+          <p>No projects yet. Name one and you can paste an agent snippet on the next screen.</p>
+          <Link href="/projects/new" className="btn btn-primary">
+            Create your first project
+          </Link>
         </div>
       ) : (
         <div className="card-grid">

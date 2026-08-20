@@ -68,6 +68,15 @@ TOOLS: list[dict[str, Any]] = [
         "inputSchema": {"type": "object", "properties": {}},
     },
     {
+        "name": "project_get",
+        "description": "Get one project by id.",
+        "inputSchema": {
+            "type": "object",
+            "required": ["projectId"],
+            "properties": {"projectId": {"type": "string"}},
+        },
+    },
+    {
         "name": "project_create",
         "description": "Create a project (requires an existing instanceId).",
         "inputSchema": {
@@ -188,6 +197,8 @@ def _call_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         return _request("GET", "/org/v1/mcp/org")
     if name == "project_list":
         return _request("GET", f"/org/v1/orgs/{org}/projects")
+    if name == "project_get":
+        return _request("GET", f"/org/v1/orgs/{org}/projects/{arguments['projectId']}")
     if name == "project_create":
         return _request("POST", f"/org/v1/orgs/{org}/projects", _clean(arguments))
     if name == "instance_list":

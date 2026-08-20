@@ -1,9 +1,39 @@
 # Librebase MCP server
 
-Stdio MCP server that lets AI tools (Cursor, Claude, etc.) maintain a
-Librebase org's **users, instances, and projects** through the admin API.
+Lets Cursor, Claude, Grok, and klautcode see your org and project.
 
-## Setup
+SaaS path: copy the snippet from the project **Connect an agent** panel.
+That is a remote URL — no Python, no `PYTHONPATH`, no local checkout.
+
+```json
+{
+  "mcpServers": {
+    "librebase": {
+      "url": "https://app.librebase.xyz/mcp",
+      "headers": {
+        "Authorization": "Bearer lb_mcp_..."
+      }
+    }
+  }
+}
+```
+
+Claude Code:
+
+```bash
+claude mcp add --transport http librebase https://app.librebase.xyz/mcp \
+  --header "Authorization: Bearer lb_mcp_..."
+```
+
+## Tools
+
+- `org_whoami` — resolve the key's org
+- `project_list` / `project_get` / `project_create`
+- `instance_list` / `instance_get` / `instance_create` / `instance_launch` / `instance_stop`
+- `member_list` / `member_invite` / `member_update_role`
+- `host_list` / `host_create`
+
+## Local stdio (open-source / air-gapped)
 
 ```json
 {
@@ -14,32 +44,10 @@ Librebase org's **users, instances, and projects** through the admin API.
       "cwd": "/path/to/librebase/mcp",
       "env": {
         "PYTHONPATH": "/path/to/librebase/mcp",
-        "LIBREBASE_ADMIN_URL": "https://app.librebase.xyz/api/admin-proxy",
+        "LIBREBASE_ADMIN_URL": "http://127.0.0.1:54330",
         "LIBREBASE_MCP_KEY": "lb_mcp_..."
       }
     }
   }
 }
-```
-
-`LIBREBASE_ADMIN_URL` is the admin API base URL. `LIBREBASE_MCP_KEY` is the
-MCP key generated in the console (`/admin`); it scopes every call to one org.
-
-## Tools
-
-- `org_whoami` — resolve the key's org
-- `project_list` / `project_create`
-- `instance_list` / `instance_get` / `instance_create` / `instance_launch` / `instance_stop`
-- `member_list` / `member_invite` / `member_update_role`
-- `host_list` / `host_create`
-
-## Test locally
-
-```bash
-cd mcp
-LIBREBASE_ADMIN_URL=https://... LIBREBASE_MCP_KEY=lb_mcp_... \
-  python3 -m librebase_mcp < <(printf '%s\n' \
-    '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' \
-    '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' \
-    '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"org_whoami","arguments":{}}}')
 ```
