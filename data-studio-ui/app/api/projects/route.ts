@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireEntitlement } from "@/lib/entitlements";
 import { createProjectAsync, listProjectsAsync } from "@/lib/projects-store";
 import { resolveStudioOrgId } from "@/lib/org-context";
-import { getLibrebaseRuntime } from "@/lib/runtime-env";
+import { getLibrebaseRuntime, isLocalRuntimeAllowed } from "@/lib/runtime-env";
 import type { CreateProjectInput } from "@/lib/types";
 
 export async function GET() {
@@ -29,10 +29,17 @@ export async function POST(request: Request) {
     const orgId = body.orgId ?? (await resolveStudioOrgId());
     await requireEntitlement("project.create", orgId);
 
+    if (!isLocalRuntimeAllowed() && (body.runtime === "local" || body.region === "local")) {
+      return NextResponse.json(
+        { error: "Local runtime is disabled. Provision a host VM (or Kubernetes)." },
+        { status: 400 },
+      );
+    }
+
     const result = await createProjectAsync({
       name: body.name.trim(),
       orgId,
-      region: body.region ?? "local",
+      region: body.region ?? "eu-west-1",
       runtimeChoice,
       instanceId: body.instanceId,
       runtime: body.runtime,

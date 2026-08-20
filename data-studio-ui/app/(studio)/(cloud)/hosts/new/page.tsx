@@ -12,7 +12,7 @@ const VM_SIZES = [
 export default function NewHostPage() {
   const router = useRouter();
   const [name, setName] = useState("");
-  const [region, setRegion] = useState("local");
+  const [region, setRegion] = useState("eu-west-1");
   const [provider, setProvider] = useState("linative-cloud");
   const [memMb, setMemMb] = useState(512);
   const [error, setError] = useState<string | null>(null);
@@ -90,9 +90,8 @@ export default function NewHostPage() {
         <div className="field">
           <label htmlFor="region">Region</label>
           <select id="region" value={region} onChange={(e) => setRegion(e.target.value)}>
-            <option value="local">Local</option>
-            <option value="us-east-1">US East</option>
             <option value="eu-west-1">EU West</option>
+            <option value="us-east-1">US East</option>
           </select>
         </div>
 
