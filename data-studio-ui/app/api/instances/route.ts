@@ -3,7 +3,7 @@ import { requireEntitlement } from "@/lib/entitlements";
 import { provisionDedicatedInstance } from "@/lib/k8s-provisioner";
 import { createInstanceAsync, listInstancesAsync } from "@/lib/instances-store";
 import { resolveStudioOrgId } from "@/lib/org-context";
-import { getLibrebaseRuntime } from "@/lib/runtime-env";
+import { getLibrebaseRuntime, isLocalRuntimeAllowed } from "@/lib/runtime-env";
 import type { CreateInstanceInput } from "@/lib/types";
 
 export async function GET() {
@@ -25,6 +25,13 @@ export async function POST(request: Request) {
 
     const orgId = body.orgId ?? (await resolveStudioOrgId());
     await requireEntitlement("instance.launch", orgId);
+
+    if (!isLocalRuntimeAllowed() && !body.hostId && body.runtime !== "kubernetes") {
+      return NextResponse.json(
+        { error: "A host VM or Kubernetes runtime is required. Localhost engines are disabled on this SaaS." },
+        { status: 400 },
+      );
+    }
 
     const instance = await createInstanceAsync({
       name: body.name.trim(),

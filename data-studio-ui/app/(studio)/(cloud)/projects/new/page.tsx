@@ -9,12 +9,11 @@ type RuntimeChoice = "new" | "existing";
 export default function NewProjectPage() {
   const router = useRouter();
   const [name, setName] = useState("");
-  const [region, setRegion] = useState("local");
+  const [region, setRegion] = useState("eu-west-1");
   const [runtimeChoice, setRuntimeChoice] = useState<RuntimeChoice>("new");
   const [instanceId, setInstanceId] = useState("");
   const [instances, setInstances] = useState<Instance[]>([]);
-  const [defaultRuntime, setDefaultRuntime] = useState<RuntimeTarget>("local");
-  const [deployToK8s, setDeployToK8s] = useState(false);
+  const [defaultRuntime, setDefaultRuntime] = useState<RuntimeTarget>("kubernetes");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -23,8 +22,7 @@ export default function NewProjectPage() {
       .then((r) => r.json())
       .then((data: { instances?: Instance[]; defaultRuntime?: RuntimeTarget }) => {
         setInstances(data.instances ?? []);
-        setDefaultRuntime(data.defaultRuntime ?? "local");
-        setDeployToK8s(data.defaultRuntime === "kubernetes");
+        setDefaultRuntime(data.defaultRuntime ?? "kubernetes");
       })
       .catch(() => setInstances([]));
   }, []);
@@ -43,7 +41,7 @@ export default function NewProjectPage() {
           region,
           runtimeChoice,
           instanceId: runtimeChoice === "existing" ? instanceId : undefined,
-          runtime: deployToK8s ? "kubernetes" : "local",
+          runtime: "kubernetes",
         }),
       });
       const data = (await res.json()) as { project?: { id: string }; error?: string };
@@ -84,9 +82,8 @@ export default function NewProjectPage() {
         <div className="field">
           <label htmlFor="region">Region</label>
           <select id="region" value={region} onChange={(e) => setRegion(e.target.value)}>
-            <option value="local">Local</option>
-            <option value="us-east-1">US East</option>
             <option value="eu-west-1">EU West</option>
+            <option value="us-east-1">US East</option>
           </select>
         </div>
 
@@ -108,7 +105,7 @@ export default function NewProjectPage() {
               <div>
                 <strong>New instance</strong>
                 <p className="muted" style={{ margin: "0.25rem 0 0", fontSize: "0.85rem" }}>
-                  Dedicated 1:1 — new data dir and port block (Supabase-like default)
+                  Dedicated 1:1 on Kubernetes — localhost engines are not offered on this SaaS
                 </p>
               </div>
             </label>
@@ -147,22 +144,10 @@ export default function NewProjectPage() {
           </div>
         </fieldset>
 
-        <div className="field">
-          <label className="radio-option" style={{ display: "flex", gap: "0.5rem" }}>
-            <input
-              type="checkbox"
-              checked={deployToK8s}
-              onChange={(e) => setDeployToK8s(e.target.checked)}
-            />
-            <div>
-              <strong>Deploy to Kubernetes</strong>
-              <p className="muted" style={{ margin: "0.25rem 0 0", fontSize: "0.85rem" }}>
-                Provision instance manifests on the configured cluster (requires KUBECONFIG). Studio
-                default runtime: {defaultRuntime}.
-              </p>
-            </div>
-          </label>
-        </div>
+        <p className="muted" style={{ fontSize: "0.85rem" }}>
+          Runtime: Kubernetes ({defaultRuntime}). Localhost engines are disabled; see LIB-12 for
+          open-source on-prem onboarding.
+        </p>
 
         {error && <div className="alert warn">{error}</div>}
 
