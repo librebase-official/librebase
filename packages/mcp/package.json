@@ -1,6 +1,6 @@
 {
   "name": "@librebase/mcp",
-  "version": "0.1.17",
+  "version": "0.1.18",
   "description": "MCP server \u2014 control Librebase Admin API + Studio probes for agents",
   "type": "module",
   "bin": {
