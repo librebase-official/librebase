@@ -180,6 +180,22 @@ def patch_dockerfile(path: Path, version: str) -> bool:
     return True
 
 
+def patch_layout_version(path: Path, version: str) -> bool:
+    """Update the hardcoded LIBREBASE_VERSION const in layout.tsx."""
+    if not path.exists():
+        return False
+    content = path.read_text()
+    new_content = re.sub(
+        r'(const LIBREBASE_VERSION = ")\d+\.\d+\.\d+(")',
+        f'\\g<1>{version}\\g<2>',
+        content,
+    )
+    if new_content == content:
+        return False
+    path.write_text(new_content)
+    return True
+
+
 def main() -> int:
     bump = None
     if "--bump" in sys.argv:
@@ -225,6 +241,11 @@ def main() -> int:
         if patch_dockerfile(repo / rel, version):
             print(f"  patched {rel}")
             patched += 1
+
+    layout_tsx = repo / "data-studio-ui/app/layout.tsx"
+    if patch_layout_version(layout_tsx, version):
+        print(f"  patched data-studio-ui/app/layout.tsx")
+        patched += 1
 
     print(f"Version synced to {patched} files: {version}")
     return 0

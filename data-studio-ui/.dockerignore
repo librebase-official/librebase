@@ -1,0 +1,16 @@
+__tests__
+*.test.ts
+*.test.tsx
+.git
+.next
+.vscode
+node_modules
+vitest.config.ts
+docker-compose.yml
+deploy/
+docs/
+plans/
+scripts/
+tests/
+*.md
+!VERSION
