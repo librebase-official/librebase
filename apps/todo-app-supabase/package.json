@@ -1,6 +1,6 @@
 {
   "name": "@librebase/todo-app-supabase",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "description": "Same todo app on a real Supabase backend \u2014 auth + todos CRUD via /auth/v1 + /rest/v1",
   "type": "module",
   "private": true,
