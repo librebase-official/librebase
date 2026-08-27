@@ -10,7 +10,10 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV NEXT_PUBLIC_SITE_URL=https://app.librebase.xyz
+ARG NEXT_PUBLIC_SITE_URL=https://app.librebase.xyz
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+ARG LIBREBASE_VERSION=0.1.2
+ENV LIBREBASE_VERSION=$LIBREBASE_VERSION
 RUN npm run build
 
 FROM docker.io/node:22-alpine AS runner
@@ -25,6 +28,7 @@ RUN addgroup -S nextjs && adduser -S nextjs -G nextjs
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nextjs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nextjs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nextjs /app/VERSION ./VERSION
 
 USER nextjs
 EXPOSE 3005

@@ -7,7 +7,7 @@ import {
   dedicatedNamespace,
   sharedNamespace,
 } from "./k8s-manifests";
-import { getKubeconfigPath, getK8sContainerRuntime } from "./runtime-env";
+import { getKubeconfigPath, getK8sContainerRuntime, isSaasHarness } from "./runtime-env";
 import type { Instance, InstanceStatus, Project } from "./types";
 
 export interface K8sProvisionResult {
@@ -69,6 +69,14 @@ function runKubectl(args: string[]): {
 
 function applyManifests(yaml: string): K8sProvisionResult {
   if (!isClusterAvailable()) {
+    if (isSaasHarness()) {
+      return {
+        ok: false,
+        degraded: true,
+        message:
+          "Kubernetes is OSS-only — this SaaS harness provisions Hetzner VMs instead. Set LIBREBASE_HARNESS=oss to use your own cluster.",
+      };
+    }
     return {
       ok: false,
       degraded: true,
@@ -103,6 +111,14 @@ function instanceNamespace(instance: Instance): string {
 
 /** Provision a dedicated (or shared-base) instance on Kubernetes. */
 export function provisionDedicatedInstance(instance: Instance): K8sProvisionResult {
+  if (isSaasHarness()) {
+    return {
+      ok: false,
+      degraded: true,
+      message:
+        "Kubernetes is OSS-only — this SaaS harness provisions Hetzner VMs instead. Set LIBREBASE_HARNESS=oss to use your own cluster.",
+    };
+  }
   // Entitlement gates are enforced at API launch/create entry points.
   const ns = instanceNamespace(instance);
   const yaml =
@@ -137,6 +153,14 @@ export function attachSharedProject(
   instance: Instance,
   project: Project,
 ): K8sProvisionResult {
+  if (isSaasHarness()) {
+    return {
+      ok: false,
+      degraded: true,
+      message:
+        "Kubernetes is OSS-only — this SaaS harness provisions Hetzner VMs instead.",
+    };
+  }
   // Entitlement gates are enforced at API launch/create entry points.
   if (instance.deploymentMode !== "shared") {
     return {
@@ -165,6 +189,18 @@ function mapPodPhase(phase: string | undefined, ready: boolean): InstanceStatus 
 
 /** Query Kubernetes for instance pod health (honest — no fake green). */
 export function getInstanceStatus(instanceId: string): K8sInstanceStatus {
+  if (isSaasHarness()) {
+    const inst = getInstance(instanceId);
+    const ns = inst ? (inst.k8sNamespace ?? instanceNamespace(inst)) : "";
+    return {
+      instanceId,
+      namespace: ns,
+      status: "stopped",
+      degraded: true,
+      message:
+        "Kubernetes is OSS-only — this SaaS harness uses Hetzner. Provision a VM instead.",
+    };
+  }
   const instance = getInstance(instanceId);
   if (!instance) {
     return {
@@ -179,6 +215,16 @@ export function getInstanceStatus(instanceId: string): K8sInstanceStatus {
   const ns = instance.k8sNamespace ?? instanceNamespace(instance);
 
   if (!isClusterAvailable()) {
+    if (isSaasHarness()) {
+      return {
+        instanceId,
+        namespace: ns,
+        status: "stopped",
+        degraded: true,
+        message:
+          "Kubernetes is OSS-only — this SaaS harness uses Hetzner. Provision a VM instead.",
+      };
+    }
     return {
       instanceId,
       namespace: ns,
@@ -249,12 +295,26 @@ export function getInstanceStatus(instanceId: string): K8sInstanceStatus {
 
 /** Remove instance resources from the cluster. */
 export function deleteK8sInstance(instanceId: string): K8sProvisionResult {
+  if (isSaasHarness()) {
+    return {
+      ok: false,
+      degraded: true,
+      message: "Kubernetes is OSS-only — nothing to delete in SaaS harness.",
+    };
+  }
   const instance = getInstance(instanceId);
   if (!instance) {
     return { ok: false, degraded: true, message: `Instance not found: ${instanceId}` };
   }
 
   if (!isClusterAvailable()) {
+    if (isSaasHarness()) {
+      return {
+        ok: false,
+        degraded: true,
+        message: "Kubernetes is OSS-only — nothing to delete in SaaS harness.",
+      };
+    }
     return {
       ok: false,
       degraded: true,

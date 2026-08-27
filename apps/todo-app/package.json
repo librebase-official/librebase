@@ -1,7 +1,7 @@
 {
   "name": "@librebase/todo-app",
-  "version": "0.1.0",
-  "description": "Reference todo app on Librebase — auth + todos via @librebase/librebase against a lis project API",
+  "version": "0.1.2",
+  "description": "Reference todo app on Librebase \u2014 auth + todos via @librebase/librebase against a lis project API",
   "type": "module",
   "private": true,
   "scripts": {

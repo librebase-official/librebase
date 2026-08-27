@@ -1,0 +1,13 @@
+{
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/api/hosts/[hostId]/delete/route": "/api/hosts/[hostId]/delete",
+  "/api/hosts/[hostId]/start/route": "/api/hosts/[hostId]/start",
+  "/api/hosts/[hostId]/stop/route": "/api/hosts/[hostId]/stop",
+  "/dashboard/hosts/page": "/dashboard/hosts",
+  "/dashboard/instances/page": "/dashboard/instances",
+  "/dashboard/orgs/page": "/dashboard/orgs",
+  "/dashboard/page": "/dashboard",
+  "/dashboard/system/page": "/dashboard/system",
+  "/page": "/"
+}

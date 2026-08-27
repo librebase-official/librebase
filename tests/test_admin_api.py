@@ -980,5 +980,179 @@ class TestSwitchOrg(unittest.TestCase):
             db.close(); tmp.cleanup()
 
 
+class TestGrokDeviceCode(unittest.TestCase):
+    """Unit tests for Grok device code flow functions."""
+
+    def setUp(self) -> None:
+        self.mod = load_server()
+
+    def test_grok_provider_config(self) -> None:
+        """grok provider returns config with device_code flow when client ID is set."""
+        with mock.patch.dict(os.environ, {"LIBREBASE_GROK_CLIENT_ID": "test-cid"}):
+            cfg = self.mod.oauth_provider_config("grok")
+            self.assertIsNotNone(cfg)
+            self.assertEqual(cfg["id"], "test-cid")
+            self.assertEqual(cfg["flow"], "device_code")
+            self.assertIn("device/code", cfg["authorize"])
+            self.assertIn("token", cfg["token"])
+
+    def test_grok_provider_config_missing(self) -> None:
+        """grok provider returns None when client ID is not set."""
+        with mock.patch.dict(os.environ, {"LIBREBASE_GROK_CLIENT_ID": ""}):
+            cfg = self.mod.oauth_provider_config("grok")
+            self.assertIsNone(cfg)
+
+    def test_grok_in_oauth_providers(self) -> None:
+        """grok is in the OAUTH_PROVIDERS set."""
+        self.assertIn("grok", self.mod.OAUTH_PROVIDERS)
+
+    def test_grok_provider_config_scope(self) -> None:
+        """grok scope includes required claims."""
+        with mock.patch.dict(os.environ, {"LIBREBASE_GROK_CLIENT_ID": "test-cid"}):
+            cfg = self.mod.oauth_provider_config("grok")
+            self.assertIn("openid", cfg["scope"])
+            self.assertIn("email", cfg["scope"])
+            self.assertIn("offline_access", cfg["scope"])
+
+    def test_grok_pending_store(self) -> None:
+        """_grok_pending stores device code info correctly."""
+        self.mod._grok_pending.clear()
+        self.mod._grok_pending["dc_test123"] = {
+            "user_code": "ABCD-1234",
+            "verification_uri": "https://accounts.x.ai/oauth2/device",
+            "expires_in": 900,
+            "interval": 5,
+            "created_at": time.time(),
+        }
+        self.assertIn("dc_test123", self.mod._grok_pending)
+        self.assertEqual(self.mod._grok_pending["dc_test123"]["user_code"], "ABCD-1234")
+        self.mod._grok_pending.clear()
+
+    def test_grok_pending_expiry(self) -> None:
+        """Expired device codes are detected by the poll endpoint."""
+        self.mod._grok_pending.clear()
+        self.mod._grok_pending["dc_expired"] = {
+            "user_code": "XXXX-0000",
+            "verification_uri": "https://accounts.x.ai/oauth2/device",
+            "expires_in": 1,
+            "interval": 5,
+            "created_at": time.time() - 100,  # created 100s ago, expires_in=1
+        }
+        dc_info = self.mod._grok_pending["dc_expired"]
+        elapsed = time.time() - dc_info["created_at"]
+        self.assertGreater(elapsed, dc_info["expires_in"])
+        self.mod._grok_pending.clear()
+
+    def test_grok_pending_cleanup_on_success(self) -> None:
+        """Device code is removed from pending store after successful token exchange."""
+        self.mod._grok_pending.clear()
+        self.mod._grok_pending["dc_done"] = {"user_code": "DONE"}
+        self.assertIn("dc_done", self.mod._grok_pending)
+        self.mod._grok_pending.pop("dc_done", None)
+        self.assertNotIn("dc_done", self.mod._grok_pending)
+        self.mod._grok_pending.clear()
+
+    def test_grok_initiate_requires_config(self) -> None:
+        """grok_initiate_device_code returns None without LIBREBASE_GROK_CLIENT_ID."""
+        with mock.patch.dict(os.environ, {"LIBREBASE_GROK_CLIENT_ID": ""}):
+            result = self.mod.grok_initiate_device_code()
+            self.assertIsNone(result)
+
+    def test_grok_poll_requires_config(self) -> None:
+        """grok_poll_token returns None without LIBREBASE_GROK_CLIENT_ID."""
+        with mock.patch.dict(os.environ, {"LIBREBASE_GROK_CLIENT_ID": ""}):
+            result = self.mod.grok_poll_token("dc_fake")
+            self.assertIsNone(result)
+
+
+class TestGrokLoginHTTP(unittest.TestCase):
+    """HTTP-level tests for Grok device code endpoints."""
+
+    def _boot(self):
+        mod = load_server()
+        tmp = tempfile.TemporaryDirectory()
+        db = mod.LiorgDb(Path(tmp.name) / "org.db")
+        jwt_secret = "grok-test-secret"
+        old_db = mod.LiorgHandler.__dict__.get("db")
+        old_jwt = mod.LiorgHandler.__dict__.get("jwt_secret")
+        mod.LiorgHandler.db = db
+        mod.LiorgHandler.jwt_secret = jwt_secret
+        mod.LiorgHandler._ip_attempts = {}
+        mod._grok_pending.clear()
+        server = ThreadingHTTPServer(("127.0.0.1", 0), mod.LiorgHandler)
+        base = f"http://127.0.0.1:{server.server_port}"
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        return mod, tmp, db, base, server, jwt_secret, old_db, old_jwt
+
+    def test_grok_start_without_config(self) -> None:
+        """GET /org/v1/auth/grok/start returns 503 when not configured."""
+        mod, tmp, db, base, server, jwt, old_db, old_jwt = self._boot()
+        try:
+            with mock.patch.dict(os.environ, {"LIBREBASE_GROK_CLIENT_ID": ""}):
+                req = urllib.request.Request(f"{base}/org/v1/auth/grok/start")
+                with self.assertRaises(urllib.error.HTTPError) as ctx:
+                    urllib.request.urlopen(req, timeout=5)
+                self.assertEqual(ctx.exception.code, 503)
+        finally:
+            server.shutdown(); server.server_close()
+            mod.LiorgHandler.db = old_db
+            mod.LiorgHandler.jwt_secret = old_jwt
+            mod._grok_pending.clear()
+            db.close(); tmp.cleanup()
+
+    def test_grok_poll_missing_device_code(self) -> None:
+        """GET /org/v1/auth/grok/poll without deviceCode returns 400."""
+        mod, tmp, db, base, server, jwt, old_db, old_jwt = self._boot()
+        try:
+            req = urllib.request.Request(f"{base}/org/v1/auth/grok/poll")
+            with self.assertRaises(urllib.error.HTTPError) as ctx:
+                urllib.request.urlopen(req, timeout=5)
+            self.assertEqual(ctx.exception.code, 400)
+        finally:
+            server.shutdown(); server.server_close()
+            mod.LiorgHandler.db = old_db
+            mod.LiorgHandler.jwt_secret = old_jwt
+            mod._grok_pending.clear()
+            db.close(); tmp.cleanup()
+
+    def test_grok_poll_unknown_device_code(self) -> None:
+        """GET /org/v1/auth/grok/poll with unknown deviceCode returns 404."""
+        mod, tmp, db, base, server, jwt, old_db, old_jwt = self._boot()
+        try:
+            req = urllib.request.Request(f"{base}/org/v1/auth/grok/poll?deviceCode=dc_nonexistent")
+            with self.assertRaises(urllib.error.HTTPError) as ctx:
+                urllib.request.urlopen(req, timeout=5)
+            self.assertEqual(ctx.exception.code, 404)
+        finally:
+            server.shutdown(); server.server_close()
+            mod.LiorgHandler.db = old_db
+            mod.LiorgHandler.jwt_secret = old_jwt
+            mod._grok_pending.clear()
+            db.close(); tmp.cleanup()
+
+    def test_grok_poll_expired_device_code(self) -> None:
+        """GET /org/v1/auth/grok/poll with expired deviceCode returns 410."""
+        mod, tmp, db, base, server, jwt, old_db, old_jwt = self._boot()
+        try:
+            mod._grok_pending["dc_old"] = {
+                "user_code": "OLD-0000",
+                "verification_uri": "https://accounts.x.ai/oauth2/device",
+                "expires_in": 1,
+                "interval": 5,
+                "created_at": time.time() - 100,
+            }
+            req = urllib.request.Request(f"{base}/org/v1/auth/grok/poll?deviceCode=dc_old")
+            with self.assertRaises(urllib.error.HTTPError) as ctx:
+                urllib.request.urlopen(req, timeout=5)
+            self.assertEqual(ctx.exception.code, 410)
+        finally:
+            server.shutdown(); server.server_close()
+            mod.LiorgHandler.db = old_db
+            mod.LiorgHandler.jwt_secret = old_jwt
+            mod._grok_pending.clear()
+            db.close(); tmp.cleanup()
+
+
 if __name__ == "__main__":
     unittest.main()

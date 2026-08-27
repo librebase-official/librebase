@@ -1,0 +1,571 @@
+% !TEX program = pdflatex
+\documentclass[11pt,a4paper]{article}
+
+% ── Page geometry ──
+\usepackage[margin=0.9in, top=0.85in, bottom=0.85in, headheight=14pt]{geometry}
+
+% ── Fonts ──
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+
+% ── Colour palette ──
+\usepackage[x11names]{xcolor}
+\definecolor{LBPrimary}{HTML}{1A3A5C}   % deep blue
+\definecolor{LBAccent}{HTML}{2E86AB}   % mid blue
+\definecolor{LBHighlight}{HTML}{F18F01} % orange accent
+\definecolor{LBGray}{HTML}{5A6670}      % muted gray
+\definecolor{LBLightBg}{HTML}{F4F6F8}   % light panel bg
+\definecolor{LBBorder}{HTML}{D0D5DB}    % border gray
+\definecolor{LBSuccess}{HTML}{2E7D32}   % green
+\definecolor{LBWarn}{HTML}{C62828}      % red
+
+% ── Graphics ──
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows,positioning,calc,backgrounds}
+\usepackage{graphicx}
+\usepackage{wrapfig}
+
+% ── Tables ──
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{colortbl}
+\usepackage{tabularx}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+
+% ── Lists ──
+\usepackage{enumitem}
+\setlist{nosep, leftmargin=*}
+
+% ── Headers / footers ──
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\color{LBGray}\small\raisebox{-0.5ex}{LibreBase Market Research Brief — Internal}}
+\fancyhead[R]{\color{LBGray}\small\raisebox{-0.5ex}{August 2026}}
+\fancyfoot[L]{\color{LBGray}\scriptsize LibreBase \textbullet{} librebase.xyz}
+\fancyfoot[C]{\color{LBGray}\scriptsize Confidential — Internal Research}
+\fancyfoot[R]{\color{LBGray}\scriptsize Page \thepage\ of \pageref{LastPage}}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.2pt}
+
+% ── Section styling ──
+\usepackage{titlesec}
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{LBPrimary}}
+  {\thesection}{0.5em}{}
+  [{\vspace{2pt}\color{LBAccent}\titlerule[1.2pt]}]
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{LBAccent}}
+  {\thesubsection}{0.4em}{}
+\titleformat{\subsubsection}
+  {\normalfont\normalsize\bfseries\color{LBPrimary}}
+  {\thesubsubsection}{0.3em}{}
+
+% ── Custom boxes ──
+\newenvironment{keyinsight}[1]{%
+  \par\medskip\noindent
+  \begin{tikzpicture}
+    \fill[LBLightBg] (0,0) rectangle (\linewidth, 1.4em);
+    \draw[LBAccent, line width=1.5pt] (0,0) rectangle (\linewidth, 1.4em);
+    \node[anchor=north west, inner sep=8pt, text=LBPrimary, font=\bfseries]
+      at (0.2em, -0.15em) {\scalebox{1.15}{#1}};
+  \end{tikzpicture}
+  \vspace{-0.3em}
+  \noindent
+  \begin{minipage}{\dimexpr\linewidth-0.4em\relax}
+}{%
+  \end{minipage}
+  \vspace{4pt}
+}
+
+\newenvironment{warnbox}{%
+  \par\medskip\noindent
+  \begin{tikzpicture}
+    \fill[HTML]{FFF3F3} (0,0) rectangle (\linewidth, 1.3em);
+    \draw[LBWarn, line width=1.2pt] (0,0) rectangle (\linewidth, 1.3em);
+    \node[anchor=north west, inner sep=8pt, text=LBWarn, font=\bfseries]
+      at (0.2em, -0.12em) {\scalebox{1.05}{⚠ Risk / Watch}};
+  \end{tikzpicture}
+  \vspace{-0.25em}
+  \noindent
+  \begin{minipage}{\dimexpr\linewidth-0.4em\relax}
+}{%
+  \end{minipage}
+  \vspace{4pt}
+}
+
+\newenvironment{oppbox}{%
+  \par\medskip\noindent
+  \begin{tikzpicture}
+    \fill[HTML]{F0F7F0} (0,0) rectangle (\linewidth, 1.3em);
+    \draw[LBSuccess, line width=1.2pt] (0,0) rectangle (\linewidth, 1.3em);
+    \node[anchor=north west, inner sep=8pt, text=LBSuccess, font=\bfseries]
+      at (0.2em, -0.12em) {\scalebox{1.05}{✓ Opportunity}};
+  \end{tikzpicture}
+  \vspace{-0.25em}
+  \noindent
+  \begin{minipage}{\dimexpr\linewidth-0.4em\relax}
+}{%
+  \end{minipage}
+  \vspace{4pt}
+}
+
+% ── Compact table helper ──
+\newcommand{\mktbl}[2]{%
+  \par\medskip
+  \arrayrulecolor{LBBorder}
+  \begin{tabularx}{\linewidth}{#1}
+    \rowcolor{LBLightBg}
+    #2
+    \arrayrulecolor{LBAccent}\bottomrule[1.2pt]
+  \end{tabularx}
+  \par\medskip
+}
+
+% ── Logo / brand mark ──
+\newcommand{\brandbar}{%
+  \begin{tikzpicture}
+    \fill[LBPrimary] (0,0) rectangle (\linewidth, 3.2pt);
+    \fill[LBAccent] (0,0) rectangle (0.6\linewidth, 3.2pt);
+    \fill[LBHighlight] (0.6\linewidth,0) rectangle (0.7\linewidth, 3.2pt);
+  \end{tikzpicture}
+}
+
+\begin{document}
+
+% ═══════════════════════════════════════
+%  COVER / TITLE BLOCK
+% ═══════════════════════════════════════
+
+\noindent
+\begin{minipage}[t]{0.18\linewidth}
+  \raisebox{-0.5ex}{%
+    \begin{tikzpicture}[scale=0.9]
+      \fill[LBPrimary] (0,0) rectangle (4.5,4.5);
+      \fill[LBAccent] (0,0) rectangle (4.5,2.2);
+      \fill[LBHighlight] (0,2.2) rectangle (2.2,4.5);
+      \node[white, font=\bfseries\Large, anchor=center] at (2.25,2.25) {LB};
+    \end{tikzpicture}%
+  }
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.78\linewidth}
+  \setlength{\parindent}{0pt}
+  {\color{LBGray}\scriptsize\scshape INTERNAL RESEARCH BRIEF \textbullet{} FOR SALES USE ONLY}\\[3pt]
+  {\color{LBPrimary}\Huge\bfseries LibreBase Market Intelligence}\\[2pt]
+  {\color{LBAccent}\large\sffamily Sample Library \& AI Music Tools Landscape}\\[4pt]
+  \brandbar\\[4pt]
+  {\color{LBGray}\footnotesize Prepared for: \textbf{Sales Representative — Internal Use}}
+  \hspace{1.5em}
+  {\color{LBGray}\footnotesize Date: \textbf{August 16--18, 2026}}
+  \hspace{1.5em}
+  {\color{LBGray}\footnotesize Classification: \textbf{Confidential}}%
+\end{minipage}
+
+\vspace{8pt}
+\hrule height 0.6pt
+\vspace{14pt}
+
+% ═══════════════════════════════════════
+%  EXECUTIVE SUMMARY
+% ═══════════════════════════════════════
+
+\section{Executive Summary}
+
+This brief consolidates three research streams into a single sales-ready reference:
+\textbf{Sample Marketplace \& Subscription Services}, \textbf{AI-Powered Sample Generators \& ML
+Music Tools}, and \textbf{Traditional Sample Library Competitors}. Together they map the
+full competitive terrain for music production sampling — the \$1.8B sector where LibreBase
+positions its open-knowledge angle against entrenched incumbents.
+
+\begin{keyinsight}{The one-line pitch}
+  The sample market is \$1.8B and growing at 8.9--9.5\% CAGR. Splice (22\% share, 6M+ users)
+  dominates volume; Loopcloud owns DAW integration; Tracklib monopolises legal clearance.
+  But every incumbent charges subscription rents that producers hate, hides quality behind
+  credit systems, and lacks any all-in-one AI-native workflow. The gap is real — and wide.
+\end{keyinsight}
+
+\textbf{Why this matters for sales:}
+\begin{itemize}
+  \item \textbf{Mid-market is underserved.} Enterprise tools (Sphera, Enablon) cost six figures;
+        consumer subs (\$8--40/mo) feel predatory. The \$150--300 ``professional-lite'' tier is empty.
+  \item \textbf{AI is the wedge, not the product.} Every competitor's AI is bolted-on and mediocre.
+        The gap is a tool that unifies generation + separation + editing + MIDI in one plugin.
+  \item \textbf{Perpetual ownership is the emotional hook.} ``Cancel = lose everything'' is the
+        \#1 pain point across Splice, Loopcloud, Output, EastWest. A hybrid ownership model is
+        unclaimed territory.
+  \item \textbf{Consolidation breeds vulnerability.} Splice owns Spitfire, Output, Sample Magic.
+        Users are anxious; a vendor-neutral, open platform is a natural trust alternative.
+\end{itemize}
+
+% ═══════════════════════════════════════
+%  MARKET SNAPSHOT
+% ═══════════════════════════════════════
+
+\section{Market Snapshot}
+
+\mktbl{ L{2.8cm} L{3.8cm} L{6cm} %
+  \rowcolor{LBLightBg}
+  \textbf{Metric} & \textbf{Value} & \textbf{Sales Signal} \\
+  \midrule
+  Market size (2025) & \$1.8B & Large enough to matter; not saturated \\
+  Projected (2034) & \$3.9--4.6B & ~9\% CAGR — sustained growth, not a bubble \\
+  Splice market share & ~22\% & Leading, but not a monopoly \\
+  Splice registered users & 6M+ & Huge installed base — churn opportunity \\
+  Splice 2024 downloads & ~350M & Scale, but "generic" quality complaints \\
+  Spotify-for-samples sentiment & Broken & Ownership is the untapped wedge \\
+  AI sample gen market & Fragmented & No dominant all-in-one — white space \\
+  SDS/Compliance adj. market & \$1.34B $\rightarrow$ \$2.49B (14\% CAGR) & Parallel vertical with same open-data angle \\
+}
+
+% ═══════════════════════════════════════
+%  COMPETITIVE LANDSCAPE — PLATFORMS
+% ═══════════════════════════════════════
+
+\section{Competitive Landscape — Subscription Platforms}
+
+\subsection{Splice — The Incumbent Leader}
+
+\begin{itemize}
+  \item \textbf{Library:} 3--4M+ samples. \textbf{Pricing:} Sounds+ \$12.99/mo, Creator \$19.99/mo,
+        Creator+ \$39.99/mo; annual Creator promo at \$120/yr.
+  \item \textbf{Strengths:} Largest library, brand recognition, AI search, Rent-to-Own, Splice
+        Studio, acquired Spitfire Audio (\$50M, 2025) + Output + Sample Magic — consolidation king.
+  \item \textbf{Weaknesses:} Credit system feels restrictive; price hikes controversial
+        (Sounds 1000 $\rightarrow$ \$34.99/mo); lose access on cancel; credits expire. 80\% of samples
+        criticised as ``generic'' or ``samey''.
+\end{itemize}
+
+\subsection{Loopcloud — The DAW Integration Leader}
+
+\begin{itemize}
+  \item \textbf{Library:} 4M+ samples. \textbf{Pricing:} Artist \$7.99/mo, Studio \$11.99/mo
+        (most popular), Professional tier.
+  \item \textbf{Strengths:} Deepest DAW integration (VST/AAX/AU plugin), no credit limits
+        (points-based packs), best for house/techno, cloud storage (10--50GB+), AI-assisted
+        browsing, time-stretch/pitch-shift in-plugin, daily free sounds.
+  \item \textbf{Weaknesses:} Internet required for cloud features; plugin learning curve;
+        library overlap with Splice.
+\end{itemize}
+
+\subsection{Tracklib — The Legal Clearance Monopoly}
+
+\begin{itemize}
+  \item \textbf{Library:} Original songs (not royalty-free loops). \textbf{Pricing:} Lite \$8.99/mo,
+        Premium \$13.99/mo, Max \$19.99/mo.
+  \item \textbf{Strengths:} One-of-a-kind — real records legally sampleable; used by Kendrick
+        Lamar producers; no upfront licensing fees; drag-to-DAW desktop app.
+  \item \textbf{Weaknesses:} No free account (must pay to start); Trustpilot 2.0/5; confusing
+        tier structure (A/B/C clearance categories); limited royalty-free genres.
+\end{itemize}
+
+\subsection{Noiiz, BandLab, Output, LANDR — The Rest}
+
+\mktbl{ L{2.7cm} L{2.2cm} L{2.5cm} X %
+  \rowcolor{LBLightBg}
+  \textbf{Platform} & \textbf{Model} & \textbf{Price} & \textbf{Watch} \\
+  \midrule
+  Noiiz & Unlimited downloads & \$5--\$10/mo; \$99/yr & Simple pricing but small library; Trustpilot 2.2/5 \\
+  BandLab & Social creation & Free / \$8.25--\$16/mo & Dark horse — pulls Gen Z with 20 free samples/mo + social \\
+  Output Arcade & Playable sampler & \$9.99--\$12.99/mo & Subscription-only; acquired by Splice (trust anxiety); Trustpilot 3.7/5 \\
+  Output One & Full suite & \$14.99/mo & Arcade + FX + Co-Producer AI — but locked to ecosystem \\
+  LANDR Studio & Bundled & \$8.25--\$19.99/mo & Samples + mastering + distribution — bundle play \\
+  Sample Focus & Community & Free (3 cr/wk) / Premium & Free-first model; community-curated \\
+  NI Sounds.com & Sound design & \$9.99/mo & Best for ambient/experimental; niche \\
+  Waves ILLUGEN 2.0 & Text-to-sample & One-time/sub & AI generator; MusicTech rated 5/10 — quality concerns \\
+}
+
+% ═══════════════════════════════════════
+%  AI TOOLS DEEP DIVE
+% ═══════════════════════════════════════
+
+\section{AI-Powered Sample Generators — The Emerging Layer}
+
+\textbf{Scope:} Tools for AI/ML sample generation, stem separation, audio-to-MIDI, note-level
+editing, and transformation — August 2026 snapshot.
+
+\begin{keyinsight}{The headline}
+  The AI sample generation space is \textbf{fragmented} with no dominant all-in-one solution.
+  Samplab's shutdown (Sept 17, 2026) leaves a real gap in polyphonic audio editing. The most
+  promising free options (Magenta, NeuralNote) require technical skill; paid options each solve
+  only part of the puzzle. \textbf{The opportunity: a single plugin unifying generation +
+  separation + editing + MIDI with DAW integration.}
+\end{keyinsight}
+
+\subsection{Quality Matrix}
+
+\mktbl{ L{2.4cm} C{1.1cm} C{1.1cm} C{1.1cm} C{1.1cm} C{1.0cm} C{1.6cm} %
+  \rowcolor{LBLightBg}
+  \textbf{Tool} & \textbf{AI Gen} & \textbf{Sep.} & \textbf{A2MIDI} & \textbf{Note Edit} & \textbf{Plugin} & \textbf{Price} \\
+  \midrule
+  Samplab (RIP) & \cellcolor[HTML]{C8E6C9}\checkmark & \checkmark & \checkmark & \checkmark & VST3 & \$12/mo \\
+  RipX DAW & — & \checkmark & \checkmark & \checkmark & Standalone & \$60--\$149 one-time \\
+  Waves ILLUGEN & \checkmark & — & — & — & Standalone & \$8--\$20/mo \\
+  Text-to-Sample & \checkmark & — & — & — & VST3/AU & Pay-per-use \\
+  Magenta (Google) & \checkmark & — & — & — & Open & \textbf{Free} \\
+  Splice Create & \checkmark & — & — & — & Web & \$13/mo (credits) \\
+  Loudly & \checkmark & \checkmark & — & — & Web & Freemium \\
+  NeuralNote & — & — & \checkmark & — & VST3/AU & \textbf{Free} \\
+  Emergence Audio & — & — & — & — & Kontakt & \$29--\$1,299 \\
+  Adobe Podcast & — & \checkmark & — & — & Web & Free/Premium \\
+  BandLab & \checkmark & — & — & — & Web & Free/\$8--\$16/mo \\
+}
+
+\subsection{Primary AI Players}
+
+\textbf{Samplab — Shutting Down Sept 17, 2026.}
+Polyphonic audio-to-MIDI, stem separation, chord detection, note-level editing, TextToSample.
+Was the only tool doing note-level editing inside polyphonic audio seamlessly. No successor.
+\textbf{Gap left behind:} the biggest hole in the market.
+
+\textbf{Waves ILLUGEN — Text-to-Sound.}
+Text $\rightarrow$ one-shots, loops, SFX. Standalone desktop app only — no plugin. Credit-based. New;
+MusicTech rated 5/10. Quality concerns.
+
+\textbf{Text-to-Sample.com — New Entrant.}
+Text $\rightarrow$ audio (5--30s). Web + VST3/AU plugin. Credit-based, pay-as-you-go. No vocals.
+Short max length. Unproven.
+
+\textbf{Splice Create — April 2026 Launch.}
+Three generative AI tools for reshaping Splice library sounds. Text-to-sample within Splice
+ecosystem. Integrated with credit system. Locked to Splice. Quality unproven.
+
+\textbf{Google Magenta — Open Source, Free.}
+Magenta RealTime 2 (800M param transformer, 190k hours stock music training, released June 2025).
+Magenta Studio for Ableton. DDSP-VST for realtime morphing. NSynth for neural synthesis.
+Requires technical setup. Research-grade, not a polished product.
+
+\textbf{RipX DAW — The Samplab Replacement (Partial).}
+6+ stem AI separation, note-level extraction/editing, instrument replacement. One-time purchase
+(\$60--\$149). Steep learning curve. Not a sample generator — separation + editing only.
+
+\subsection{Gaps in the AI Layer}
+
+\begin{oppbox}
+  \item \textbf{Polyphonic note editing void} — Samplab's shutdown leaves the single biggest gap.
+  \item \textbf{No all-in-one tool} — generation + separation + audio-to-MIDI + note editing +
+        plugin integration: none exists.
+  \item \textbf{AI vocals underdeveloped} — every generator says "instrumental only." Wide-open gap.
+  \item \textbf{Real-time performance tools} — Magenta MRT2 and DDSP-VST are research-grade.
+  \item \textbf{Plugin integration gap} — most generators are web-only or standalone apps.
+  \item \textbf{Orchestral/world instruments} — AI generation of realistic orchestral samples remains poor.
+\end{oppbox}
+
+% ═══════════════════════════════════════
+%  TRADITIONAL SAMPLE LIBRARIES
+% ═══════════════════════════════════════
+
+\section{Traditional Sample Library Competitors}
+
+\textbf{Market:} Orchestral, cinematic, and traditional sample libraries.
+\textbf{Size:} ~\$1.8B (2025) $\rightarrow$ \$3.9B by 2034 (8.9\% CAGR).
+
+\subsection{Incumbent Map}
+
+\mktbl{ L{2.6cm} L{1.6cm} L{1.6cm} L{1.6cm} L{1.8cm} L{3.2cm} @}%
+  \rowcolor{LBLightBg}
+  \textbf{Competitor} & \textbf{Premium Anchor} & \textbf{Subscription} & \textbf{Freemium Entry} & \textbf{DRM/Payer} & \textbf{Core Pain Point} \\
+  \midrule
+  Spitfire Audio & BBC SO Pro €999 & LABS+ £12.99/mo & LABS (free) & SINE player & Expensive; Splice acquisition fears; SINE bugs \\
+  Native Instruments & Komplete Ultimate \$1,799 & — & — & iLok (hated) & Hardware dongle; insolvency rumors; heavy CPU \\
+  Output & — & Arcade \$12.99/mo & — & — & Subscription-only; trust (Splice-owned); mixed quality \\
+  Heavyocity & NOVO/Damage \$399 ea & — & — & Kontakt & Niche; expensive; Kontakt dependency \\
+  Cinesamples & Musio \$299--\$399 & Musio \$9.99/mo & — & Musio player & "Too good to be true" suspicion; player quality \\
+  8Dio & Adagio \$499 & — & — & Kontakt & QC issues; Trustpilot 3.1/8; sale fatigue \\
+  Embertone & Joshua Bell \$199 & — & — & Kontakt & Niche (solo only); small catalog \\
+  Orchestral Tools & Berlin Max €1,399 & — & Berlin Free & SINE player & Very expensive; SINE bugs; no Linux \\
+  EastWest & — & ComposerCloud \$19.99/mo & — & Install centre & Worst portal software; subscription fatigue \\
+}
+
+\subsection{Aggregated Industry Pain Points}
+
+\begin{warnbox}
+  \item \textbf{DRM \& licensing hatred} — iLok hardware dongle failures; cloud inconvenient;
+        license transfer restrictions; online verification requirements. Universal complaint.
+  \item \textbf{Subscription fatigue} — monthly fees stacking up; cancel = lose access.
+  \item \textbf{Perpetual too expensive} — €799--€1,899 for full orchestras; gap between \$30 singles
+        and \$1,000+ orchestras has no mid-tier option.
+  \item \textbf{Storage bloat} — 100GB+ per library; 1TB+ for full template; 32--64GB RAM recommended.
+  \item \textbf{Player instability} — SINE bugs, Kontakt crashes, Opus issues; "just works" is
+        an unclaimed position.
+  \item \textbf{Splice acquisition anxiety} — Spitfire, Output, Sample Magic all under Splice.
+        Users fear forced subscription future; license ownership if company goes under.
+  \item \textbf{No Linux support} — zero major sample library supports Linux. Clear niche.
+\end{warnbox}
+
+\begin{oppbox}
+  \item \textbf{Compressed/AI-assisted libraries} — pro sound without 100GB; AI could reduce size
+        10--50$\times$. No player leadership in this space.
+  \item \textbf{Perpetual-friendly subscription hybrid} — "own after X payments." Spitfire's
+        Splice rent-to-own is a start; no one offers it for all libraries.
+  \item \textbf{Playerless/web-based} — kill iLok + proprietary players. Simple license key.
+        Cross-platform (Linux underserved).
+  \item \textbf{Transparent mid-tier pricing} — \$\150--300 "professional lite" tier is empty.
+        Cinesamples Musio is closest but quality questioned.
+  \item \textbf{All-in-one subscription with ownership} — subscribe 24 months, own forever.
+        No one offers this.
+  \item \textbf{Stability \& performance} — "just works" positioning could win share.
+  \item \textbf{Linux support} — own the zero-coverage niche.
+\end{oppbox}
+
+% ═══════════════════════════════════════
+%  PAIN POINTS — CROSS-PLATFORM
+% ═══════════════════════════════════════
+
+\section{Cross-Platform Pain Points — The Sales Playbook}
+
+\subsection{The "Rental" Problem \#1}
+\begin{itemize}
+  \item Cancel subscription $\rightarrow$ lose access to downloaded samples (Splice, Loopcloud, Arcade, EastWest)
+  \item Credits expire on cancellation (Splice)
+  \item No perpetual ownership in most subscriptions
+  \item \textbf{Sales angle:} ``You keep what you download — forever.'' Ownership as a differentiator.
+\end{itemize}
+
+\subsection{Credit/Point System Frustration \#2}
+\begin{itemize}
+  \item Artificial currency obscures real cost; feels predatory
+  \item Hard to know cost-per-sample; unused credits create anxiety
+  \item \textbf{Sales angle:} Transparent pricing. No credits. Know what you pay.
+\end{itemize}
+
+\subsection{Discovery \& Quality \#3}
+\begin{itemize}
+  \item 80\% of Splice samples criticised as generic; hard to find gems
+  \item Poor metadata/tempo-key tagging on one-shots; genre gaps (world, non-Western, niche)
+  \item \textbf{Sales angle:} Curated quality over volume. Better metadata. Genre depth.
+\end{itemize}
+
+\subsection{Technical \#4}
+\begin{itemize}
+  \item Missing samples when collaborating (Splice); clunky DAW integration (vs Loopcloud's seamless)
+  \item Always-on internet for cloud features; resource-heavy desktop apps
+  \item \textbf{Sales angle:} Offline-first. DAW-native plugin. No cloud dependency.
+\end{itemize}
+
+\subsection{Pricing Fatigue \#5}
+\begin{itemize}
+  \item Multiple subscriptions add up (\$10--40/mo each); Splice price hikes; hard to justify for hobbyists
+  \item Annual commitments feel risky
+  \item \textbf{Sales angle:} One subscription. Flat pricing. No per-user tax.
+\end{itemize}
+
+\subsection{Creator Compensation \#6}
+\begin{itemize}
+  \item Producers report low per-download payouts on Splice; no royalty transparency
+  \item \textbf{Sales angle:} Transparent per-download payouts. Creator profiles. Tip jars.
+\end{itemize}
+
+% ═══════════════════════════════════════
+%  STRATEGIC POSITIONING
+% ═══════════════════════════════════════
+
+\section{Strategic Positioning — Where LibreBase Fits}
+
+\subsection{The Open-Knowledge Angle}
+
+LibreBase's core thesis — \textbf{knowledge should be findable, attributable, and freely
+reusable} — maps directly onto every pain point above:
+
+\begin{itemize}
+  \item \textbf{No lock-in} — samples, metadata, and workflows are yours, portable, exportable.
+        The anti-Splice, anti-iLok, anti-subscription-fatigue platform.
+  \item \textbf{Attributable} — every sample, loop, and AI generation traced to source. Creator
+        credits visible. Royalty transparency by design.
+  \item \textbf{Findable} — open metadata standards (BPM/key/timbre) that work across platforms.
+        No walled-garden search.
+  \item \textbf{Freely reusable} — perpetual access model. Download and own. No credit anxiety.
+        Cancel and keep.
+\end{itemize}
+
+\subsection{Concrete Positions for Sales}
+
+\mktbl{ L{3.2cm} X %
+  \rowcolor{LBLightBg}
+  \textbf{Position} & \textbf{Sales Hook} \\
+  \midrule
+  Open platform vs. Splice walled garden & ``Splice owns Spitfire, Output, Sample Magic — your samples live in their ecosystem. LibreBase is vendor-neutral: your data, your formats, your choice.'' \\
+  Perpetual ownership vs. rental & ``Cancel Splice and you lose 3--4M samples you 'downloaded.' With LibreBase, what you acquire is yours — no rental, no credit expiry.'' \\
+  Transparent pricing vs. credit systems & ``Splice's credit model obscures real cost. LibreBase uses flat, predictable pricing — no artificial currency, no use-it-or-lose-it.'' \\
+  AI-native vs. bolt-on AI & ``Splice Create (April 2026) is AI bolted onto a sample library. LibreBase's open approach means AI generation + separation + editing + MIDI in one workflow — not a crediting game.'' \\
+  No DRM vs. iLok/SINE/Kontakt & ``iLok is universally hated. SINE crashes. Kontakt eats RAM. LibreBase: no dongles, no proprietary players, no Linux exclusion.'' \\
+  Mid-market focus vs. enterprise blanks & ``Sphera and Enablon cost six figures. Consumer subs feel predatory. LibreBase targets the \$150--300 professional-lite gap nobody fills.'' \\
+  Linux support as wedge & ``Zero major sample library supports Linux. LibreBase does — own a niche nobody else touches.'' \\
+  Creator economy vs. black-box royalties & ``Splice producers report low payouts with no transparency. LibreBase makes attribution and compensation visible by default.'' \\
+}
+
+\subsection Wronskian Competitors to Watch}
+
+\begin{itemize}
+  \item \textbf{BandLab} — dark horse. Free tier (20 samples/mo + social distribution) pulling Gen Z.
+        Watch for bundling momentum.
+  \item \textbf{Splice consolidation} — Spitfire + Output + Sample Magic under one roof.
+        User trust erosion is real; opportunity for vendor-neutral alternative.
+  \item \textbf{Text-to-sample generators} — ILLUGEN, Text-to-Sample, Splice Create, Loudly.
+        Fragmented, quality varies, no DAW-native leader. First mover here wins.
+  \item \textbf{Magenta/Google} — free, open weights, real-time synthesis. If Google productises,
+        it undercuts paid tools. LibreBase's open-data angle is parallel and complementary.
+\end{itemize}
+
+% ═══════════════════════════════════════
+%  QUICK-REFERENCE CARD
+% ═══════════════════════════════════════
+
+\section{Quick-Reference Card — Sales Ready}
+
+\subsection{Top 5 Objections \& Responses}
+
+\mktbl{ L{4.5cm} X @}%
+  \rowcolor{LBLightBg}
+  \textbf{Objection} & \textbf{Response} \\
+  \midrule
+  ``Splice has the biggest library'' & ``Yes — 3--4M+ samples, 22\% share. But 80\% of users call them generic, credits expire, and cancel means losing everything. We offer ownership + curation, not volume + rental.'' \\
+  ``Loopcloud integrates with my DAW'' & ``Loopcloud's plugin is strong, but it's cloud-dependent and points-based. We're DAW-native, offline-capable, and flat-priced — no credit maths.'' \\
+  ``I've already paid for Kontakt libraries'' & ``Kontakt's iLok DRM is the #1 complaint in the industry. We're playerless — no dongles, no proprietary lock-in. Your existing libraries stay yours.'' \\
+  ``AI sample gen is gimmicky'' & ``Waves ILLUGEN scored 5/10 from MusicTech. Splice Create is new and unproven. But Samplab's shutdown (Sept 2026) left a real gap — the market wants generation + editing in one tool. We're building toward that.'' \\
+  ``Enterprise tools are more trustworthy'' & ``Sphera and Enablon cost \$16K--\$100K+ and are overkill for anyone under \$500M revenue. Mid-market is underserved. We're built for teams that need AI-powered review without the enterprise tax.'' \\
+}
+
+\subsection{Key Numbers to Quote}
+
+\begin{itemize}
+  \item \textbf{\$\$1.8B} — current sample library market (2025)
+  \item \textbf{8.9--9.5\% CAGR} — sustained growth through 2034
+  \item \textbf{22\%} — Splice market share (leader, not monopoly)
+  \item \textbf{6M+} — Splice registered users (churn opportunity)
+  \item \textbf{\$\$34.99/mo} — Splice Sounds 1000 (price hike flashpoint)
+  \item \textbf{Trustpilot scores:} Splice 4.3, Output 3.7, EastWest 3.4, 8Dio 3.1, Heavyocity 2.5, Tracklib 2.0, Noiiz 2.2
+  \item \textbf{Samplab shutdown:} Sept 17, 2026 — leaves polyphonic note-editing gap
+\end{itemize}
+
+\subsection{Signals to Monitor}
+
+\begin{itemize}
+  \item Splice price trajectory post-Spitfire/Output acquisitions — user churn sentiment
+  \item BandLab's free-tier growth — Gen Z creator pull
+  \item Any Google productisation of Magenta RealTime 2 — free AI undercutting paid tools
+  \item Text-to-sample quality improvements — when does it become production-ready?
+  \item Linux adoption in music production — growing but still zero competitor support
+\end{itemize}
+
+% ═══════════════════════════════════════
+%  SOURCES
+% ═══════════════════════════════════════
+
+\vspace{10pt}
+\hrule height 0.4pt
+\vspace{4pt}
+{\color{LBGray}\footnotesize\itshape
+  Sources: Market Intelo, Dataintelo, Trustpilot, Reddit (r/edmproduction, r/makinghiphop,
+  r/spitfireaudio, r/composer, r/musicproduction), Music Business Worldwide, Output Inc
+  comparison guides, Splice/Loopcloud/Tracklib/Spitfire/NI/Output/Heavyocity/Cinesamples/
+  8Dio/Embertone/Orchestral Tools/EastWest official pricing pages, Vi-Control forums, KVR Audio,
+  Gearspace, Attack Magazine, BandLab Help Center, MusicRadar, MusicTech reviews, Adobe Podcast,
+  Google Magenta project docs, Samplab/RipX/Waves/Text-to-Sample/Loudly official pages.
+  Research consolidated August 16--18, 2026. All pricing and metrics as of date of research.
+}
+
+\end{document}

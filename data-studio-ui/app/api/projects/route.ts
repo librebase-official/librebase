@@ -2,13 +2,26 @@ import { NextResponse } from "next/server";
 import { requireEntitlement } from "@/lib/entitlements";
 import { createProjectAsync, listProjectsAsync } from "@/lib/projects-store";
 import { resolveStudioOrgId } from "@/lib/org-context";
-import { getLibrebaseRuntime } from "@/lib/runtime-env";
+import { getLibrebaseRuntime, isSaasHarness } from "@/lib/runtime-env";
+import { AdminApiError } from "@/lib/librebase-admin-client";
 import type { CreateProjectInput } from "@/lib/types";
 
 export async function GET() {
-  const orgId = await resolveStudioOrgId();
-  const projects = await listProjectsAsync(orgId);
-  return NextResponse.json({ projects, orgId });
+  try {
+    const orgId = await resolveStudioOrgId();
+    const projects = await listProjectsAsync(orgId);
+    return NextResponse.json({ projects, orgId });
+  } catch (error) {
+    if (error instanceof AdminApiError) {
+      return NextResponse.json(
+        { error: error.message, projects: [] },
+        { status: error.status },
+      );
+    }
+    const msg = error instanceof Error ? error.message : "failed to load projects";
+    const status = msg.includes("401") || msg.includes("unauthorized") ? 401 : 500;
+    return NextResponse.json({ error: msg, projects: [] }, { status });
+  }
 }
 
 export async function POST(request: Request) {
@@ -26,6 +39,16 @@ export async function POST(request: Request) {
       );
     }
 
+    if (isSaasHarness() && body.runtime === "kubernetes") {
+      return NextResponse.json(
+        {
+          error:
+            "Kubernetes is OSS-only. SaaS provisions Hetzner VMs — use runtime local or set LIBREBASE_HARNESS=oss.",
+        },
+        { status: 400 },
+      );
+    }
+
     const orgId = body.orgId ?? (await resolveStudioOrgId());
     await requireEntitlement("project.create", orgId);
 
@@ -36,6 +59,8 @@ export async function POST(request: Request) {
       runtimeChoice,
       instanceId: body.instanceId,
       runtime: body.runtime,
+      hostId: body.hostId,
+      memLimitMb: body.memLimitMb,
     });
 
     return NextResponse.json(

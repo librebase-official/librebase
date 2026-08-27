@@ -14,6 +14,12 @@ const need = [
   "app/login/page.tsx",
   "app/admin/page.tsx",
   "app/(studio)/(cloud)/logs/page.tsx",
+  "app/(studio)/(cloud)/projects/[projectId]/auth/page.tsx",
+  "app/(studio)/(cloud)/projects/[projectId]/auth/providers/page.tsx",
+  "app/(studio)/(cloud)/projects/[projectId]/storage/page.tsx",
+  "app/(studio)/(cloud)/projects/[projectId]/functions/page.tsx",
+  "app/(studio)/(cloud)/projects/[projectId]/realtime/page.tsx",
+  "app/(studio)/(cloud)/projects/[projectId]/database/policies/page.tsx",
   "app/api/admin/login/route.ts",
   "app/api/logs/route.ts",
 ];

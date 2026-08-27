@@ -82,6 +82,38 @@ TOOLS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "auth_provider_list",
+        "description": "List OAuth sign-in providers configured for a project.",
+        "inputSchema": {
+            "type": "object",
+            "required": ["projectId"],
+            "properties": {"projectId": {"type": "string"}},
+        },
+    },
+    {
+        "name": "auth_provider_upsert",
+        "description": (
+            "Configure (upsert) an OAuth sign-in provider for a project. "
+            "The client secret is KMS-sealed server-side; it is never returned."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "required": ["projectId", "provider", "clientId", "clientSecret", "redirectUris"],
+            "properties": {
+                "projectId": {"type": "string"},
+                "provider": {"type": "string", "enum": ["github", "google", "grok"]},
+                "clientId": {"type": "string"},
+                "clientSecret": {"type": "string"},
+                "redirectUris": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Callback URLs the provider may redirect to.",
+                },
+                "enabled": {"type": "boolean"},
+            },
+        },
+    },
+    {
         "name": "instance_list",
         "description": "List instances in the org.",
         "inputSchema": {"type": "object", "properties": {}},
@@ -190,6 +222,19 @@ def _call_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         return _request("GET", f"/org/v1/orgs/{org}/projects")
     if name == "project_create":
         return _request("POST", f"/org/v1/orgs/{org}/projects", _clean(arguments))
+    if name == "auth_provider_list":
+        return _request(
+            "GET",
+            f"/org/v1/orgs/{org}/projects/{arguments['projectId']}/providers",
+        )
+    if name == "auth_provider_upsert":
+        body = _clean(arguments)
+        body.setdefault("enabled", True)
+        return _request(
+            "POST",
+            f"/org/v1/orgs/{org}/projects/{body['projectId']}/providers",
+            body,
+        )
     if name == "instance_list":
         return _request("GET", f"/org/v1/orgs/{org}/instances")
     if name == "instance_get":
@@ -233,7 +278,7 @@ def _handle(msg: dict[str, Any]) -> dict[str, Any] | None:
             "result": {
                 "protocolVersion": "2024-11-05",
                 "capabilities": {"tools": {}},
-                "serverInfo": {"name": "librebase", "version": "0.1.0"},
+                "serverInfo": {"name": "librebase", "version": "0.1.2"},
             },
         }
     if method == "notifications/initialized":

@@ -1,6 +1,8 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { getProjectAsync } from "@/lib/projects-store";
+import { PageHeader } from "@/components/studio/PageHeader";
+import { PauseGate } from "@/components/studio/PauseGate";
+import { ProjectShell } from "../_components/project-shell";
+import { TablesBrowser } from "./tables-browser";
+import { requireProjectPage } from "@/lib/projects-store";
 
 interface PageProps {
   params: Promise<{ projectId: string }>;
@@ -8,31 +10,20 @@ interface PageProps {
 
 export default async function ProjectDatabasePage({ params }: PageProps) {
   const { projectId } = await params;
-  const project = await getProjectAsync(projectId);
-  if (!project) notFound();
+  const project = await requireProjectPage(projectId);
 
   return (
-    <>
-      <div className="page-header">
-        <h1>{project.name} — Database</h1>
-      </div>
-      <nav className="tabs">
-        <Link href={`/projects/${projectId}`} className="tab">
-          Home
-        </Link>
-        <Link href={`/projects/${projectId}/database`} className="tab active">
-          Database
-        </Link>
-        <Link href={`/projects/${projectId}/sql`} className="tab">
-          SQL
-        </Link>
-        <Link href={`/projects/${projectId}/settings`} className="tab">
-          Settings
-        </Link>
-      </nav>
-      <div className="empty">
-        Table browser — launch the database to browse tables, rows, and indexes.
-      </div>
-    </>
+    <ProjectShell projectId={projectId} projectName={project.name} active="database">
+      <PageHeader
+        title="Table editor"
+        description="⌘C or right-click copies the table for an agent. Export CSV is in the toolbar."
+      />
+      <PauseGate projectId={projectId} projectName={project.name}>
+        <TablesBrowser
+          projectId={projectId}
+          projectName={project.name}
+        />
+      </PauseGate>
+    </ProjectShell>
   );
 }

@@ -3,11 +3,15 @@ services:
     build:
       context: ../../admin-api
       dockerfile: Dockerfile
+    # Admin is an internal API: never expose it to the internet. The studio
+    # reaches it over the compose network; keep this port on loopback only.
     ports:
-      - "54330:54330"
+      - "127.0.0.1:54330:54330"
+    env_file:
+      - .env
     environment:
-      LIBREBASE_ADMIN_JWT_SECRET: ${LIBREBASE_ADMIN_JWT_SECRET:-dev-librebase-admin-secret}
       LIBREBASE_ADMIN_DB_PATH: /data/admin.db
+      LIBREBASE_KMS_URL: http://kms:54340
     volumes:
       - librebase-admin-data:/data
     healthcheck:
@@ -15,20 +19,44 @@ services:
       interval: 30s
       timeout: 3s
       retries: 3
+    networks:
+      - librebase-deploy-net
+
+  kms:
+    build:
+      context: ../..
+      dockerfile: kms/Dockerfile
+    env_file:
+      - .env
+    environment:
+      LIBREBASE_KMS_BIND: 0.0.0.0
+      LIBREBASE_KMS_PORT: 54340
+      LIBREBASE_KMS_DB_PATH: /data/kms.db
+    volumes:
+      - librebase-kms-data:/data
+    networks:
+      - librebase-deploy-net
 
   studio:
     build:
       context: ../../data-studio-ui
       dockerfile: Dockerfile
+    # Only nginx on the host talks to the studio; keep it off the internet.
     ports:
-      - "54324:54324"
+      - "127.0.0.1:3005:3005"
+    env_file:
+      - .env
     environment:
       LIBREBASE_ADMIN_URL: http://librebase-admin:54330
-      LIBREBASE_ADMIN_SESSION: ${LIBREBASE_ADMIN_SESSION:-}
-      LIBREBASE_ORG_ID: ${LIBREBASE_ORG_ID:-}
     depends_on:
       librebase-admin:
         condition: service_healthy
+    networks:
+      - librebase-deploy-net
 
 volumes:
   librebase-admin-data:
+  librebase-kms-data:
+
+networks:
+  librebase-deploy-net:

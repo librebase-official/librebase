@@ -2,6 +2,8 @@ import { resolveStudioOrgId } from "./org-context";
 import {
   adminApiEnabled,
   adminCreateHost,
+  adminDeleteHost,
+  adminGetHost,
   adminListHosts,
 } from "./librebase-admin-client";
 import type { CreateHostInput, Host } from "./types";
@@ -24,6 +26,23 @@ export async function createHostAsync(input: CreateHostInput): Promise<Host> {
     throw new Error("hosts require LIBREBASE_ADMIN_URL (control plane)");
   }
   return adminCreateHost(orgId, input);
+}
+
+export async function getHostAsync(hostId: string, orgId?: string): Promise<Host | undefined> {
+  const resolvedOrg = orgId ?? (await resolveStudioOrgId());
+  if (!adminApiEnabled()) {
+    return undefined;
+  }
+  return adminGetHost(resolvedOrg, hostId);
+}
+
+export async function deleteHostAsync(hostId: string, orgId?: string): Promise<boolean> {
+  const resolvedOrg = orgId ?? (await resolveStudioOrgId());
+  if (!adminApiEnabled()) {
+    throw new Error("hosts require LIBREBASE_ADMIN_URL (control plane)");
+  }
+  await adminDeleteHost(resolvedOrg, hostId);
+  return true;
 }
 
 /** Host-aware port block allocation so instances on one VM share its port space. */

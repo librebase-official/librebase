@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Button, FormField, Input, Select } from "@/components/ui";
+import { PageHeader } from "@/components/studio/PageHeader";
 
 const VM_SIZES = [
   { label: "512 MB (small)", value: 512 },
@@ -9,11 +11,24 @@ const VM_SIZES = [
   { label: "2 GB", value: 2048 },
 ];
 
+const PROVIDERS: { value: string; label: string }[] =
+  // SaaS harness is Hetzner-only (upsell). OSS can use local/k8s via LIBREBASE_HARNESS=oss.
+  (process.env.NEXT_PUBLIC_HARNESS === "oss" ||
+  process.env.NEXT_PUBLIC_HARNESS === "local" ||
+  process.env.NEXT_PUBLIC_HARNESS === "k8s"
+    ? [
+        { value: "hetzner", label: "Hetzner Cloud (provisioned VM)" },
+        { value: "linative-cloud", label: "Linative Cloud (bookkeeping)" },
+        { value: "sail", label: "Sail (bookkeeping)" },
+        { value: "self-host", label: "Self-hosted (bookkeeping)" },
+      ]
+    : [{ value: "hetzner", label: "Hetzner Cloud (provisioned VM)" }]);
+
 export default function NewHostPage() {
   const router = useRouter();
   const [name, setName] = useState("");
-  const [region, setRegion] = useState("local");
-  const [provider, setProvider] = useState("linative-cloud");
+  const [region, setRegion] = useState("nbg1");
+  const [provider, setProvider] = useState("hetzner");
   const [memMb, setMemMb] = useState(512);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -29,7 +44,7 @@ export default function NewHostPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, region, provider, memMb }),
       });
-      const data = (await res.json()) as { host?: { id: string }; error?: string };
+      const data = (await res.json()) as { host?: { id: string; status: string }; error?: string };
       if (!res.ok) {
         setError(data.error ?? "Failed to rent VM");
         return;
@@ -43,64 +58,90 @@ export default function NewHostPage() {
     }
   }
 
+  const isHetzner = provider === "hetzner";
+
   return (
     <>
-      <div className="page-header">
-        <div>
-          <h1>Rent a VM</h1>
-          <p className="muted">
-            Rent a VM from us, then launch multiple Librebase instances onto it and manage its
-            memory budget from the dashboard.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Rent a VM"
+        description="Reserve a machine, then launch multiple instances onto it and manage the memory budget from the dashboard."
+      />
 
       <form className="form" onSubmit={handleSubmit}>
-        <div className="field">
-          <label htmlFor="name">VM name</label>
-          <input
+        <FormField label="VM name" htmlFor="name">
+          <Input
             id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="prod-vm-1"
             required
+            disabled={submitting}
           />
-        </div>
+        </FormField>
 
-        <div className="field">
-          <label htmlFor="memMb">Memory budget</label>
-          <select id="memMb" value={memMb} onChange={(e) => setMemMb(Number(e.target.value))}>
+        <FormField label="Memory budget" htmlFor="memMb">
+          <Select
+            id="memMb"
+            value={memMb}
+            onChange={(e) => setMemMb(Number(e.target.value))}
+            disabled={submitting}
+          >
             {VM_SIZES.map((size) => (
               <option key={size.value} value={size.value}>
                 {size.label}
               </option>
             ))}
-          </select>
-        </div>
+          </Select>
+        </FormField>
 
-        <div className="field">
-          <label htmlFor="provider">Provider</label>
-          <select id="provider" value={provider} onChange={(e) => setProvider(e.target.value)}>
-            <option value="linative-cloud">Linative Cloud</option>
-            <option value="sail">Sail</option>
-            <option value="self-host">Self-hosted</option>
-          </select>
-        </div>
+        <FormField label="Provider" htmlFor="provider" hint={isHetzner ? "Hetzner VMs are provisioned on real cloud hardware; the host agent registers automatically when booted." : "Bookkeeping-only — no VM is provisioned. Use for local development."}>
+          <Select
+            id="provider"
+            value={provider}
+            onChange={(e) => setProvider(e.target.value)}
+            disabled={submitting}
+          >
+            {PROVIDERS.map((p) => (
+              <option key={p.value} value={p.value}>
+                {p.label}
+              </option>
+            ))}
+          </Select>
+        </FormField>
 
-        <div className="field">
-          <label htmlFor="region">Region</label>
-          <select id="region" value={region} onChange={(e) => setRegion(e.target.value)}>
-            <option value="local">Local</option>
-            <option value="us-east-1">US East</option>
-            <option value="eu-west-1">EU West</option>
-          </select>
-        </div>
+        {isHetzner ? (
+          <FormField label="Region" htmlFor="region">
+            <Select
+              id="region"
+              value={region}
+              onChange={(e) => setRegion(e.target.value)}
+              disabled={submitting}
+            >
+              <option value="nbg1">Nuremberg (nbg1)</option>
+              <option value="fsn1">Falkenstein (fsn1)</option>
+              <option value="hel1">Helsinki (hel1)</option>
+            </Select>
+          </FormField>
+        ) : (
+          <FormField label="Region" htmlFor="region">
+            <Select
+              id="region"
+              value={region}
+              onChange={(e) => setRegion(e.target.value)}
+              disabled={submitting}
+            >
+              <option value="local">Local</option>
+              <option value="us-east-1">US East</option>
+              <option value="eu-west-1">EU West</option>
+            </Select>
+          </FormField>
+        )}
 
-        {error && <div className="alert warn">{error}</div>}
+        {error && <p className="auth-error">{error}</p>}
 
-        <button type="submit" className="btn btn-primary" disabled={submitting}>
+        <Button type="submit" variant="primary" disabled={submitting}>
           {submitting ? "Renting…" : "Rent VM"}
-        </button>
+        </Button>
       </form>
     </>
   );

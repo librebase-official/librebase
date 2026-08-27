@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { copyText } from "@/lib/clipboard";
 
 export default function SetupPage() {
   const router = useRouter();
@@ -37,13 +38,9 @@ export default function SetupPage() {
 
   async function copyKey() {
     if (!done?.mcpKey) return;
-    try {
-      await navigator.clipboard.writeText(done.mcpKey);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      /* clipboard unavailable */
-    }
+    const ok = await copyText(done.mcpKey);
+    setCopied(ok);
+    setTimeout(() => setCopied(false), 2000);
   }
 
   if (done) {

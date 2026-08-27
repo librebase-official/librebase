@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button, FormField, Input } from "@/components/ui";
 
 export function ChangePassword() {
   const [current, setCurrent] = useState("");
@@ -35,23 +36,22 @@ export function ChangePassword() {
   }
 
   return (
-    <section className="card" style={{ marginTop: "1.5rem" }}>
-      <h2 style={{ margin: "0 0 0.75rem" }}>Change password</h2>
+    <section className="card admin-section">
+      <h2 className="admin-section-title">Change password</h2>
       <form className="form" onSubmit={onSubmit} style={{ maxWidth: 360 }}>
-        <div className="field">
-          <label htmlFor="pw-current">Current password</label>
-          <input
+        <FormField label="Current password" htmlFor="pw-current">
+          <Input
             id="pw-current"
             type="password"
             value={current}
             onChange={(e) => setCurrent(e.target.value)}
             autoComplete="current-password"
             required
+            disabled={busy}
           />
-        </div>
-        <div className="field">
-          <label htmlFor="pw-next">New password</label>
-          <input
+        </FormField>
+        <FormField label="New password" htmlFor="pw-next">
+          <Input
             id="pw-next"
             type="password"
             value={next}
@@ -59,15 +59,14 @@ export function ChangePassword() {
             autoComplete="new-password"
             required
             minLength={6}
+            disabled={busy}
           />
-        </div>
-        {error ? <p style={{ color: "var(--danger)", margin: 0 }}>{error}</p> : null}
-        {done ? (
-          <p style={{ color: "var(--accent)", margin: 0 }}>Password updated.</p>
-        ) : null}
-        <button type="submit" className="btn btn-primary" disabled={busy}>
+        </FormField>
+        {error ? <p className="auth-error text-sm">{error}</p> : null}
+        {done ? <p className="muted text-sm" style={{ color: "var(--accent)" }}>Password updated.</p> : null}
+        <Button type="submit" variant="primary" disabled={busy}>
           {busy ? "Updating…" : "Update password"}
-        </button>
+        </Button>
       </form>
     </section>
   );

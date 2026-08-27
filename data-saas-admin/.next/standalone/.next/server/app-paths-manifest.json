@@ -1,0 +1,13 @@
+{
+  "/_global-error/page": "app/_global-error/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/hosts/[hostId]/delete/route": "app/api/hosts/[hostId]/delete/route.js",
+  "/api/hosts/[hostId]/start/route": "app/api/hosts/[hostId]/start/route.js",
+  "/api/hosts/[hostId]/stop/route": "app/api/hosts/[hostId]/stop/route.js",
+  "/dashboard/hosts/page": "app/dashboard/hosts/page.js",
+  "/dashboard/instances/page": "app/dashboard/instances/page.js",
+  "/dashboard/orgs/page": "app/dashboard/orgs/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/dashboard/system/page": "app/dashboard/system/page.js",
+  "/page": "app/page.js"
+}

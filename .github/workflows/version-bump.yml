@@ -1,0 +1,36 @@
+name: Version Bump
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Bump patch version
+        run: python3 scripts/sync-version.py --bump patch
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add VERSION
+          git add -u  # only modified files from sync-version.py
+          VERSION=$(cat VERSION)
+          git commit -m "chore: auto-bump version to ${VERSION}
+
+          🤖 Generated with Codebuff
+          Co-Authored-By: Codebuff <noreply@codebuff.com>" || echo "No version changes to commit"
+          git push

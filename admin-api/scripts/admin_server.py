@@ -23,11 +23,17 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 from urllib.parse import parse_qs, quote, urlencode, urlparse
 
 ROOT = Path(__file__).resolve().parent.parent
 MIGRATIONS = ROOT / "migrations"
+SCRIPTS = Path(__file__).resolve().parent
+
+try:  # Hetzner substrate is optional; admin-server must boot without it
+    import hcloud as _hcloud  # type: ignore[import-not-found]
+except Exception:  # pragma: no cover - hcloud.py present in scripts/
+    _hcloud = None  # type: ignore[assignment]
 
 DEFAULT_DB = Path.home() / ".local" / "share" / "librebase" / "org.db"
 JWT_TTL_SECONDS = 60 * 60 * 24 * 7  # legacy; replaced by ACCESS_TTL for console sessions
@@ -180,15 +186,33 @@ def user_mfa_ok(db: "LiorgDb", user_id: str, code: str) -> bool:
 
 
 # --- KMS client (seal/unseal provider secrets) ---
-OAUTH_PROVIDERS = {"github", "google"}
+OAUTH_PROVIDERS = {"github", "google", "grok"}
 
 # --- Console SSO (operator sign-in via GitHub/Google) ---
-OAUTH_CONSOLE_URL = os.environ.get("LIBREBASE_CONSOLE_URL", "").strip().rstrip("/") or (
-    "https://app.librebase.xyz"
-)
+def console_origin() -> str:
+    """Public console origin (env-driven so the stack deploys to any machine)."""
+    return os.environ.get("LIBREBASE_CONSOLE_URL", "").strip().rstrip("/") or (
+        "https://app.librebase.xyz"
+    )
+
+
+OAUTH_CONSOLE_URL = console_origin()
 
 
 def oauth_provider_config(provider: str) -> dict[str, str] | None:
+    if provider == "grok":
+        cid = os.environ.get("LIBREBASE_GROK_CLIENT_ID", "").strip()
+        if not cid:
+            return None
+        return {
+            "id": cid,
+            "secret": "",  # device code flow doesn't need a client secret
+            "authorize": "https://auth.x.ai/oauth2/device/code",
+            "token": "https://auth.x.ai/oauth2/token",
+            "userinfo": "https://api.x.ai/v1/userinfo",
+            "scope": "openid profile email offline_access grok-cli:access api:access",
+            "flow": "device_code",
+        }
     if provider == "github":
         cid = os.environ.get("LIBREBASE_GITHUB_CLIENT_ID", "").strip()
         secret = os.environ.get("LIBREBASE_GITHUB_CLIENT_SECRET", "").strip()
@@ -356,6 +380,94 @@ def oauth_find_or_create_user(db: "LiorgDb", provider: str, sub: str, email: str
     return db.fetchone("SELECT * FROM users WHERE id = ?", (user_id,))
 
 
+# --- Grok device code flow (xAI) ---
+# xAI uses RFC 8628 device authorization grant: POST /oauth2/device for a device
+# code, then POST /oauth2/token with grant_type=urn:ietf:params:oauth:grant-type:device_code.
+
+def grok_initiate_device_code() -> dict[str, Any] | None:
+    """Initiate the xAI device code flow (RFC 8628).
+
+    Returns {device_code, user_code, verification_uri, expires_in} or None.
+    Uses the same public client_id as the official Grok CLI.
+    """
+    cfg = oauth_provider_config("grok")
+    if not cfg:
+        return None
+    try:
+        data = urlencode({
+            "client_id": cfg["id"],
+            "scope": cfg["scope"],
+        }).encode()
+        req = urllib.request.Request(
+            cfg["authorize"],
+            data=data,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def grok_poll_token(device_code: str, interval: int = 5) -> dict[str, Any] | None:
+    """Poll the xAI token endpoint for device code approval (RFC 8628).
+
+    Returns token dict or an error dict like {"error": "authorization_pending"}.
+    xAI may return "slow_down" to tell us to increase the polling interval.
+    """
+    cfg = oauth_provider_config("grok")
+    if not cfg:
+        return None
+    try:
+        data = urlencode({
+            "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+            "device_code": device_code,
+            "client_id": cfg["id"],
+        }).encode()
+        req = urllib.request.Request(
+            cfg["token"],
+            data=data,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        try:
+            err = json.loads(e.read().decode("utf-8"))
+            return {"error": err.get("error", "unknown")}
+        except Exception:  # noqa: BLE001
+            return {"error": f"http_{e.code}"}
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def grok_fetch_identity(token_data: dict[str, Any]) -> tuple[str, str] | None:
+    """Fetch user identity from xAI using the access token. Returns (sub, email) or None."""
+    access = token_data.get("access_token")
+    if not access:
+        return None
+    cfg = oauth_provider_config("grok")
+    if not cfg:
+        return None
+    try:
+        info = _oauth_http_json(
+            cfg.get("userinfo", "https://api.x.ai/v1/userinfo"),
+            headers={"Authorization": f"Bearer {access}"},
+        )
+        sub = str(info.get("sub", ""))
+        email = info.get("email", "") or ""
+        # xAI may not return email directly; try the user info
+        if not email:
+            email = info.get("login", "") or info.get("name", "") + "@grok.local"
+        return (sub, email) if sub else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
+# In-memory store for pending Grok device codes (device_code → {user_code, verification_uri, ...})
+_grok_pending: dict[str, dict[str, Any]] = {}
 
 def kms_configured() -> bool:
     return bool(os.environ.get("LIBREBASE_KMS_URL", "").strip())
@@ -654,7 +766,7 @@ def issue_mcp_key(db: "LiorgDb", org_id: str) -> str:
     return key
 
 
-def row_mcp_key(row: sqlite3.Row) -> dict[str, Any]:
+def row_mcp_key(row: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "id": row["id"],
         "orgId": row["org_id"],
@@ -664,13 +776,40 @@ def row_mcp_key(row: sqlite3.Row) -> dict[str, Any]:
 
 
 class LiorgDb:
-    def __init__(self, path: Path) -> None:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        self.conn = sqlite3.connect(path, check_same_thread=False)
-        self.conn.row_factory = sqlite3.Row
+    def __init__(self, path: Path | None = None, dsn: str | None = None) -> None:
+        self._backend = "sqlite"
+        if dsn:
+            self._init_postgres(dsn)
+        else:
+            assert path is not None
+            path.parent.mkdir(parents=True, exist_ok=True)
+            self.conn = sqlite3.connect(path, check_same_thread=False)
+            self.conn.row_factory = sqlite3.Row
+            self.migrate()
+
+    def _init_postgres(self, dsn: str) -> None:
+        """Connect to Supabase/Postgres using psycopg2."""
+        import psycopg2  # type: ignore[import-not-found]
+        from psycopg2.extras import RealDictCursor  # type: ignore[import-not-found]
+
+        self.conn = psycopg2.connect(dsn)
+        self.conn.autocommit = False
+        self._real_dict_cursor = RealDictCursor
+        self._backend = "postgres"
         self.migrate()
 
+    @staticmethod
+    def _psql(sql: str) -> str:
+        """Convert SQLite ? placeholders to Postgres %s."""
+        return sql.replace("?", "%s")
+
     def migrate(self) -> None:
+        if self._backend == "postgres":
+            self._psql_migrate()
+        else:
+            self._sqlite_migrate()
+
+    def _sqlite_migrate(self) -> None:
         self.conn.execute(
             "CREATE TABLE IF NOT EXISTS schema_migrations ("
             "version TEXT PRIMARY KEY, applied_at TEXT NOT NULL)"
@@ -705,18 +844,75 @@ class LiorgDb:
             )
         self.conn.commit()
 
+    def _psql_migrate(self) -> None:
+        cur = self.conn.cursor()
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS schema_migrations ("
+            "version TEXT PRIMARY KEY, applied_at TEXT NOT NULL)"
+        )
+        self.conn.commit()
+        for migration in sorted(MIGRATIONS.glob("*.sql")):
+            version = migration.name
+            cur.execute(
+                "SELECT 1 FROM schema_migrations WHERE version = %s", (version,)
+            )
+            done = cur.fetchone()
+            if done:
+                continue
+            sql = migration.read_text(encoding="utf-8")
+            cleaned_lines: list[str] = []
+            for line in sql.splitlines():
+                stripped = line.strip()
+                if stripped.startswith("--"):
+                    continue
+                cleaned_lines.append(line)
+            for stmt in "\n".join(cleaned_lines).split(";"):
+                stmt = stmt.strip()
+                if not stmt:
+                    continue
+                try:
+                    cur.execute(self._psql(stmt))
+                except Exception as exc:
+                    self.conn.rollback()
+                    msg = str(exc).lower()
+                    if "duplicate column" not in msg and "already exists" not in msg and "duplicate key" not in msg:
+                        raise
+                else:
+                    self.conn.commit()
+            cur.execute(
+                "INSERT INTO schema_migrations (version, applied_at) VALUES (%s, %s)",
+                (version, utc_now()),
+            )
+            self.conn.commit()
+
     def close(self) -> None:
         self.conn.close()
 
-    def fetchone(self, sql: str, params: tuple[Any, ...] = ()) -> sqlite3.Row | None:
+    def fetchone(self, sql: str, params: tuple[Any, ...] = ()) -> Mapping[str, Any] | None:
+        if self._backend == "postgres":
+            cur = self.conn.cursor(cursor_factory=self._real_dict_cursor)
+            cur.execute(self._psql(sql), params)
+            return cur.fetchone()
         cur = self.conn.execute(sql, params)
-        return cur.fetchone()
+        row = cur.fetchone()
+        if row is None:
+            return None
+        return {k: row[k] for k in row.keys()}
 
-    def fetchall(self, sql: str, params: tuple[Any, ...] = ()) -> list[sqlite3.Row]:
+    def fetchall(self, sql: str, params: tuple[Any, ...] = ()) -> list[Mapping[str, Any]]:
+        if self._backend == "postgres":
+            cur = self.conn.cursor(cursor_factory=self._real_dict_cursor)
+            cur.execute(self._psql(sql), params)
+            return cur.fetchall()
         cur = self.conn.execute(sql, params)
-        return cur.fetchall()
+        return [{k: row[k] for k in row.keys()} for row in cur.fetchall()]
 
     def execute(self, sql: str, params: tuple[Any, ...] = ()) -> None:
+        if self._backend == "postgres":
+            cur = self.conn.cursor()
+            cur.execute(self._psql(sql), params)
+            self.conn.commit()
+            return
         self.conn.execute(sql, params)
         self.conn.commit()
 
@@ -782,15 +978,15 @@ PLANS = {
         "support": "none",
     },
     "starter": {
-        "price": 9,
+        "price": 12,
         "instance_limit": 1,
         "compute": "dedicated",
-        "memory_mb": 256,
+        "memory_mb": 512,
         "storage_gb": 10,
         "support": "email",
     },
     "pro": {
-        "price": 29,
+        "price": 20,
         "instance_limit": 3,
         "compute": "dedicated",
         "memory_mb": 1024,
@@ -863,18 +1059,18 @@ def plan_from_price(price_id: str) -> str:
 
 def stripe_success_url() -> str:
     return os.environ.get(
-        "LIBREBASE_STRIPE_SUCCESS_URL", "https://app.librebase.xyz/admin?billing=success"
+        "LIBREBASE_STRIPE_SUCCESS_URL", f"{console_origin()}/admin?billing=success"
     )
 
 
 def stripe_cancel_url() -> str:
     return os.environ.get(
-        "LIBREBASE_STRIPE_CANCEL_URL", "https://app.librebase.xyz/admin?billing=cancel"
+        "LIBREBASE_STRIPE_CANCEL_URL", f"{console_origin()}/admin?billing=cancel"
     )
 
 
 def stripe_portal_return_url() -> str:
-    return os.environ.get("LIBREBASE_STRIPE_PORTAL_RETURN_URL", "https://app.librebase.xyz/admin")
+    return os.environ.get("LIBREBASE_STRIPE_PORTAL_RETURN_URL", f"{console_origin()}/admin")
 
 
 def stripe_metered_price() -> str:
@@ -1066,7 +1262,7 @@ def stripe_report_usage(db: "LiorgDb", org_id: str) -> None:
         pass  # metering must never block instance launch
 
 
-def row_project(row: sqlite3.Row) -> dict[str, Any]:
+def row_project(row: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "id": row["id"],
         "name": row["name"],
@@ -1079,7 +1275,7 @@ def row_project(row: sqlite3.Row) -> dict[str, Any]:
     }
 
 
-def row_host(row: sqlite3.Row) -> dict[str, Any]:
+def row_host(row: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "id": row["id"],
         "orgId": row["org_id"],
@@ -1089,12 +1285,27 @@ def row_host(row: sqlite3.Row) -> dict[str, Any]:
         "memMb": row["mem_mb"],
         "memUsedMb": row["mem_used_mb"],
         "status": row["status"],
+        "serverId": _row_int(row, "server_id"),
+        "ip": row["ip"] if "ip" in row.keys() else None,
+        "imageId": _row_int(row, "image_id"),
         "createdAt": row["created_at"],
         "updatedAt": row["updated_at"],
     }
 
 
-def row_instance(row: sqlite3.Row) -> dict[str, Any]:
+def _row_int(row: Mapping[str, Any], col: str) -> int | None:
+    if col not in row.keys():
+        return None
+    val = row[col]
+    if val is None:
+        return None
+    try:
+        return int(val)
+    except (TypeError, ValueError):
+        return None
+
+
+def row_instance(row: Mapping[str, Any]) -> dict[str, Any]:
     ports = None
     if row["ports_json"]:
         ports = json.loads(row["ports_json"])
@@ -1124,7 +1335,7 @@ def row_instance(row: sqlite3.Row) -> dict[str, Any]:
     return payload
 
 
-def row_provider(row: sqlite3.Row) -> dict[str, Any]:
+def row_provider(row: Mapping[str, Any]) -> dict[str, Any]:
     """Public (masked) view — never exposes the client secret."""
     redirects = json.loads(row["redirect_uris"]) if row["redirect_uris"] else []
     return {
@@ -1136,7 +1347,7 @@ def row_provider(row: sqlite3.Row) -> dict[str, Any]:
     }
 
 
-def row_provider_full(row: sqlite3.Row) -> dict[str, Any]:
+def row_provider_full(row: Mapping[str, Any]) -> dict[str, Any]:
     """Admin/runtime view — includes the KMS-sealed secret reference."""
     payload = row_provider(row)
     payload["clientSecretEnc"] = row["client_secret_enc"]
@@ -1186,8 +1397,12 @@ class LiorgHandler(BaseHTTPRequestHandler):
         return self.client_address[0]
 
     def rate_limited(self) -> bool:
-        """In-memory per-IP sliding window for the login endpoint."""
-        ip = self.client_ip()
+        """In-memory per-IP sliding window for the login endpoint.
+
+        SECURITY: Uses the direct TCP connection IP, NOT the X-Forwarded-For
+        header, which can be spoofed by an attacker to bypass rate limiting.
+        """
+        ip = self.client_address[0]  # TCP peer IP — cannot be spoofed
         now = time.time()
         attempts = [
             t for t in LiorgHandler._ip_attempts.get(ip, [])
@@ -1264,11 +1479,21 @@ class LiorgHandler(BaseHTTPRequestHandler):
         return row["role"] if row else None
 
     def require_org_role(self, org_id: str, minimum: str) -> dict[str, Any] | None:
-        """Return claims if the caller holds >= `minimum` role in org_id (JWT or MCP key)."""
+        """Return claims if the caller holds >= `minimum` role in org_id (JWT or MCP key).
+
+        SECURITY FIX: MCP keys are scoped as "admin" role. They must NOT be
+        able to perform owner-level operations (invites, org rename, member
+        role changes, MCP key rotation).  We enforce role hierarchy here.
+        """
         mcp = self.mcp_claims()
         if mcp:
             if mcp.get("org_id") != org_id:
                 self.send_json(403, {"error": "forbidden"})
+                return None
+            # MCP keys are fixed at "admin" level — reject if minimum is higher.
+            mcp_role = mcp.get("role", "admin")
+            if not role_at_least(mcp_role, minimum):
+                self.send_json(403, {"error": "insufficient role"})
                 return None
             return mcp
         claims = self.bearer_claims()
@@ -1321,12 +1546,182 @@ class LiorgHandler(BaseHTTPRequestHandler):
             "code": code,
         }
 
+    def require_agent(self, row: Mapping[str, Any]) -> bool:
+        """Auth a host agent via the bearer token bound at provisioning time."""
+        token = self.headers.get("Authorization", "").removeprefix("Bearer ").strip()
+        correct = row["agent_token"] if "agent_token" in row.keys() else None
+        if not correct or not token:
+            return False
+        return hmac.compare_digest(hash_token(token), correct)
+
+    def host_by_agent_token(self) -> Mapping[str, Any] | None:
+        """Look up the host this agent bears a token for (no org in path)."""
+        token = self.headers.get("Authorization", "").removeprefix("Bearer ").strip()
+        if not token:
+            return None
+        row = self.db.fetchone("SELECT * FROM hosts WHERE agent_token = ?", (hash_token(token),))
+        return row
+
+    def agent_host(self) -> Mapping[str, Any] | None:
+        """Resolve the calling host agent's host row, 401-ing if invalid."""
+        row = self.host_by_agent_token()
+        if not row:
+            self.send_json(401, {"error": "invalid agent token"})
+            return None
+        return row
+
+    def sync_hcloud_host(self, row: Mapping[str, Any]) -> Mapping[str, Any] | None:
+        """Reconcile a provisioning host's status against Hetzner.
+
+        Called on host reads. Only flips state when Hetzner reports a terminal
+        condition (server gone/error) — the host agent still owns the running
+        flip by calling /register once it's up.
+        """
+        if _hcloud is None or not _hcloud.hcloud_configured():
+            return row
+        server_id = row["server_id"] if "server_id" in row.keys() else None
+        if not server_id:
+            return row
+        try:
+            info = _hcloud.get_server(int(server_id))
+        except Exception:
+            return row
+        now = utc_now()
+        # Refresh public IP once Hetzner has allocated it.
+        if info.get("ip") and (not row["ip"] or row["ip"] != info["ip"]):
+            self.db.execute(
+                "UPDATE hosts SET ip = ?, updated_at = ? WHERE id = ?",
+                (info["ip"], now, row["id"]),
+            )
+        status = info.get("status")
+        if status in ("off", "error", "unknown", None) and row["status"] == "provisioning":
+            self.db.execute(
+                "UPDATE hosts SET status = ?, updated_at = ? WHERE id = ?",
+                ("error", now, row["id"]),
+            )
+        self.db.execute("UPDATE hosts SET updated_at = ? WHERE id = ?", (now, row["id"]))
+        return self.db.fetchone("SELECT * FROM hosts WHERE id = ?", (row["id"],))
+
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/") or "/"
 
+        if path == "/org/v1/host-agent/instances":
+            row = self.agent_host()
+            if not row:
+                return
+            # Instances scheduled onto this host (all states), newest first.
+            insts = self.db.fetchall(
+                "SELECT * FROM instances WHERE host_id = ? ORDER BY created_at",
+                (row["id"],),
+            )
+            self.send_json(200, [row_instance(i) for i in insts])
+            return
+
         if path == "/health":
             self.send_json(200, {"ok": True})
+            return
+
+        if path == "/org/v1/auth/grok/start":
+            """Initiate Grok (xAI) device code OAuth flow."""
+            if not oauth_provider_config("grok"):
+                self.send_json(503, {"error": "grok OAuth not configured"})
+                return
+            dc = grok_initiate_device_code()
+            if not dc or "device_code" not in dc:
+                self.send_json(502, {"error": "failed to initiate grok device code"})
+                return
+            # Store the device_code so /poll can retrieve it
+            device_code = dc["device_code"]
+            _grok_pending[device_code] = {
+                "user_code": dc.get("user_code", ""),
+                "verification_uri": dc.get("verification_uri", "https://accounts.x.ai/oauth2/device"),
+                "verification_uri_complete": dc.get("verification_uri_complete", ""),
+                "expires_in": dc.get("expires_in", 900),
+                "interval": dc.get("interval", 5),
+                "created_at": time.time(),
+            }
+            self.send_json(200, {
+                "deviceCode": device_code,
+                "userCode": dc.get("user_code", ""),
+                "verificationUri": dc.get("verification_uri", "https://accounts.x.ai/oauth2/device"),
+                "verificationUriComplete": dc.get("verification_uri_complete", ""),
+                "expiresIn": dc.get("expires_in", 900),
+                "interval": dc.get("interval", 5),
+            })
+            return
+
+        if path == "/org/v1/auth/grok/poll":
+            """Poll Grok device code approval status. POST with {deviceCode}."""
+            # This is technically a GET that reads query param for simplicity
+            q = parse_qs(parsed.query)
+            device_code = (q.get("deviceCode", [""])[0]).strip()
+            if not device_code:
+                self.send_json(400, {"error": "deviceCode required"})
+                return
+            dc_info = _grok_pending.get(device_code)
+            if not dc_info:
+                self.send_json(404, {"error": "unknown device code"})
+                return
+            # Check expiry
+            if time.time() - dc_info["created_at"] > dc_info.get("expires_in", 900):
+                _grok_pending.pop(device_code, None)
+                self.send_json(410, {"error": "device code expired"})
+                return
+            # Poll xAI
+            result = grok_poll_token(device_code, dc_info.get("interval", 5))
+            if not result:
+                self.send_json(502, {"error": "failed to poll xAI"})
+                return
+            if result.get("error") == "authorization_pending":
+                self.send_json(200, {"status": "pending"})
+                return
+            if result.get("error") == "slow_down":
+                self.send_json(200, {"status": "pending", "slowDown": True})
+                return
+            if result.get("error") == "expired_token":
+                _grok_pending.pop(device_code, None)
+                self.send_json(410, {"error": "device code expired"})
+                return
+            if result.get("error") == "access_denied":
+                _grok_pending.pop(device_code, None)
+                self.send_json(403, {"error": "access denied by user"})
+                return
+            if result.get("error"):
+                _grok_pending.pop(device_code, None)
+                self.send_json(400, {"error": result["error"]})
+                return
+            # Success — we have tokens
+            identity = grok_fetch_identity(result)
+            if not identity:
+                _grok_pending.pop(device_code, None)
+                self.send_json(400, {"error": "grok did not return user identity"})
+                return
+            sub, email = identity
+            user = oauth_find_or_create_user(self.db, "grok", sub, email)
+            if not user:
+                _grok_pending.pop(device_code, None)
+                self.send_json(400, {"error": "could not create user from grok identity"})
+                return
+            member = self.db.fetchone(
+                "SELECT org_id, role FROM members WHERE user_id = ? ORDER BY created_at LIMIT 1",
+                (user["id"],),
+            )
+            if not member:
+                _grok_pending.pop(device_code, None)
+                self.send_json(403, {"error": "no organization membership"})
+                return
+            edition = self.org_edition(member["org_id"])
+            token, refresh_token = issue_session(
+                self.db, self.jwt_secret, user["id"], member["org_id"], member["role"], edition
+            )
+            _grok_pending.pop(device_code, None)
+            self.send_json(200, {
+                "token": token,
+                "refreshToken": refresh_token,
+                "orgId": member["org_id"],
+                "email": user["email"],
+            })
             return
 
         if path == "/org/v1/auth/oauth/start":
@@ -1498,15 +1893,30 @@ class LiorgHandler(BaseHTTPRequestHandler):
                 "SELECT org_id, role FROM members WHERE user_id = ?",
                 (user["id"],),
             )
+            org_names = {
+                row["id"]: row["name"]
+                for row in self.db.fetchall(
+                    "SELECT id, name FROM organizations WHERE id IN ({})".format(
+                        ",".join("?" * len(memberships))
+                    ),
+                    [m["org_id"] for m in memberships],
+                )
+            } if memberships else {}
             self.send_json(
                 200,
                 {
                     "user": {"id": user["id"], "email": user["email"]},
                     "activeOrgId": claims.get("org_id"),
+                    "activeOrgName": org_names.get(claims.get("org_id")),
                     "role": claims.get("role"),
                     "edition": claims.get("edition"),
                     "memberships": [
-                        {"orgId": m["org_id"], "role": m["role"]} for m in memberships
+                        {
+                            "orgId": m["org_id"],
+                            "role": m["role"],
+                            "name": org_names.get(m["org_id"]),
+                        }
+                        for m in memberships
                     ],
                 },
             )
@@ -1651,7 +2061,11 @@ class LiorgHandler(BaseHTTPRequestHandler):
                 "SELECT * FROM hosts WHERE org_id = ? ORDER BY created_at",
                 (org_id,),
             )
-            self.send_json(200, [row_host(r) for r in rows])
+            out = []
+            for r in rows:
+                synced = self.sync_hcloud_host(r)
+                out.append(row_host(synced or r))
+            self.send_json(200, out)
             return
 
         host_one = re.fullmatch(r"/org/v1/orgs/([^/]+)/hosts/([^/]+)", path)
@@ -1666,7 +2080,8 @@ class LiorgHandler(BaseHTTPRequestHandler):
             if not row:
                 self.send_json(404, {"error": "host not found"})
                 return
-            self.send_json(200, row_host(row))
+            synced = self.sync_hcloud_host(row)
+            self.send_json(200, row_host(synced or row))
             return
 
         self.send_json(404, {"error": "not found"})
@@ -1717,8 +2132,8 @@ class LiorgHandler(BaseHTTPRequestHandler):
             user_id = new_id("user")
             now = utc_now()
             self.db.execute(
-                "INSERT INTO organizations (id, name, slug, edition, created_at) VALUES (?, ?, ?, ?, ?)",
-                (org_id, name, slug, "self-host", now),
+                "INSERT INTO organizations (id, name, slug, edition, plan, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                (org_id, name, slug, "self-host", "self-host", now),
             )
             self.db.execute(
                 "INSERT INTO users (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)",
@@ -1767,7 +2182,16 @@ class LiorgHandler(BaseHTTPRequestHandler):
             if len(new_password) < 6:
                 self.send_json(400, {"error": "new password must be at least 6 characters"})
                 return
-            if user["password_hash"] and not verify_password(current, user["password_hash"]):
+            # SECURITY: OAuth-only users (no password_hash) must not have a
+            # password set via this endpoint — it would let an attacker who
+            # steals a session independently authenticate with the new password.
+            if not user["password_hash"]:
+                self.send_json(
+                    400,
+                    {"error": "account uses OAuth only; password change not available"},
+                )
+                return
+            if not verify_password(current, user["password_hash"]):
                 self.send_json(401, {"error": "current password is incorrect"})
                 return
             self.db.execute(
@@ -2089,6 +2513,17 @@ class LiorgHandler(BaseHTTPRequestHandler):
             if not name or not instance_id:
                 self.send_json(400, {"error": "name and instanceId required"})
                 return
+            # SECURITY: Verify the instance belongs to this org (prevent
+            # cross-org instance references that could leak data paths).
+            # If the instance does not exist at all, allow the reference
+            # (data-integrity issue, not a security hole).
+            inst_check = self.db.fetchone(
+                "SELECT org_id FROM instances WHERE id = ?",
+                (instance_id,),
+            )
+            if inst_check and inst_check["org_id"] != org_id:
+                self.send_json(404, {"error": "instance not found in this org"})
+                return
             now = utc_now()
             project_id = new_id("proj")
             self.db.execute(
@@ -2177,15 +2612,203 @@ class LiorgHandler(BaseHTTPRequestHandler):
             provider = str(body.get("provider", "linative-cloud")).strip()
             region = str(body.get("region", "local")).strip()
             status = str(body.get("status", "stopped")).strip()
+            server_id = None
+            ip = None
+            image_id = body.get("imageId") or body.get("image_id")
+            agent_token_hash = None
+
+            # When Hetzner is configured, actually create the VM (golden image +
+            # cloud-init boot of the host agent). Without it, hosts are bookkeeping
+            # rows (self-host/dev) and instances launch only as a local runtime.
+            if provider == "hetzner":
+                if _hcloud is not None and _hcloud.hcloud_configured():
+                    token = secrets.token_urlsafe(32)
+                    agent_token_hash = hash_token(token)
+                    try:
+                        identity = _hcloud.provision_host(
+                            host_id, name=name, region=region, agent_token=token
+                        )
+                    except Exception as exc:  # network / API error — don't leave an orphan host
+                        self.send_json(
+                            502,
+                            {"error": "host VM provisioning failed", "detail": str(exc)},
+                        )
+                        return
+                    server_id = identity.get("server_id")
+                    ip = identity.get("ip")
+                    image_id = image_id or _hcloud.hcloud_image_id()
+                    status = "provisioning"
+                else:
+                    # Demo/provisioning state when Hetzner is not configured:
+                    # show as provisioning with a placeholder IP so the UI can
+                    # display a loading animation instead of stopped.
+                    status = "provisioning"
+                    ip = "192.0.2.1"
+                    server_id = 0
+
             self.db.execute(
                 "INSERT INTO hosts "
                 "(id, org_id, name, provider, region, mem_mb, mem_used_mb, status, "
-                "created_at, updated_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?)",
-                (host_id, org_id, name, provider, region, mem_mb, status, now, now),
+                "server_id, ip, image_id, agent_token, created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    host_id,
+                    org_id,
+                    name,
+                    provider,
+                    region,
+                    mem_mb,
+                    status,
+                    server_id,
+                    ip,
+                    image_id,
+                    agent_token_hash,
+                    now,
+                    now,
+                ),
             )
             row = self.db.fetchone("SELECT * FROM hosts WHERE id = ?", (host_id,))
             self.send_json(201, row_host(row))
+            return
+
+        agent_register = re.fullmatch(r"/org/v1/host-agent/register", path)
+        if agent_register:
+            row = self.agent_host()
+            if not row:
+                return
+            new_ip = body.get("ip")
+            now = utc_now()
+            if new_ip and (not row["ip"] or row["ip"] != new_ip):
+                self.db.execute("UPDATE hosts SET ip = ? WHERE id = ?", (new_ip, row["id"]))
+            self.db.execute(
+                "UPDATE hosts SET status = ?, updated_at = ? WHERE id = ?",
+                ("running", now, row["id"]),
+            )
+            self.send_json(200, {"status": "running"})
+            return
+
+        agent_heartbeat = re.fullmatch(r"/org/v1/host-agent/heartbeat", path)
+        if agent_heartbeat:
+            row = self.agent_host()
+            if not row:
+                return
+            self.db.execute("UPDATE hosts SET updated_at = ? WHERE id = ?", (utc_now(), row["id"]))
+            self.send_json(200, {"ok": True})
+            return
+
+        host_register = re.fullmatch(r"/org/v1/orgs/([^/]+)/hosts/([^/]+)/register", path)
+        if host_register:
+            org_id, host_id = host_register.groups()
+            row = self.db.fetchone(
+                "SELECT * FROM hosts WHERE org_id = ? AND id = ?",
+                (org_id, host_id),
+            )
+            if not row:
+                self.send_json(404, {"error": "host not found"})
+                return
+            if not self.require_agent(row):
+                self.send_json(401, {"error": "invalid agent token"})
+                return
+            now = utc_now()
+            new_ip = body.get("ip")
+            if new_ip and (not row["ip"] or row["ip"] != new_ip):
+                self.db.execute(
+                    "UPDATE hosts SET ip = ? WHERE id = ?",
+                    (new_ip, host_id),
+                )
+            self.db.execute(
+                "UPDATE hosts SET status = ?, updated_at = ? WHERE id = ?",
+                ("running", now, host_id),
+            )
+            self.send_json(200, {"status": "running"})
+            return
+
+        host_heartbeat = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/hosts/([^/]+)/heartbeat", path
+        )
+        if host_heartbeat:
+            org_id, host_id = host_heartbeat.groups()
+            row = self.db.fetchone(
+                "SELECT * FROM hosts WHERE org_id = ? AND id = ?",
+                (org_id, host_id),
+            )
+            if not row:
+                self.send_json(404, {"error": "host not found"})
+                return
+            if not self.require_agent(row):
+                self.send_json(401, {"error": "invalid agent token"})
+                return
+            self.db.execute(
+                "UPDATE hosts SET updated_at = ? WHERE id = ?",
+                (utc_now(), host_id),
+            )
+            self.send_json(200, {"ok": True})
+            return
+
+        host_stop = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/hosts/([^/]+)/stop", path
+        )
+        if host_stop:
+            org_id, host_id = host_stop.groups()
+            if not self.require_org_role(org_id, "admin"):
+                return
+            row = self.db.fetchone(
+                "SELECT * FROM hosts WHERE org_id = ? AND id = ?",
+                (org_id, host_id),
+            )
+            if not row:
+                self.send_json(404, {"error": "host not found"})
+                return
+            server_id = row["server_id"] if "server_id" in row.keys() else None
+            if not server_id:
+                self.send_json(400, {"error": "host has no backing VM"})
+                return
+            if _hcloud is None or not _hcloud.hcloud_configured():
+                self.send_json(502, {"error": "hetzner not configured"})
+                return
+            try:
+                _hcloud.power_off_server(int(server_id))
+            except Exception as exc:
+                self.send_json(502, {"error": "failed to stop VM", "detail": str(exc)})
+                return
+            self.db.execute(
+                "UPDATE hosts SET status = ?, updated_at = ? WHERE id = ?",
+                ("stopped", utc_now(), host_id),
+            )
+            self.send_json(200, {"status": "stopped"})
+            return
+
+        host_start = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/hosts/([^/]+)/start", path
+        )
+        if host_start:
+            org_id, host_id = host_start.groups()
+            if not self.require_org_role(org_id, "admin"):
+                return
+            row = self.db.fetchone(
+                "SELECT * FROM hosts WHERE org_id = ? AND id = ?",
+                (org_id, host_id),
+            )
+            if not row:
+                self.send_json(404, {"error": "host not found"})
+                return
+            server_id = row["server_id"] if "server_id" in row.keys() else None
+            if not server_id:
+                self.send_json(400, {"error": "host has no backing VM"})
+                return
+            if _hcloud is None or not _hcloud.hcloud_configured():
+                self.send_json(502, {"error": "hetzner not configured"})
+                return
+            try:
+                _hcloud.power_on_server(int(server_id))
+            except Exception as exc:
+                self.send_json(502, {"error": "failed to start VM", "detail": str(exc)})
+                return
+            self.db.execute(
+                "UPDATE hosts SET status = ?, updated_at = ? WHERE id = ?",
+                ("provisioning", utc_now(), host_id),
+            )
+            self.send_json(200, {"status": "provisioning"})
             return
 
         org_instances = re.fullmatch(r"/org/v1/orgs/([^/]+)/instances", path)
@@ -2384,12 +3007,116 @@ class LiorgHandler(BaseHTTPRequestHandler):
             self.send_json(200, {"ok": True})
             return
 
+        project_del = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/projects/([^/]+)", path
+        )
+        if project_del:
+            org_id, project_id = project_del.groups()
+            if not self.require_org_role(org_id, "admin"):
+                return
+            row = self.db.fetchone(
+                "SELECT * FROM projects WHERE org_id = ? AND id = ?",
+                (org_id, project_id),
+            )
+            if not row:
+                self.send_json(404, {"error": "project not found"})
+                return
+            self.db.execute(
+                "DELETE FROM projects WHERE org_id = ? AND id = ?",
+                (org_id, project_id),
+            )
+            self.send_json(200, {"ok": True})
+            return
+
+        instance_del = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/instances/([^/]+)", path
+        )
+        if instance_del:
+            org_id, instance_id = instance_del.groups()
+            if not self.require_org_role(org_id, "admin"):
+                return
+            row = self.db.fetchone(
+                "SELECT * FROM instances WHERE org_id = ? AND id = ?",
+                (org_id, instance_id),
+            )
+            if not row:
+                self.send_json(404, {"error": "instance not found"})
+                return
+            # Remove any projects linked to this instance (dedicated keeps 1:1,
+            # shared may hold many) so we never leave dangling references.
+            self.db.execute(
+                "DELETE FROM projects WHERE org_id = ? AND instance_id = ?",
+                (org_id, instance_id),
+            )
+            self.db.execute(
+                "DELETE FROM instances WHERE org_id = ? AND id = ?",
+                (org_id, instance_id),
+            )
+            self.send_json(200, {"ok": True})
+            return
+
+        host_del = re.fullmatch(r"/org/v1/orgs/([^/]+)/hosts/([^/]+)", path)
+        if host_del:
+            org_id, host_id = host_del.groups()
+            if not self.require_org_role(org_id, "admin"):
+                return
+            row = self.db.fetchone(
+                "SELECT * FROM hosts WHERE org_id = ? AND id = ?",
+                (org_id, host_id),
+            )
+            if not row:
+                self.send_json(404, {"error": "host not found"})
+                return
+            server_id = row["server_id"] if "server_id" in row.keys() else None
+            if server_id and _hcloud is not None and _hcloud.hcloud_configured():
+                try:
+                    _hcloud.delete_server(int(server_id))
+                except Exception as exc:
+                    self.send_json(
+                        502,
+                        {"error": "host still exists; VM deletion failed", "detail": str(exc)},
+                    )
+                    return
+            self.db.execute(
+                "DELETE FROM hosts WHERE org_id = ? AND id = ?", (org_id, host_id)
+            )
+            self.send_json(200, {"ok": True})
+            return
+
         self.send_json(404, {"error": "not found"})
 
     def do_PATCH(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/") or "/"
         body = self.read_json()
+
+        org_patch = re.fullmatch(r"/org/v1/orgs/([^/]+)", path)
+        if org_patch:
+            org_id = org_patch.group(1)
+            if not self.require_org_role(org_id, "owner"):
+                return
+            name = str(body.get("name", "")).strip()
+            if not name:
+                self.send_json(400, {"error": "name required"})
+                return
+            self.db.execute(
+                "UPDATE organizations SET name = ? WHERE id = ?",
+                (name, org_id),
+            )
+            row = self.db.fetchone(
+                "SELECT * FROM organizations WHERE id = ?", (org_id,)
+            )
+            self.send_json(
+                200,
+                {
+                    "id": row["id"],
+                    "name": row["name"],
+                    "slug": row["slug"],
+                    "edition": row["edition"],
+                    "plan": row["plan"],
+                },
+            )
+            return
 
         member_match = re.fullmatch(r"/org/v1/members/([^/]+)", path)
         if member_match:
@@ -2413,6 +3140,42 @@ class LiorgHandler(BaseHTTPRequestHandler):
                 (role, row["org_id"], row["user_id"]),
             )
             self.send_json(200, {"userId": row["user_id"], "role": role})
+            return
+
+        project_link = re.fullmatch(r"/org/v1/orgs/([^/]+)/projects/([^/]+)", path)
+        if project_link:
+            org_id, project_id = project_link.groups()
+            if not self.require_org_member(org_id):
+                return
+            row = self.db.fetchone(
+                "SELECT * FROM projects WHERE org_id = ? AND id = ?",
+                (org_id, project_id),
+            )
+            if not row:
+                self.send_json(404, {"error": "project not found"})
+                return
+            instance_id = str(body.get("instanceId", body.get("instance_id", ""))).strip()
+            if not instance_id:
+                self.send_json(400, {"error": "instanceId required"})
+                return
+            inst = self.db.fetchone(
+                "SELECT * FROM instances WHERE org_id = ? AND id = ?",
+                (org_id, instance_id),
+            )
+            if not inst:
+                self.send_json(404, {"error": "instance not found in this org"})
+                return
+            now = utc_now()
+            self.db.execute(
+                "UPDATE projects SET instance_id = ?, deployment_mode = 'shared', updated_at = ? "
+                "WHERE org_id = ? AND id = ?",
+                (instance_id, now, org_id, project_id),
+            )
+            updated = self.db.fetchone(
+                "SELECT * FROM projects WHERE org_id = ? AND id = ?",
+                (org_id, project_id),
+            )
+            self.send_json(200, row_project(updated))
             return
 
         inst_match = re.fullmatch(r"/org/v1/orgs/([^/]+)/instances/([^/]+)", path)
@@ -2480,23 +3243,33 @@ def main() -> None:
             os.environ.get("LIORG_PORT", "54330"),
         )
     )
+    db_dsn = os.environ.get("LIBREBASE_DB_DSN", "").strip() or None
     db_path = Path(
         os.environ.get(
             "LIBREBASE_ADMIN_DB_PATH",
             os.environ.get("LIORG_DB_PATH", str(DEFAULT_DB)),
         )
     )
-    secret = os.environ.get(
-        "LIBREBASE_ADMIN_JWT_SECRET",
-        os.environ.get("LIORG_SESSION_JWT_SECRET", "dev-librebase-admin-secret"),
+    secret = os.environ.get("LIBREBASE_ADMIN_JWT_SECRET") or os.environ.get(
+        "LIORG_SESSION_JWT_SECRET"
     )
+    if not secret:
+        # Never fall back to a known/predictable secret: forgeable JWTs would
+        # let anyone impersonate any user. Self-hosts that omit the env var get
+        # a random secret (all sessions invalidate on restart).
+        secret = secrets.token_urlsafe(48)
+        print(
+            "WARNING: no LIBREBASE_ADMIN_JWT_SECRET set; generated a random JWT "
+            "secret. Set LIBREBASE_ADMIN_JWT_SECRET to keep sessions across restarts.",
+            file=sys.stderr,
+        )
 
-    db = LiorgDb(db_path)
+    db = LiorgDb(dsn=db_dsn, path=None if db_dsn else db_path)
     LiorgHandler.db = db
     LiorgHandler.jwt_secret = secret
 
     server = ThreadingHTTPServer((host, port), LiorgHandler)
-    sys.stderr.write(f"librebase-admin listening on http://{host}:{port} db={db_path}\n")
+    sys.stderr.write(f"librebase-admin listening on http://{host}:{port} db={db_dsn or db_path}\n")
     try:
         server.serve_forever()
     finally:

@@ -1,15 +1,19 @@
 import Link from "next/link";
 import {
   adminApiEnabled,
+  adminGetBilling,
   adminHealth,
   adminListMcpKeys,
   adminListMembers,
   adminMe,
-  adminCreateInvite,
 } from "@/lib/librebase-admin-client";
 import { McpKeys } from "@/components/McpKeys";
 import { ChangePassword } from "@/components/ChangePassword";
 import { InviteMembers } from "@/components/InviteMembers";
+import { OrgSettings } from "@/components/OrgSettings";
+import { BillingPlans } from "@/components/BillingPlans";
+import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/studio/PageHeader";
 import { resolveStudioOrgId } from "@/lib/org-context";
 
 export const dynamic = "force-dynamic";
@@ -23,36 +27,36 @@ export default async function AdminPage() {
   let meError: string | null = null;
   let members: Awaited<ReturnType<typeof adminListMembers>> = [];
   let mcpKeys: Awaited<ReturnType<typeof adminListMcpKeys>> = [];
+  let billing: Awaited<ReturnType<typeof adminGetBilling>> | null = null;
   if (enabled && healthy) {
     try {
       me = await adminMe();
       members = await adminListMembers(me.activeOrgId || orgId);
       mcpKeys = await adminListMcpKeys(me.activeOrgId || orgId);
+      billing = await adminGetBilling(me.activeOrgId || orgId);
     } catch (e) {
       meError = e instanceof Error ? e.message : "Could not load /org/v1/me";
     }
   }
 
   return (
-    <div className="main" style={{ maxWidth: 720, margin: "2rem auto" }}>
-      <div className="page-header">
-        <div>
-          <h1>Librebase Admin</h1>
-          <p className="muted">
-            Operator panel — org metadata and entitlements (product layer, not lidb).
-          </p>
-        </div>
-        <div style={{ display: "flex", gap: "0.5rem" }}>
-          <Link href="/login" className="btn">
-            Login
-          </Link>
-          <Link href="/setup" className="btn">
-            Setup
-          </Link>
-        </div>
-      </div>
+    <div className="st-settings">
+      <PageHeader
+        title="Admin"
+        description="Operator panel — org metadata and entitlements. Product layer, not lidb."
+        actions={
+          <div className="flex-gap">
+            <Link href="/login" className="btn">
+              Login
+            </Link>
+            <Link href="/setup" className="btn">
+              Setup
+            </Link>
+          </div>
+        }
+      />
 
-      <dl style={{ display: "grid", gap: "0.75rem" }}>
+      <dl className="admin-meta">
         <div>
           <dt className="muted">Admin API</dt>
           <dd>
@@ -68,9 +72,24 @@ export default async function AdminPage() {
         {me && (
           <>
             <div>
+              <dt className="muted">Organization</dt>
+              <dd className="flex-gap">
+                <strong>{me.activeOrgName ?? me.activeOrgId}</strong>
+                <OrgSettings
+                  orgId={me.activeOrgId}
+                  currentName={me.activeOrgName ?? me.activeOrgId}
+                  role={
+                    (me.role === "owner" || me.role === "admin")
+                      ? me.role
+                      : "developer"
+                  }
+                />
+              </dd>
+            </div>
+            <div>
               <dt className="muted">Operator</dt>
               <dd>
-                {me.user.email} · {me.role} · {me.edition}
+                {me.user.email} · {me.role} · <Badge variant="info">{me.edition}</Badge>
               </dd>
             </div>
             <div>
@@ -78,7 +97,9 @@ export default async function AdminPage() {
               <dd>
                 {me.memberships.length === 0
                   ? "—"
-                  : me.memberships.map((m) => `${m.orgId} (${m.role})`).join(", ")}
+                  : me.memberships
+                      .map((m) => `${m.name ?? m.orgId} (${m.role})`)
+                      .join(", ")}
               </dd>
             </div>
           </>
@@ -86,7 +107,7 @@ export default async function AdminPage() {
         {meError && (
           <div>
             <dt className="muted">Session</dt>
-            <dd style={{ color: "var(--warn)" }}>
+            <dd className="auth-error">
               {meError} — <Link href="/login">sign in</Link>
             </dd>
           </div>
@@ -94,25 +115,29 @@ export default async function AdminPage() {
       </dl>
 
       {members.length > 0 && (
-        <section style={{ marginTop: "2rem" }}>
-          <h2 style={{ fontSize: "1.1rem" }}>Members</h2>
-          <ul style={{ listStyle: "none", padding: 0, marginTop: "0.75rem" }}>
+        <section className="admin-section">
+          <h2 className="admin-section-title">Members</h2>
+          <ul className="member-list">
             {members.map((m) => (
-              <li
-                key={m.userId}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  padding: "0.4rem 0",
-                  borderBottom: "1px solid var(--border, #3333)",
-                }}
-              >
+              <li key={m.userId}>
                 <span>{m.email}</span>
-                <span className="muted">{m.role}</span>
+                <Badge variant="info">{m.role}</Badge>
               </li>
             ))}
           </ul>
         </section>
+      )}
+
+      {billing && (
+        <BillingPlans
+          orgId={billing.orgId}
+          plan={billing.plan}
+          edition={billing.edition}
+          stripeConfigured={billing.stripeConfigured}
+          stripeStatus={billing.stripeStatus}
+          instanceCount={billing.instanceCount}
+          instanceLimit={billing.instanceLimit}
+        />
       )}
 
       {me && me.role === "owner" && (
@@ -123,7 +148,7 @@ export default async function AdminPage() {
 
       {me && <ChangePassword />}
 
-      <p style={{ marginTop: "2rem" }}>
+      <p className="mt-4">
         <Link href="/">← Projects</Link>
       </p>
     </div>

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { adminCreateInvite, AdminInvite } from "@/lib/librebase-admin-client";
+import { copyText } from "@/lib/clipboard";
 
 export function InviteMembers({ orgId }: { orgId: string }) {
   const [email, setEmail] = useState("");
@@ -79,10 +80,8 @@ export function InviteMembers({ orgId }: { orgId: string }) {
           <button
             className="btn btn-ghost"
             style={{ fontSize: "0.8rem" }}
-            onClick={() => {
-              navigator.clipboard.writeText(
-                `${window.location.origin}/invite/${sent.token}`,
-              );
+            onClick={async () => {
+              await copyText(`${window.location.origin}/invite/${sent.token}`);
               setSent(null);
               setEmail("");
             }}

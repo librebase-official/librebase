@@ -150,21 +150,21 @@
         justify-content: center;
         align-items: center;
         text-align: center;
-        padding: 120px 24px 60px;
+        padding: 90px 24px 40px;
       }
       .hero-kicker {
-        font-size: clamp(13px, 1.4vw, 16px);
+        font-size: clamp(12px, 1.3vw, 14px);
         font-weight: 600;
         letter-spacing: 0.32em;
         text-transform: uppercase;
         color: var(--signal);
-        margin-bottom: 28px;
+        margin-bottom: 16px;
       }
       .hero-title {
         font-family: "Orbitron", sans-serif;
         font-weight: 700;
-        font-size: clamp(44px, 8.5vw, 108px);
-        line-height: 0.98;
+        font-size: clamp(26px, 4.6vw, 54px);
+        line-height: 1.05;
         letter-spacing: -0.02em;
         color: var(--paper);
         max-width: 1100px;
@@ -172,21 +172,34 @@
       .hero-title .em {
         color: var(--signal);
       }
+      .hero-wordmark {
+        font-family: "Orbitron", sans-serif;
+        font-weight: 700;
+        font-size: clamp(50px, 11vw, 132px);
+        line-height: 0.94;
+        letter-spacing: -0.02em;
+        color: var(--paper);
+        margin-bottom: 6px;
+        filter: drop-shadow(0 0 34px rgba(47, 212, 194, 0.22));
+      }
+      .hero-wordmark .base {
+        color: var(--signal);
+      }
       .hero-sub {
-        margin-top: 30px;
-        font-size: clamp(16px, 2.2vw, 22px);
+        margin-top: 16px;
+        font-size: clamp(15px, 1.9vw, 19px);
         font-weight: 500;
         color: var(--fog);
-        max-width: 640px;
-        line-height: 1.5;
+        max-width: 620px;
+        line-height: 1.45;
       }
       .hero-sub strong {
         color: var(--paper);
       }
       .hero-cta {
-        margin-top: 44px;
+        margin-top: 24px;
         display: flex;
-        gap: 18px;
+        gap: 16px;
         flex-wrap: wrap;
         justify-content: center;
       }
@@ -223,19 +236,19 @@
         transform: translateY(-3px);
       }
       .scroll-hint {
-        margin-top: 60px;
-        font-size: 12px;
+        margin-top: 26px;
+        font-size: 11px;
         letter-spacing: 0.28em;
         text-transform: uppercase;
         color: var(--fog);
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 10px;
+        gap: 8px;
       }
       .scroll-hint .line {
         width: 1px;
-        height: 46px;
+        height: 34px;
         background: linear-gradient(var(--signal), transparent);
         animation: drip 1.8s ease-in-out infinite;
       }
@@ -259,16 +272,16 @@
 
       /* ---------- hero stat (big QPS) ---------- */
       .hero-stat {
-        margin-top: 72px;
+        margin-top: 42px;
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 18px;
+        gap: 12px;
         width: 100%;
         max-width: 720px;
       }
       .hero-stat .label {
-        font-size: 12px;
+        font-size: 11px;
         letter-spacing: 0.26em;
         text-transform: uppercase;
         color: var(--fog);
@@ -276,7 +289,7 @@
       .hero-stat .value {
         font-family: "Orbitron", sans-serif;
         font-weight: 700;
-        font-size: clamp(64px, 12vw, 150px);
+        font-size: clamp(52px, 9vw, 108px);
         line-height: 0.9;
         letter-spacing: -0.03em;
         color: var(--paper);
@@ -450,8 +463,8 @@
       /* ring (cold start) */
       .ring-wrap {
         position: relative;
-        width: 220px;
-        height: 220px;
+        width: 320px;
+        height: 320px;
         margin: 40px auto 0;
       }
       .ring-track {
@@ -476,15 +489,12 @@
       }
       .ring-center .num {
         font-family: "Orbitron", sans-serif;
-        font-size: 44px;
+        font-size: 30px;
         font-weight: 700;
         color: var(--signal);
-      }
-      .ring-center .lab {
-        font-size: 13px;
-        letter-spacing: 0.2em;
-        text-transform: uppercase;
-        color: var(--fog);
+        text-align: center;
+        line-height: 1.2;
+        padding: 0 30px;
       }
 
       /* final CTA */
@@ -554,6 +564,7 @@
       <!-- ============ HERO ============ -->
       <section class="hero">
         <p class="hero-kicker" data-hero="kicker">Benchmark · same machine · same tests</p>
+        <div class="hero-wordmark" data-hero="mark">Libre<span class="base">base</span></div>
         <h1 class="hero-title" data-hero="title">
           Tiny. Fast.<br /><span class="em">Honest.</span>
         </h1>
@@ -647,13 +658,12 @@
         </div>
 
         <div class="ring-wrap" data-reveal>
-          <svg width="220" height="220" viewBox="0 0 220 220" aria-hidden="true">
+          <svg width="320" height="320" viewBox="0 0 220 220" aria-hidden="true">
             <circle class="ring-track" cx="110" cy="110" r="92" />
             <circle class="ring-fill" id="cold-ring" cx="110" cy="110" r="92" transform="rotate(-90 110 110)" />
           </svg>
           <div class="ring-center">
-            <span class="num">265 ms</span>
-            <span class="lab">ready</span>
+            <span class="num">in 265 ms ready</span>
           </div>
         </div>
       </section>
@@ -692,13 +702,18 @@
         .from(".nav", { y: -30, opacity: 0, duration: 0.7 }, 0.1)
         .from('[data-hero="kicker"]', { y: 24, opacity: 0, duration: 0.6 }, 0.3)
         .from(
-          '[data-hero="title"]',
-          { y: 46, opacity: 0, duration: 0.85 },
+          '[data-hero="mark"]',
+          { y: 44, opacity: 0, scale: 0.96, duration: 0.9 },
           0.45,
         )
-        .from('[data-hero="sub"]', { y: 26, opacity: 0, duration: 0.6 }, 0.85)
-        .from('[data-hero="cta"] > *', { y: 20, opacity: 0, duration: 0.5, stagger: 0.1 }, 1.05)
-        .from('[data-hero="stat"]', { y: 34, opacity: 0, duration: 0.7 }, 1.25);
+        .from(
+          '[data-hero="title"]',
+          { y: 46, opacity: 0, duration: 0.85 },
+          0.9,
+        )
+        .from('[data-hero="sub"]', { y: 26, opacity: 0, duration: 0.6 }, 1.25)
+        .from('[data-hero="cta"] > *', { y: 20, opacity: 0, duration: 0.5, stagger: 0.1 }, 1.45)
+        .from('[data-hero="stat"]', { y: 34, opacity: 0, duration: 0.7 }, 1.65);
 
       // count up hero QPS
       const heroQps = { v: 0 };
@@ -706,7 +721,7 @@
         v: 4683,
         duration: 2.2,
         ease: "power2.out",
-        delay: 1.35,
+        delay: 1.75,
         onUpdate: () => (document.getElementById("hero-qps").textContent = fmt(heroQps.v)),
       });
 

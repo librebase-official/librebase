@@ -1,14 +1,16 @@
 services:
   web:
-    build: .
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://app.librebase.xyz}
     container_name: librebase_web_1
     restart: unless-stopped
     ports:
-      - "3005:3005"
+      - "127.0.0.1:3005:3005"
     environment:
       - NODE_ENV=production
       - PORT=3005
-      - NEXT_PUBLIC_SITE_URL=https://app.librebase.xyz
       - LIBREBASE_ADMIN_URL=${LIBREBASE_ADMIN_URL:-http://librebase_admin_1:54330}
       - LIBREBASE_SUPABASE_URL=${LIBREBASE_SUPABASE_URL}
       - LIBREBASE_SUPABASE_SERVICE_ROLE_KEY=${LIBREBASE_SUPABASE_SERVICE_ROLE_KEY}

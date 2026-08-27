@@ -1,22 +1,34 @@
-import Link from "next/link";
+import { redirect } from "next/navigation";
+import { ProjectsDashboard, type ProjectRow } from "@/components/studio/ProjectsDashboard";
+import { listHostsAsync } from "@/lib/hosts-store";
 import { listInstancesAsync } from "@/lib/instances-store";
 import { listProjectsAsync } from "@/lib/projects-store";
 import { resolveStudioOrgId } from "@/lib/org-context";
-import { probeInstanceDb } from "@/lib/project-runtime";
+import { probeInstanceDbSafe } from "@/lib/project-runtime";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProjectsHomePage() {
   const orgId = await resolveStudioOrgId();
-  const projects = await listProjectsAsync(orgId);
-  const instances = await listInstancesAsync(orgId);
+  let projects;
+  let instances;
+  let hosts;
+  try {
+    [projects, instances, hosts] = await Promise.all([
+      listProjectsAsync(orgId),
+      listInstancesAsync(orgId),
+      listHostsAsync(orgId).catch(() => [] as never[]),
+    ]);
+  } catch {
+    redirect("/login");
+  }
   const instanceMap = new Map(instances.map((i) => [i.id, i]));
 
-  const rows = await Promise.all(
+  const rows: ProjectRow[] = await Promise.all(
     projects.map(async (project) => {
       const instance = instanceMap.get(project.instanceId);
       const probe = instance
-        ? await probeInstanceDb(instance)
+        ? await probeInstanceDbSafe(instance)
         : {
             reachable: false,
             status: "unknown" as const,
@@ -27,48 +39,5 @@ export default async function ProjectsHomePage() {
     }),
   );
 
-  return (
-    <>
-      <div className="page-header">
-        <div>
-          <h1>Projects</h1>
-          <p className="muted">Organization workspace — dedicated or shared runtimes</p>
-        </div>
-        <Link href="/projects/new" className="btn btn-primary">
-          New project
-        </Link>
-      </div>
-
-      {rows.length === 0 ? (
-        <div className="empty">
-          <p>No projects yet.</p>
-          <Link href="/projects/new">Create your first project</Link>
-        </div>
-      ) : (
-        <div className="card-grid">
-          {rows.map(({ project, instance, probe }) => (
-            <Link
-              key={project.id}
-              href={`/projects/${project.id}`}
-              className="card"
-              style={{ textDecoration: "none", color: "inherit" }}
-            >
-              <h2>{project.name}</h2>
-              <p className="muted" style={{ margin: "0.25rem 0 0.75rem", fontSize: "0.85rem" }}>
-                {project.region} · {project.deploymentMode}
-              </p>
-              <span className={`badge ${probe.status}`}>
-                {probe.reachable ? "Running" : probe.status}
-              </span>
-              {instance && (
-                <p className="muted" style={{ marginTop: "0.75rem", fontSize: "0.8rem" }}>
-                  Instance: {instance.name}
-                </p>
-              )}
-            </Link>
-          ))}
-        </div>
-      )}
-    </>
-  );
+  return <ProjectsDashboard initialRows={rows} initialHosts={hosts} />;
 }

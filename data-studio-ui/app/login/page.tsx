@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useCallback } from "react";
 
 function GitHubIcon() {
   return (
@@ -35,12 +35,90 @@ function GoogleIcon() {
   );
 }
 
+function GrokIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  );
+}
+
+type GrokStep = "idle" | "showing_code" | "polling" | "success" | "error";
+
 export default function LoginPage() {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  // Grok device code flow state
+  const [grokStep, setGrokStep] = useState<string>("idle");
+  const [grokUserCode, setGrokUserCode] = useState("");
+  const [grokVerificationUri, setGrokVerificationUri] = useState("");
+  const [grokError, setGrokError] = useState<string | null>(null);
+
+  const pollGrok = useCallback(
+    async (deviceCode: string, interval: number) => {
+      setGrokStep("polling");
+      const maxAttempts = 120; // ~10 minutes at 5s intervals
+      for (let i = 0; i < maxAttempts; i++) {
+        await new Promise((r) => setTimeout(r, interval * 1000));
+        try {
+          const res = await fetch(
+            `/api/admin/grok/poll?deviceCode=${encodeURIComponent(deviceCode)}`,
+          );
+          const body = await res.json();
+          if (body.token) {
+            // Success — set session cookies and redirect
+            setGrokStep("success");
+            document.cookie = `lb_session=${body.token}; path=/; max-age=${15 * 60}; SameSite=Lax`;
+            document.cookie = `lb_refresh=${body.refreshToken}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
+            router.push("/projects");
+            router.refresh();
+            return;
+          }
+          if (body.status === "pending") {
+            // Continue polling
+            if (body.slowDown) {
+              interval = Math.min(interval + 2, 15);
+            }
+            continue;
+          }
+          // Error
+          setGrokError(body.error || "Grok login failed");
+          setGrokStep("error");
+          return;
+        } catch {
+          // Network error, keep trying
+          continue;
+        }
+      }
+      setGrokError("Timed out waiting for Grok approval");
+      setGrokStep("error");
+    },
+    [router],
+  );
+
+  async function startGrokLogin() {
+    setGrokError(null);
+    setGrokStep("showing_code");
+    try {
+      const res = await fetch("/api/admin/grok/start");
+      const body = await res.json();
+      if (!res.ok) {
+        setGrokError(body.error || "Failed to start Grok login");
+        setGrokStep("error");
+        return;
+      }
+      setGrokUserCode(body.userCode || "");
+      setGrokVerificationUri(body.verificationUri || "https://accounts.x.ai/oauth2/device");  // user visits this URL to enter the code
+      pollGrok(body.deviceCode, body.interval || 5);
+    } catch {
+      setGrokError("Failed to connect to server");
+      setGrokStep("error");
+    }
+  }
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -64,17 +142,65 @@ export default function LoginPage() {
   return (
     <div className="auth-page">
       <div className="auth-card">
+        <p className="st-wordmark" style={{ border: 0, padding: 0, height: "auto", marginBottom: 16 }}>
+          Libre<em>base</em>
+        </p>
         <h1>Operator login</h1>
-        <p className="muted">Sign in to the Librebase console.</p>
+        <p className="muted">Sign in to the console. Status inside stays honest.</p>
 
-        <div className="auth-oauth">
-          <a className="btn oauth-btn" href="/api/admin/oauth/start?provider=github">
-            <GitHubIcon /> Continue with GitHub
-          </a>
-          <a className="btn oauth-btn" href="/api/admin/oauth/start?provider=google">
-            <GoogleIcon /> Continue with Google
-          </a>
-        </div>
+        {/* Grok device code flow — show code when active */}
+        {grokStep === "showing_code" || grokStep === "polling" ? (
+          <div className="grok-device-flow">
+            <div className="grok-code-box">
+              <p className="grok-label">Sign in with Grok at:</p>
+              <a
+                className="grok-verification-url"
+                href={grokVerificationUri}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {grokVerificationUri}
+              </a>
+              <p className="grok-code-label">Enter this code:</p>
+              <p className="grok-user-code">{grokUserCode}</p>
+              <p className="muted grok-status">
+                {grokStep === "polling"
+                  ? "Waiting for approval…"
+                  : "Open the URL and enter the code"}
+              </p>
+            </div>
+            {grokStep === "polling" && (
+              <button
+                className="btn btn-secondary"
+                type="button"
+                onClick={() => {
+                  setGrokStep("idle");
+                }}
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="auth-oauth">
+            <a className="btn oauth-btn" href="/api/admin/oauth/start?provider=github">
+              <GitHubIcon /> Continue with GitHub
+            </a>
+            <a className="btn oauth-btn" href="/api/admin/oauth/start?provider=google">
+              <GoogleIcon /> Continue with Google
+            </a>
+            <button
+              className="btn oauth-btn grok-btn"
+              type="button"
+              onClick={startGrokLogin}
+              disabled={grokStep === "showing_code" || grokStep === "polling"}
+            >
+              <GrokIcon /> Continue with Grok
+            </button>
+          </div>
+        )}
+
+        {grokError && <p className="auth-error">{grokError}</p>}
 
         <div className="auth-divider">or with email</div>
 

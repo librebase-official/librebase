@@ -1,13 +1,24 @@
 import { NextResponse } from "next/server";
-import { requireEntitlement } from "@/lib/entitlements";
+import { checkEntitlement, EntitlementError, requireEntitlement } from "@/lib/entitlements";
 import { createHostAsync, listHostsAsync } from "@/lib/hosts-store";
 import { resolveStudioOrgId } from "@/lib/org-context";
+import { AdminApiError } from "@/lib/librebase-admin-client";
 import type { CreateHostInput } from "@/lib/types";
 
 export async function GET() {
-  const orgId = await resolveStudioOrgId();
-  const hosts = await listHostsAsync(orgId);
-  return NextResponse.json({ hosts, orgId });
+  try {
+    const orgId = await resolveStudioOrgId();
+    const hosts = await listHostsAsync(orgId);
+    const canCreate = await checkEntitlement("host.create", orgId);
+    return NextResponse.json({ hosts, orgId, canCreate });
+  } catch (error) {
+    if (error instanceof AdminApiError) {
+      return NextResponse.json({ error: error.message, hosts: [] }, { status: error.status });
+    }
+    const msg = error instanceof Error ? error.message : "failed to load hosts";
+    const status = msg.includes("unauthorized") || msg.includes("401") ? 401 : 500;
+    return NextResponse.json({ error: msg, hosts: [] }, { status });
+  }
 }
 
 export async function POST(request: Request) {
@@ -30,6 +41,22 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ host }, { status: 201 });
   } catch (error) {
+    if (error instanceof AdminApiError) {
+      const msg =
+        typeof error.body === "object" && error.body !== null && "error" in error.body
+          ? String((error.body as { error: unknown }).error)
+          : error.message;
+      return NextResponse.json({ error: msg }, { status: error.status });
+    }
+    if (error instanceof EntitlementError) {
+      return NextResponse.json(
+        {
+          error: "Renting a VM requires a paid plan. Open Admin to upgrade.",
+          code: error.featureKey,
+        },
+        { status: 403 },
+      );
+    }
     const message = error instanceof Error ? error.message : "Failed to create host";
     const status = message.includes("entitlement") ? 403 : 500;
     return NextResponse.json({ error: message }, { status });

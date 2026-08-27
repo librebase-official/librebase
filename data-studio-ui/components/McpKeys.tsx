@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { Button, Badge } from "@/components/ui";
+import { copyText } from "@/lib/clipboard";
 import type { McpKey } from "@/lib/librebase-admin-client";
 
 export function McpKeys({ orgId, initial }: { orgId: string; initial: McpKey[] }) {
@@ -45,77 +47,53 @@ export function McpKeys({ orgId, initial }: { orgId: string; initial: McpKey[] }
 
   async function copy() {
     if (!newKey) return;
-    try {
-      await navigator.clipboard.writeText(newKey);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      /* clipboard unavailable */
-    }
+    const ok = await copyText(newKey);
+    setCopied(ok);
+    setTimeout(() => setCopied(false), 2000);
   }
 
   return (
-    <section className="card" style={{ marginTop: "1.5rem" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <h2 style={{ margin: 0 }}>MCP key</h2>
-        <button className="btn" onClick={rotate} disabled={busy}>
+    <section className="card admin-section">
+      <div className="flex-between">
+        <h2 className="admin-section-title">MCP key</h2>
+        <Button variant="secondary" size="sm" onClick={rotate} disabled={busy}>
           {busy ? "Generating…" : "Generate new key"}
-        </button>
+        </Button>
       </div>
-      <p className="muted" style={{ margin: "0.4rem 0 0.75rem", fontSize: "0.88rem" }}>
-        Used by AI tools to access this org. Shown once when generated.
+      <p className="muted text-sm mt-1">
+        Console keys are for CI. Agents should call <code>auth_login</code> so
+        you approve in the browser; the token is stored in the OS keychain and
+        never belongs in a prompt.
       </p>
 
-      {error ? <p style={{ color: "var(--danger)" }}>{error}</p> : null}
+      {error ? <p className="auth-error text-sm">{error}</p> : null}
 
       {newKey ? (
-        <div style={{ display: "grid", gap: "0.5rem" }}>
-          <code
-            style={{
-              wordBreak: "break-all",
-              padding: "0.6rem 0.75rem",
-              background: "var(--bg)",
-              border: "1px solid var(--border)",
-              borderRadius: "var(--radius)",
-              color: "var(--accent)",
-            }}
-          >
-            {newKey}
-          </code>
-          <div>
-            <button className="btn btn-primary" onClick={copy}>
+        <div className="mt-3">
+          <code className="mcp-key-display">{newKey}</code>
+          <div className="mt-2">
+            <Button variant="primary" size="sm" onClick={copy}>
               {copied ? "Copied" : "Copy key"}
-            </button>
+            </Button>
           </div>
         </div>
       ) : null}
 
       {keys.length > 0 ? (
-        <ul style={{ listStyle: "none", padding: 0, margin: "1rem 0 0" }}>
+        <ul className="member-list mt-3">
           {keys.map((k) => (
-            <li
-              key={k.id}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                padding: "0.4rem 0",
-                borderBottom: "1px solid var(--border)",
-                fontSize: "0.85rem",
-              }}
-            >
-              <span className="muted">
+            <li key={k.id}>
+              <span className="muted text-sm">
                 {k.createdAt} · {k.id.slice(-6)}
               </span>
-              <span className={k.revoked ? "badge" : "badge running"}>
+              <Badge variant={k.revoked ? "error" : "running"}>
                 {k.revoked ? "revoked" : "active"}
-              </span>
+              </Badge>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="muted" style={{ margin: "0.5rem 0 0" }}>
-          No keys yet.
-        </p>
+        <p className="muted text-sm mt-2">No keys yet.</p>
       )}
     </section>
   );

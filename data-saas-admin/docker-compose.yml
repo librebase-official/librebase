@@ -1,0 +1,16 @@
+services:
+  saas-admin:
+    build: .
+    container_name: librebase_saas_admin
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:54335:54335"
+    environment:
+      - ADMIN_API_URL=http://librebase_admin_1:54330
+      - LIBREBASE_ADMIN_DASHBOARD_TOKEN=${LIBREBASE_ADMIN_DASHBOARD_TOKEN}
+    networks:
+      - librebase-net
+
+networks:
+  librebase-net:
+    external: true

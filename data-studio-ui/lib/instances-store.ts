@@ -1,8 +1,10 @@
 import fs from "node:fs";
 import { resolveRuntimeTarget } from "./runtime-env";
+import { deleteK8sInstance } from "./k8s-provisioner";
 import {
   adminCreateInstance,
   adminApiEnabled,
+  adminDeleteInstance,
   adminGetInstance,
   adminListInstances,
   adminPatchInstance,
@@ -244,4 +246,24 @@ export async function patchInstanceAsync(
   }
   const resolvedOrg = orgId ?? (await resolveStudioOrgId());
   return adminPatchInstance(resolvedOrg, id, patch);
+}
+
+export async function deleteInstanceAsync(
+  id: string,
+  orgId?: string,
+): Promise<boolean> {
+  if (!adminApiEnabled()) {
+    const instance = getInstance(id);
+    if (!instance) return false;
+    if (instance.runtimeTarget === "kubernetes") {
+      deleteK8sInstance(id);
+    }
+    if (instance.dataDir) {
+      fs.rmSync(instance.dataDir, { recursive: true, force: true });
+    }
+    return deleteInstance(id);
+  }
+  const resolvedOrg = orgId ?? (await resolveStudioOrgId());
+  await adminDeleteInstance(resolvedOrg, id);
+  return true;
 }

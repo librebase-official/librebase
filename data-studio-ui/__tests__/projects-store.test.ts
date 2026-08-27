@@ -9,8 +9,10 @@ import {
   _clearProjectsForTest,
   createProject,
   getProject,
+  linkProjectToInstanceAsync,
   listProjects,
   listProjectsByInstance,
+  updateProject,
 } from "@/lib/projects-store";
 import {
   resetTestStudioDataRoot,
@@ -71,5 +73,41 @@ describe("projects-store", () => {
     expect(() =>
       createProject({ name: "Bad", runtimeChoice: "existing" }),
     ).toThrow(/instanceId is required/);
+  });
+
+  it("links an existing project to a database", async () => {
+    const host = createInstance({ name: "shared-host", deploymentMode: "dedicated" });
+    const second = createInstance({ name: "another-db" });
+    const { project } = createProject({
+      name: "Delta",
+      runtimeChoice: "existing",
+      instanceId: host.id,
+    });
+
+    const relinked = await linkProjectToInstanceAsync(project.id, second.id);
+    expect(relinked.instanceId).toBe(second.id);
+    expect(relinked.deploymentMode).toBe("shared");
+    expect(getProject(project.id)?.instanceId).toBe(second.id);
+    expect(listProjectsByInstance(host.id)).toHaveLength(0);
+    expect(listProjectsByInstance(second.id)).toHaveLength(1);
+  });
+
+  it("rejects linking to an instance from another org", async () => {
+    const { project } = createProject({
+      name: "Epsilon",
+      runtimeChoice: "new",
+    });
+    const foreign = createInstance({ name: "other-org-db", orgId: "other" });
+
+    await expect(
+      linkProjectToInstanceAsync(project.id, foreign.id, "default"),
+    ).rejects.toThrow(/different organization/);
+  });
+
+  it("renames a project", () => {
+    const { project } = createProject({ name: "Old", runtimeChoice: "new" });
+    const updated = updateProject(project.id, { name: "New" });
+    expect(updated.name).toBe("New");
+    expect(getProject(project.id)?.name).toBe("New");
   });
 });

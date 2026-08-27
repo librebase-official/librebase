@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Librebase first-run — scene board</title>
+    <style>
+      :root {
+        --bg: #071014;
+        --surface: #0e1a1c;
+        --border: rgba(231, 242, 236, 0.12);
+        --text: #e7f2ec;
+        --muted: #9bb0aa;
+        --accent: #2fd4c2;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Space Grotesk", system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.45;
+        padding: 1.5rem 1.5rem 3rem;
+        max-width: 880px;
+        margin-inline: auto;
+      }
+      h1 { font-size: 1.35rem; letter-spacing: -0.02em; margin: 0 0 0.25rem; }
+      .meta { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
+      .meta a { color: var(--accent); }
+      .beat {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 1rem 1.15rem;
+        margin-bottom: 0.7rem;
+      }
+      .beat header {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: baseline;
+        margin-bottom: 0.4rem;
+      }
+      .shot { font-variant-numeric: tabular-nums; color: var(--accent); font-size: 0.82rem; letter-spacing: 0.04em; }
+      .kind {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+      .copy { white-space: pre-line; }
+      .vo { color: var(--muted); font-size: 0.92rem; margin-top: 0.45rem; }
+      .vo strong { color: var(--text); font-weight: 500; }
+      code { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.82em; color: var(--accent); }
+    </style>
+  </head>
+  <body>
+    <h1>First-run film — v1 scene board</h1>
+    <p class="meta">
+      43.2s · silent Ken Burns cut ·
+      <a href="./librebase-first-run-video-script.md">full script</a>
+      · improve VO and live screencasts from the backlog in that file
+    </p>
+
+    <article class="beat">
+      <header><span class="shot">01 · 0:00–0:04</span><span class="kind">Cine</span></header>
+      <div class="copy">Teal spark in a dark rack hall. No type.</div>
+      <p class="vo"><strong>VO v2:</strong> silence, or a single low tone.</p>
+    </article>
+    <article class="beat">
+      <header><span class="shot">02 · 0:04–0:07.6</span><span class="kind">Card</span></header>
+      <div class="copy">NO HUSTLE
+Sign up. Start a project. Link your agents.
+Two minutes from first login to an agent that can see your project.</div>
+      <p class="vo"><strong>VO v2:</strong> “Sign up. Start a project. Link your agents.”</p>
+    </article>
+    <article class="beat">
+      <header><span class="shot">03 · 0:07.6–0:10.8</span><span class="kind">Cine</span></header>
+      <div class="copy">Night desk. Laptop glow. No type.</div>
+    </article>
+    <article class="beat">
+      <header><span class="shot">04 · 0:10.8–0:15.0</span><span class="kind">UI · live /login</span></header>
+      <div class="copy">Librebase · Sign in · GitHub / Google / email.</div>
+      <p class="vo"><strong>VO v2:</strong> “GitHub, Google, or email. You’re in.”</p>
+    </article>
+    <article class="beat">
+      <header><span class="shot">05 · 0:15.0–0:17.6</span><span class="kind">Card</span></header>
+      <div class="copy">01 — SIGN IN
+You’re in.
+GitHub, Google, or email. No operator console. No waitlist dead-end.</div>
+    </article>
+    <article class="beat">
+      <header><span class="shot">06 · 0:17.6–0:20.2</span><span class="kind">Card</span></header>
+      <div class="copy">02 — PROJECT
+Name it. That’s the form.
+We provision in the background. You do not pick a VM, a region, or a cluster.</div>
+      <p class="vo"><strong>VO v2:</strong> “Name the project. That’s the form.”</p>
+    </article>
+    <article class="beat">
+      <header><span class="shot">07 · 0:20.2–0:24.2</span><span class="kind">UI · mock</span></header>
+      <div class="copy">New project. Name <code>north-star</code>. Create project.
+v2: replace with a live typing screencast.</div>
+    </article>
+    <article class="beat">
+      <header><span class="shot">08 · 0:24.2–0:27.4</span><span class="kind">Cine</span></header>
+      <div class="copy">Teal fiber of light through glass. No type.</div>
+    </article>
+    <article class="beat">
+      <header><span class="shot">09 · 0:27.4–0:30.6</span><span class="kind">Card</span></header>
+      <div class="copy">03 — AGENTS
+Paste a snippet. Ask “what’s in my project?”
+Cursor, Claude, Grok — remote MCP URL, key already filled.</div>
+      <p class="vo"><strong>VO v2:</strong> “Paste the snippet into Cursor, Claude, or Grok.”</p>
+    </article>
+    <article class="beat">
+      <header><span class="shot">10 · 0:30.6–0:35.6</span><span class="kind">UI · mock</span></header>
+      <div class="copy">Connect an agent. Cursor JSON against <code>https://app.librebase.xyz/mcp</code>.
+Hold ≥5s. v2: live copy + agent reply “what’s in north-star?”</div>
+      <p class="vo"><strong>VO v2:</strong> “Then ask: what’s in my project?”</p>
+    </article>
+    <article class="beat">
+      <header><span class="shot">11 · 0:35.6–0:39.0</span><span class="kind">Cine</span></header>
+      <div class="copy">Agent orbs falling into a core. No type.</div>
+    </article>
+    <article class="beat">
+      <header><span class="shot">12 · 0:39.0–0:43.2</span><span class="kind">Card</span></header>
+      <div class="copy">Librebase
+The database your agents already know.
+app.librebase.xyz</div>
+      <p class="vo"><strong>VO v2:</strong> “Librebase. The database your agents already know.”</p>
+    </article>
+  </body>
+</html>

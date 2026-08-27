@@ -236,6 +236,44 @@ def cmd_ensure(data_dir: str, api_port: int, postgres_port: int) -> dict[str, An
     return after
 
 
+def cmd_stop(data_dir: str, api_port: int, postgres_port: int) -> dict[str, Any]:
+    """Best-effort stop of the local listener. Honest if we cannot kill it."""
+    import signal
+
+    killed: list[int] = []
+    if sys.platform != "win32":
+        try:
+            listed = subprocess.run(
+                ["lsof", "-ti", f"TCP:{api_port}", f"TCP:{postgres_port}", "-sTCP:LISTEN"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            for raw in (listed.stdout or "").split():
+                try:
+                    pid = int(raw)
+                except ValueError:
+                    continue
+                try:
+                    os.kill(pid, signal.SIGTERM)
+                    killed.append(pid)
+                except OSError:
+                    continue
+        except FileNotFoundError:
+            killed = []
+
+    time.sleep(0.2)
+    after = cmd_status(data_dir, api_port, postgres_port)
+    after["stopped_pids"] = killed
+    if after["status"] != "running":
+        after["message"] = "Runtime stopped" if killed else "Runtime was not listening"
+        after["status"] = "stopped"
+        return after
+    after["degraded"] = True
+    after["message"] = "Asked the process to stop; ports are still open"
+    return after
+
+
 def cmd_migrate(data_dir: str, api_port: int, postgres_port: int) -> dict[str, Any]:
     status = cmd_status(data_dir, api_port, postgres_port)
     if status["status"] != "running":
@@ -265,6 +303,7 @@ def _exit_code(payload: dict[str, Any], command: str) -> int:
 COMMANDS = {
     "status": cmd_status,
     "ensure": cmd_ensure,
+    "stop": cmd_stop,
     "migrate": cmd_migrate,
 }
 

@@ -29,6 +29,7 @@ MCP key generated in the console (`/admin`); it scopes every call to one org.
 
 - `org_whoami` — resolve the key's org
 - `project_list` / `project_create`
+- `auth_provider_list` / `auth_provider_upsert` — OAuth sign-in (github/google) per project; client secret is KMS-sealed, never returned
 - `instance_list` / `instance_get` / `instance_create` / `instance_launch` / `instance_stop`
 - `member_list` / `member_invite` / `member_update_role`
 - `host_list` / `host_create`

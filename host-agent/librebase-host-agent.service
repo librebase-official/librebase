@@ -1,0 +1,16 @@
+# Librebase host agent — systemd unit installed in the golden Hetzner image.
+# cloud-init enables it; it reads /etc/librebase/host-agent.env at start.
+[Unit]
+Description=Librebase host agent (instance supervisor on rented VMs)
+After=network-online.target podman.service
+Wants=network-online.target podman.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/librebase/host-agent.env
+ExecStart=/usr/local/bin/host-agent
+Restart=always
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

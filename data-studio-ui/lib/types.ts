@@ -11,7 +11,7 @@ export type InstanceStatus =
   | "error"
   | "unknown";
 
-export type HostStatus = "stopped" | "starting" | "running" | "error";
+export type HostStatus = "stopped" | "provisioning" | "starting" | "running" | "error";
 
 export interface InstancePorts {
   api: number;
@@ -29,6 +29,12 @@ export interface Host {
   /** Committed memory (MB) across placed instances. */
   memUsedMb: number;
   status: HostStatus;
+  /** Hetzner server id (when provider is hetzner), else null. */
+  serverId?: number | null;
+  /** Public IPv4 of the rented VM (once booted). */
+  ip?: string | null;
+  /** Hetzner base snapshot/image id used for this host. */
+  imageId?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -66,7 +72,7 @@ export interface Project {
   updatedAt: string;
 }
 
-export type RuntimeChoice = "new" | "existing";
+export type RuntimeChoice = "new" | "existing" | "vm";
 
 export interface CreateProjectInput {
   name: string;
@@ -76,6 +82,10 @@ export interface CreateProjectInput {
   instanceId?: string;
   /** Override LIBREBASE_RUNTIME for this project/instance. */
   runtime?: RuntimeTarget;
+  /** Host VM to place the new dedicated instance on. */
+  hostId?: string;
+  /** Memory limit (MB) reserved on the host. */
+  memLimitMb?: number;
 }
 
 export interface CreateInstanceInput {

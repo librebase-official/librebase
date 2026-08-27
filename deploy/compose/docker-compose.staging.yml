@@ -1,0 +1,94 @@
+version: "3.9"
+
+services:
+  staging-admin:
+    build: .
+    container_name: librebase_staging_admin
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:54331:54330"
+    environment:
+      LIBREBASE_ADMIN_BIND: 0.0.0.0
+      LIBREBASE_ADMIN_PORT: 54330
+      # Staging uses Postgres backend (new Supabase/Postgres instance)
+      LIBREBASE_DB_DSN: postgresql://postgres:s3cr3t_staging_db@supabase-staging-db:5432/postgres
+      LIBREBASE_ADMIN_JWT_SECRET: st4g1ng_JWT_s3cr3t_d0_n0t_us3_1n_pr0d
+      LIBREBASE_CONSOLE_URL: https://stage.librebase.xyz
+      LIBREBASE_KMS_URL: http://librebase-kms-staging:54340
+      LIBREBASE_KMS_SERVICE_ROLE: st4g1ng_KMS_s3cr3t_d0_n0t_us3_1n_pr0d
+      LIBREBASE_HETZNER_SSH_KEY_ID: ""
+      LIBREBASE_HETZNER_IMAGE_ID: ""
+      LIBREBASE_HETZNER_SERVER_TYPE: cx23
+    env_file:
+      - .env.hetzner
+    volumes:
+      - librebase-staging-admin-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:54330/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    networks:
+      - librebase-net
+
+  staging-kms:
+    build:
+      context: ..
+      dockerfile: kms/Dockerfile
+    container_name: librebase-staging-kms
+    restart: unless-stopped
+    environment:
+      LIBREBASE_KMS_BIND: 0.0.0.0
+      LIBREBASE_KMS_PORT: 54340
+      LIBREBASE_KMS_DB_PATH: /data/kms.db
+      LIBREBASE_KMS_SERVICE_ROLE: st4g1ng_KMS_s3cr3t_d0_n0t_us3_1n_pr0d
+    volumes:
+      - librebase-staging-kms-data:/data
+    networks:
+      - librebase-net
+
+  staging-db:
+    image: docker.io/postgres:16-alpine
+    container_name: supabase-staging-db
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:54331:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: s3cr3t_staging_db
+      POSTGRES_DB: postgres
+    volumes:
+      - librebase-staging-db-data:/var/lib/postgresql/data
+    networks:
+      - librebase-net
+
+  staging-web:
+    build:
+      context: ../../data-studio-ui
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_SITE_URL: https://stage.librebase.xyz
+    container_name: librebase_staging_web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3007:3005"
+    environment:
+      NODE_ENV: production
+      PORT: 3005
+      LIBREBASE_ADMIN_URL: http://staging-admin:54330
+      LIBREBASE_SUPABASE_URL: https://supabase.majico.xyz
+      LIBREBASE_SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UiLCJpYXQiOjE3ODQzMTY3NywiZXhwIjoyMjk5NjcwNzcifQ.AS78o7C3KFtmRzggbQssCMVBsD5qW77E3_Y2hZRZr2M
+    depends_on:
+      staging-admin:
+        condition: service_healthy
+    networks:
+      - librebase-net
+
+networks:
+  librebase-net:
+    external: true
+
+volumes:
+  librebase-staging-admin-data:
+  librebase-staging-kms-data:
+  librebase-staging-db-data:

@@ -38,6 +38,6 @@ npx hyperframes snapshot . --at 2.0,8.0,14.0,20.0,25.5 --output ../renders
 - **Footprint:** Open stack ~1.85 GB / 12 containers vs Librebase ~2 MB / 1 container; cold start 265 ms.
 - **Vector:** 4,683 QPS @ 100% recall — 9.4× the open stack at equal accuracy.
 - **Board:** Auth, storage, ingest, lookup — Librebase wins each row.
-- **Outro:** Drop-in for open-stack clients · librebase.xyz · Measured, not marketed.
+- **Outro:** Start now · librebase.xyz · Measured, not marketed.
 
 Numbers from `benchmarks/full-stack/results/vector-fresh-2026-08-13.json` and full-palette results.

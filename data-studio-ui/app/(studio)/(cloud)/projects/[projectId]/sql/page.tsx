@@ -1,6 +1,8 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { getProjectAsync } from "@/lib/projects-store";
+import { PageHeader } from "@/components/studio/PageHeader";
+import { PauseGate } from "@/components/studio/PauseGate";
+import { ProjectShell } from "../_components/project-shell";
+import { SqlEditor } from "./sql-editor";
+import { requireProjectPage } from "@/lib/projects-store";
 
 interface PageProps {
   params: Promise<{ projectId: string }>;
@@ -8,29 +10,17 @@ interface PageProps {
 
 export default async function ProjectSqlPage({ params }: PageProps) {
   const { projectId } = await params;
-  const project = await getProjectAsync(projectId);
-  if (!project) notFound();
+  const project = await requireProjectPage(projectId);
 
   return (
-    <>
-      <div className="page-header">
-        <h1>{project.name} — SQL</h1>
-      </div>
-      <nav className="tabs">
-        <Link href={`/projects/${projectId}`} className="tab">
-          Home
-        </Link>
-        <Link href={`/projects/${projectId}/database`} className="tab">
-          Database
-        </Link>
-        <Link href={`/projects/${projectId}/sql`} className="tab active">
-          SQL
-        </Link>
-        <Link href={`/projects/${projectId}/settings`} className="tab">
-          Settings
-        </Link>
-      </nav>
-      <div className="empty">SQL editor — coming soon.</div>
-    </>
+    <ProjectShell projectId={projectId} projectName={project.name} active="sql">
+      <PageHeader
+        title="SQL editor"
+        description="Postgres-compatible SQL against this project's runtime. Failures stay visible."
+      />
+      <PauseGate projectId={projectId} projectName={project.name}>
+        <SqlEditor projectId={projectId} />
+      </PauseGate>
+    </ProjectShell>
   );
 }

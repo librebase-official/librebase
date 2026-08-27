@@ -1,10 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import type { Instance, RuntimeTarget } from "@/lib/types";
+import { Button, FormField, Input, Select, Alert } from "@/components/ui";
+import { HostSelector } from "@/components/HostSelector";
+import { PageHeader } from "@/components/studio/PageHeader";
+import type { Host, Instance } from "@/lib/types";
 
-type RuntimeChoice = "new" | "existing";
+type RuntimeChoice = "new" | "existing" | "vm";
 
 export default function NewProjectPage() {
   const router = useRouter();
@@ -13,21 +17,38 @@ export default function NewProjectPage() {
   const [runtimeChoice, setRuntimeChoice] = useState<RuntimeChoice>("new");
   const [instanceId, setInstanceId] = useState("");
   const [instances, setInstances] = useState<Instance[]>([]);
-  const [defaultRuntime, setDefaultRuntime] = useState<RuntimeTarget>("local");
-  const [deployToK8s, setDeployToK8s] = useState(false);
+  const [hosts, setHosts] = useState<Host[]>([]);
+  const [vmDialogOpen, setVmDialogOpen] = useState(false);
+  const [selectedHostId, setSelectedHostId] = useState<string | null>(null);
+  const [selectedMemLimit, setSelectedMemLimit] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     fetch("/api/instances")
       .then((r) => r.json())
-      .then((data: { instances?: Instance[]; defaultRuntime?: RuntimeTarget }) => {
+      .then((data: { instances?: Instance[] }) => {
         setInstances(data.instances ?? []);
-        setDefaultRuntime(data.defaultRuntime ?? "local");
-        setDeployToK8s(data.defaultRuntime === "kubernetes");
       })
       .catch(() => setInstances([]));
   }, []);
+
+  useEffect(() => {
+    fetch("/api/hosts")
+      .then((r) => r.json())
+      .then((data: { hosts?: Host[] }) => {
+        setHosts(
+          (data.hosts ?? []).filter(
+            (h) => h.status === "running" && h.ip && h.provider === "hetzner",
+          ),
+        );
+      })
+      .catch(() => setHosts([]));
+  }, []);
+
+  function pickVms() {
+    setVmDialogOpen(true);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -43,15 +64,20 @@ export default function NewProjectPage() {
           region,
           runtimeChoice,
           instanceId: runtimeChoice === "existing" ? instanceId : undefined,
-          runtime: deployToK8s ? "kubernetes" : "local",
+          runtime: "local",
+          hostId: runtimeChoice === "vm" ? selectedHostId : undefined,
+          memLimitMb: runtimeChoice === "vm" ? selectedMemLimit : undefined,
         }),
       });
-      const data = (await res.json()) as { project?: { id: string }; error?: string };
+      const data = (await res.json()) as {
+        project?: { id: string };
+        error?: string;
+      };
       if (!res.ok) {
         setError(data.error ?? "Failed to create project");
         return;
       }
-      router.push(`/projects/${data.project!.id}`);
+      router.push(`/projects/${data.project!.id}?onboarded=1`);
       router.refresh();
     } catch {
       setError("Request failed");
@@ -60,40 +86,59 @@ export default function NewProjectPage() {
     }
   }
 
+  const canSubmit =
+    name.trim().length > 0 &&
+    !(runtimeChoice === "existing" && !instanceId) &&
+    !(runtimeChoice === "vm" && !selectedHostId);
+
   return (
     <>
-      <div className="page-header">
-        <div>
-          <h1>New project</h1>
-          <p className="muted">Provision a dedicated runtime or attach to an existing instance</p>
-        </div>
-      </div>
+      <PageHeader
+        title="New project"
+        description="Provision a dedicated runtime or attach to an existing instance."
+      />
 
       <form className="form" onSubmit={handleSubmit}>
-        <div className="field">
-          <label htmlFor="name">Project name</label>
-          <input
+        <FormField label="Project name" htmlFor="name">
+          <Input
             id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="My app"
             required
+            disabled={submitting}
           />
-        </div>
+        </FormField>
 
-        <div className="field">
-          <label htmlFor="region">Region</label>
-          <select id="region" value={region} onChange={(e) => setRegion(e.target.value)}>
+        <FormField label="Region" htmlFor="region">
+          <Select
+            id="region"
+            value={region}
+            onChange={(e) => setRegion(e.target.value)}
+            disabled={submitting}
+          >
             <option value="local">Local</option>
             <option value="us-east-1">US East</option>
             <option value="eu-west-1">EU West</option>
-          </select>
-        </div>
+          </Select>
+        </FormField>
 
-        <fieldset className="field" style={{ border: "none", padding: 0, margin: 0 }}>
-          <legend style={{ fontSize: "0.85rem", color: "var(--muted)", marginBottom: "0.5rem" }}>
+        <fieldset
+          className="field"
+          style={{ border: "none", padding: 0, margin: 0 }}
+        >
+          <legend
+            style={{ fontSize: "0.85rem", color: "var(--muted)", marginBottom: "0.5rem" }}
+          >
             Runtime
           </legend>
+          <p
+            className="muted"
+            style={{ margin: "0 0 0.5rem", fontSize: "0.82rem" }}
+          >
+            Default: a dedicated local runtime (no VM needed). Rent a Hetzner VM or
+            link an existing database only if you want to.
+          </p>
           <div className="radio-group">
             <label
               className={`radio-option${runtimeChoice === "new" ? " selected" : ""}`}
@@ -107,9 +152,55 @@ export default function NewProjectPage() {
               />
               <div>
                 <strong>New instance</strong>
-                <p className="muted" style={{ margin: "0.25rem 0 0", fontSize: "0.85rem" }}>
-                  Dedicated 1:1 — new data dir and port block (Supabase-like default)
+                <p
+                  className="muted"
+                  style={{ margin: "0.25rem 0 0", fontSize: "0.85rem" }}
+                >
+                  Dedicated 1:1 — new data dir and port block
                 </p>
+              </div>
+            </label>
+
+            <label
+              className={`radio-option${runtimeChoice === "vm" ? " selected" : ""}`}
+            >
+              <input
+                type="radio"
+                name="runtime"
+                value="vm"
+                checked={runtimeChoice === "vm"}
+                onChange={() => setRuntimeChoice("vm")}
+              />
+              <div style={{ flex: 1 }}>
+                <strong>Provision on a VM</strong>
+                <p
+                  className="muted"
+                  style={{ margin: "0.25rem 0 0.5rem", fontSize: "0.85rem" }}
+                >
+                  Dedicated instance placed on a rented VM (Hetzner)
+                </p>
+                {runtimeChoice === "vm" && (
+                  <div style={{ marginTop: "0.5rem" }}>
+                    <Button
+                      type="button"
+                      variant={selectedHostId ? "primary" : "secondary"}
+                      size="sm"
+                      onClick={pickVms}
+                    >
+                      {selectedHostId
+                        ? `${hosts.find((h) => h.id === selectedHostId)?.name ?? "VM selected"}`
+                        : "Select a VM…"}
+                    </Button>
+                    {selectedHostId && (
+                      <p
+                        className="muted"
+                        style={{ marginTop: "0.25rem", fontSize: "0.82rem" }}
+                      >
+                        {selectedMemLimit} MB reserved
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </label>
 
@@ -124,52 +215,62 @@ export default function NewProjectPage() {
                 onChange={() => setRuntimeChoice("existing")}
               />
               <div style={{ flex: 1 }}>
-                <strong>Add to existing instance</strong>
-                <p className="muted" style={{ margin: "0.25rem 0 0.5rem", fontSize: "0.85rem" }}>
-                  Shared runtime — multiple projects on one lidb embed
+                <strong>Link to existing database</strong>
+                <p
+                  className="muted"
+                  style={{ margin: "0.25rem 0 0.5rem", fontSize: "0.85rem" }}
+                >
+                  Shared runtime — multiple projects on one database
                 </p>
                 {runtimeChoice === "existing" && (
-                  <select
-                    value={instanceId}
-                    onChange={(e) => setInstanceId(e.target.value)}
-                    required
-                  >
-                    <option value="">Select instance…</option>
-                    {instances.map((inst) => (
-                      <option key={inst.id} value={inst.id}>
-                        {inst.name} ({inst.status})
-                      </option>
-                    ))}
-                  </select>
+                  <>
+                    {instances.length === 0 ? (
+                      <p className="muted" style={{ fontSize: "0.85rem" }}>
+                        No databases yet.{" "}
+                        <Link href="/instances/new">Create a database</Link> first.
+                      </p>
+                    ) : (
+                      <Select
+                        value={instanceId}
+                        onChange={(e) => setInstanceId(e.target.value)}
+                        required
+                      >
+                        <option value="">Select a database…</option>
+                        {instances.map((inst) => (
+                          <option key={inst.id} value={inst.id}>
+                            {inst.name} ({inst.status})
+                          </option>
+                        ))}
+                      </Select>
+                    )}
+                  </>
                 )}
               </div>
             </label>
           </div>
         </fieldset>
 
-        <div className="field">
-          <label className="radio-option" style={{ display: "flex", gap: "0.5rem" }}>
-            <input
-              type="checkbox"
-              checked={deployToK8s}
-              onChange={(e) => setDeployToK8s(e.target.checked)}
-            />
-            <div>
-              <strong>Deploy to Kubernetes</strong>
-              <p className="muted" style={{ margin: "0.25rem 0 0", fontSize: "0.85rem" }}>
-                Provision instance manifests on the configured cluster (requires KUBECONFIG). Studio
-                default runtime: {defaultRuntime}.
-              </p>
-            </div>
-          </label>
-        </div>
+        {error && <Alert variant="error">{error}</Alert>}
 
-        {error && <div className="alert warn">{error}</div>}
-
-        <button type="submit" className="btn btn-primary" disabled={submitting}>
+        <Button
+          type="submit"
+          variant="primary"
+          disabled={submitting || !canSubmit}
+        >
           {submitting ? "Creating…" : "Create project"}
-        </button>
+        </Button>
       </form>
+
+      <HostSelector
+        open={vmDialogOpen}
+        onClose={() => setVmDialogOpen(false)}
+        onSelect={(info) => {
+          setSelectedHostId(info.hostId);
+          setSelectedMemLimit(info.memLimitMb);
+        }}
+        selectedHostId={selectedHostId ?? undefined}
+        selectedMemLimitMb={selectedMemLimit ?? undefined}
+      />
     </>
   );
 }
