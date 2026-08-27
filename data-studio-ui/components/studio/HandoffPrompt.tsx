@@ -42,7 +42,7 @@ export function HandoffPrompt({
   lines.push(`- Console API base: ${consoleUrl.replace(/\/$/, "")}/api`);
   lines.push(``);
   lines.push(`## Agent auth`);
-  lines.push(`Use the Librebase MCP. Call \`auth_status\`; if it is not authenticated, call \`auth_login\`.`);
+  lines.push(`Use the Librebase MCP. Call \`auth_start\`, have the user approve in the browser, then call \`auth_poll\`.`);
   lines.push(`That opens the user's browser so they can sign in and approve this agent.`);
   lines.push(`The credential is stored in the OS keychain. Never ask the user to paste an MCP key, and never put a key in this prompt or in chat.`);
   lines.push(``);

@@ -12,10 +12,15 @@ def test_hosted_mcp_auth_tools_are_publicly_documented_and_reachable():
     route = read("data-studio-ui/app/api/mcp/route.ts")
     docs = read("data-studio-ui/app/for-agents/page.tsx")
     llms = read("data-studio-ui/app/llms.txt/route.ts")
+    handoff = read("data-studio-ui/components/studio/HandoffPrompt.tsx")
+    key_ui = read("data-studio-ui/components/McpKeys.tsx")
     assert 'name: "auth_start"' in route
     assert 'name: "auth_poll"' in route
     assert 'Call <Code>auth_start</Code>' in docs
     assert "auth_start" in llms and "auth_poll" in llms
+    assert "auth_status" not in handoff and "auth_login" not in handoff
+    assert "auth_start" in handoff and "auth_poll" in handoff
+    assert "auth_login" not in key_ui
 
 
 def test_auth_start_is_not_blocked_by_bearer_guard():
@@ -38,5 +43,5 @@ def test_mcp_metadata_uses_repository_version_and_matches_tool_count():
     route = read("data-studio-ui/app/api/mcp/route.ts")
     version = (ROOT / "VERSION").read_text().strip()
     assert f'version: "{version}"' not in route
-    assert "appVersion()" in route
+    assert "APP_VERSION = process.env.LIBREBASE_VERSION" in route
     assert "toolCount: TOOLS.length" in route

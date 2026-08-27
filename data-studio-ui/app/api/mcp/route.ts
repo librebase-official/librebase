@@ -1,24 +1,13 @@
 /**
  * Hosted MCP endpoint — Streamable HTTP transport.
  *
- * Agents POST JSON-RPC messages here (with an MCP key in Authorization)
- * instead of running `python3 -m librebase_mcp` locally.
- *
- * Auth: Authorization: Bearer lb_mcp_... or lb_agt_... (org-scoped).
- * The key is validated against the admin-api; the org is resolved once.
+ * Agents POST JSON-RPC messages here. Device-flow auth_start/auth_poll are
+ * public; all resource and administration tools require an org-scoped MCP key.
  */
 import { NextResponse } from "next/server";
 import { adminApiEnabled, adminBaseUrl } from "@/lib/librebase-admin-client";
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 
-async function appVersion(): Promise<string> {
-  try {
-    return (await readFile(join(process.cwd(), "VERSION"), "utf8")).trim();
-  } catch {
-    return process.env.LIBREBASE_VERSION ?? "0.0.0";
-  }
-}
+const APP_VERSION = process.env.LIBREBASE_VERSION ?? "0.0.0";
 
 /* ------------------------------------------------------------------ */
 /* Tool definitions (mirrors mcp/librebase_mcp/__main__.py)           */
@@ -492,7 +481,7 @@ async function handleJsonRpc(
     return jsonRpc(id, {
       protocolVersion: "2024-11-05",
       capabilities: { tools: {} },
-      serverInfo: { name: "librebase", version: await appVersion() },
+      serverInfo: { name: "librebase", version: APP_VERSION },
     });
   }
   if (method === "notifications/initialized") return null;
@@ -705,7 +694,7 @@ export async function GET() {
   }
   return NextResponse.json({
     name: "Librebase MCP",
-    version: await appVersion(),
+    version: APP_VERSION,
     protocol: "2024-11-05",
     capabilities: { tools: {} },
     toolCount: TOOLS.length,

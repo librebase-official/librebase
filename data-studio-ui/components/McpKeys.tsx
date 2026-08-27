@@ -61,8 +61,8 @@ export function McpKeys({ orgId, initial }: { orgId: string; initial: McpKey[] }
         </Button>
       </div>
       <p className="muted text-sm mt-1">
-        Console keys are for CI. Agents should call <code>auth_login</code> so
-        you approve in the browser; the token is stored in the OS keychain and
+        Console keys are for CI. Agents should call <code>auth_start</code>, approve
+        in the browser, then call <code>auth_poll</code>; the token is stored in the OS keychain and
         never belongs in a prompt.
       </p>
 
