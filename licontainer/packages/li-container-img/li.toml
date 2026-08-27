@@ -1,6 +1,6 @@
 [package]
 name = "li-container-img"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2026"
 license = "GPL-3.0-or-later"
 description = "liimg — OCI image pull and store (Li)"
