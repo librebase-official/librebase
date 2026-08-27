@@ -7,18 +7,37 @@ function llmsBody(): string {
   const base = SITE_URL;
   return `# Librebase
 
-> Open-source Postgres app platform. AI agents manage projects, instances, auth, and secrets through a local MCP server — the user authenticates once in their browser (no API keys pasted).
+> Open-source Postgres app platform. AI agents manage projects, instances, auth, and secrets through MCP — the user authenticates once in their browser (no API keys pasted).
 
 ## For AI agents
 Librebase ships an MCP (Model Context Protocol) server. Add it to your agent, then call \`auth_login\`: the user's browser opens for a one-click **Approve**. The resulting token is stored in the OS keychain and is **never shown to the model**.
 
 - Full setup (human + agent readable): ${base}/for-agents
 - Console origin: ${base}
-- Public admin ingress (the MCP talks to this): ${base}/api/admin-proxy
+- Hosted MCP endpoint (no install needed): ${base}/api/mcp
+- Auto-discovery: ${base}/.well-known/mcp.json
+- Public admin ingress (local MCP talks to this): ${base}/api/admin-proxy
 - Agent approval page: ${base}/mcp/authorize
 
-## MCP server config
-Add to your agent's MCP config. The server is the \`mcp/\` directory of the Librebase repo (run it from there).
+## Hosted MCP (recommended — no install)
+Point your agent at the hosted endpoint. Just add your MCP key:
+
+\`\`\`json
+{
+  "mcpServers": {
+    "librebase": {
+      "type": "mcp",
+      "url": "${base}/api/mcp",
+      "headers": {
+        "Authorization": "Bearer <your-mcp-key>"
+      }
+    }
+  }
+}
+\`\`\`
+
+## Local MCP (alternative — no network dependency)
+The server is also available as a Python package. Add to your agent's MCP config:
 
 \`\`\`json
 {
@@ -42,13 +61,11 @@ Add to your agent's MCP config. The server is the \`mcp/\` directory of the Libr
    user-bound token in the keychain; it is never returned to the model.
 
 ## Tools
-- \`auth_status\` / \`auth_login\` / \`auth_logout\` — browser login + keychain
-- \`org_whoami\`, \`project_list\`, \`project_create\`, \`project_delete\`
-- \`key_list\` / \`key_create\` / \`key_get\` — secrets; the value is redacted from the model and stored locally
-- \`auth_provider_list\` / \`auth_provider_upsert\` — OAuth (github/google); client secret is KMS-sealed, never returned
-- \`migration_apply\` / \`migration_list\` / \`sql_execute\` / \`table_list\`
+- \`org_whoami\`, \`project_list\`, \`project_create\`
+- \`auth_provider_list\` / \`auth_provider_upsert\` — OAuth (github/google/grok); client secret is KMS-sealed, never returned
 - \`instance_list\` / \`instance_create\` / \`instance_launch\` / \`instance_stop\`
 - \`member_list\` / \`member_invite\` / \`member_update_role\`
+- \`host_list\` / \`host_create\`
 
 ## Security
 - Secrets are sealed in the KMS. \`key_get\` hands the value to the process only and redacts it in model output.

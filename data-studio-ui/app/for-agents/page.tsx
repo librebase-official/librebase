@@ -67,10 +67,44 @@ export default function ForAgentsPage() {
           secrets stay sealed in the KMS.
         </p>
 
-        <Section title="1. Add the MCP server">
+        <Section title="1. Connect via hosted MCP (no install)">
           <p>
-            The MCP server is the <Code>mcp/</Code> directory of the Librebase
-            repo. Add it to your agent&apos;s MCP config:
+            Point your agent at <Code>{SITE_URL}/api/mcp</Code> — no local
+            repo needed. Just add your MCP key as a Bearer token:
+          </p>
+          <pre
+            style={{
+              background: "#11141b",
+              border: "1px solid #232838",
+              borderRadius: 10,
+              padding: 14,
+              overflowX: "auto",
+              fontSize: 13,
+              lineHeight: 1.5,
+            }}
+          >
+            <code>{`# In your agent's MCP config:
+{
+  "mcpServers": {
+    "librebase": {
+      "type": "mcp",
+      "url": "${SITE_URL}/api/mcp",
+      "headers": {
+        "Authorization": "Bearer <your-mcp-key>"
+      }
+    }
+  }
+}`}</code>
+          </pre>
+          <p style={{ color: "#6b7484", fontSize: 13 }}>
+            Or use auto-discovery:{' '}
+            <Code>GET /.well-known/mcp.json</Code> returns the full config.
+          </p>
+        </Section>
+
+        <Section title="1b. Or run locally (no network dependency)">
+          <p>
+            Clone the repo and run the MCP server locally:
           </p>
           <pre
             style={{
