@@ -1,6 +1,6 @@
 [package]
 name = "li-container-cri"
-version = "0.1.13"
+version = "0.1.14"
 edition = "2026"
 license = "GPL-3.0-or-later"
 description = "licri — Kubernetes CRI shim (Li)"
