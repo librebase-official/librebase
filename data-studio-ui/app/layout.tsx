@@ -3,7 +3,7 @@ import { Orbitron, Space_Grotesk, IBM_Plex_Mono } from "next/font/google";
 import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
-const LIBREBASE_VERSION = "0.1.12";
+const LIBREBASE_VERSION = "0.1.13";
 
 const THEME_BOOT =
   "(function(){try{var q=new URLSearchParams(location.search).get('theme');var t=q==='dark'||q==='light'?q:localStorage.getItem('lb-studio-theme');if(t!=='dark'&&t!=='light'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);if(q==='dark'||q==='light'){localStorage.setItem('lb-studio-theme',t);}}catch(e){}})();";
