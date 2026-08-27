@@ -19,6 +19,8 @@ const PROXY_ALLOW = new Set<string>([
   "/org/v1/host-agent/instances",
   "/org/v1/mcp/device/start",
   "/org/v1/mcp/device/token",
+  "/org/v1/auth/grok/start",
+  "/org/v1/auth/grok/poll",
   "/health",
 ]);
 

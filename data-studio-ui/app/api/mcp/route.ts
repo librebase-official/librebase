@@ -166,6 +166,28 @@ const TOOLS: Tool[] = [
       },
     },
   },
+
+  {
+    name: "auth_start",
+    description: "Start browser login flow. Returns a verification URL the user must open. No MCP key needed -- this is how agents self-signup.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        provider: { type: "string", enum: ["grok"], description: "OAuth provider (default: grok)" },
+      },
+    },
+  },
+  {
+    name: "auth_poll",
+    description: "Poll browser login status. Call repeatedly after auth_start until approved or expired.",
+    inputSchema: {
+      type: "object",
+      required: ["deviceCode"],
+      properties: {
+        deviceCode: { type: "string", description: "The device_code from auth_start" },
+      },
+    },
+  },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -299,6 +321,25 @@ async function callTool(
         token,
         clean(args),
       );
+
+    case "auth_start": {
+      const provider = String(args.provider ?? "grok");
+      const res = await fetch(`${adminBaseUrl()}/org/v1/auth/${provider}/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+      });
+      return await res.json();
+    }
+    case "auth_poll": {
+      const dc = String(args.deviceCode ?? "");
+      const provider = String(args.provider ?? "grok");
+      const res = await fetch(`${adminBaseUrl()}/org/v1/auth/${provider}/poll?deviceCode=${encodeURIComponent(dc)}`, {
+        method: "GET",
+        cache: "no-store",
+      });
+      return await res.json();
+    }
     default:
       return { error: "not_found", message: `unknown tool ${name}` };
   }
@@ -443,6 +484,39 @@ function getClientIp(request: Request): string {
 }
 
 /* ------------------------------------------------------------------ */
+/* Usage logging (best-effort, non-blocking)                          */
+/* ------------------------------------------------------------------ */
+
+async function logMcpUsage(
+  toolName: string,
+  status: string,
+  latencyMs: number,
+  ip: string,
+  request: Request,
+): Promise<void> {
+  try {
+    await fetch(`${adminBaseUrl()}/org/v1/mcp/usage`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: request.headers.get("authorization") ?? "",
+      },
+      body: JSON.stringify({
+        tool: toolName,
+        status,
+        latency_ms: latencyMs,
+        ip,
+        user_agent: request.headers.get("user-agent") ?? "",
+      }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(3000),
+    });
+  } catch {
+    // best-effort — never block the response
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /* HTTP route                                                         */
 /* ------------------------------------------------------------------ */
 
@@ -498,11 +572,23 @@ export async function POST(request: Request) {
     );
   }
 
+  const started = Date.now();
+  const method = String(body.method ?? "");
+  const toolName = method === "tools/call"
+    ? String(((body.params as Record<string, unknown>) ?? {}).name ?? "")
+    : method;
+
   const response = await handleJsonRpc(body, token);
+  const latencyMs = Date.now() - started;
+
   if (response === null) {
     // Notification — no response body
     return new NextResponse(null, { status: 204 });
   }
+
+  // Log usage to admin-api (best-effort, non-blocking)
+  const hasError = !!(response as Record<string, unknown>).error;
+  void logMcpUsage(toolName, hasError ? "error" : "ok", latencyMs, ip, request).catch(() => {});
 
   return NextResponse.json(response, {
     headers: {

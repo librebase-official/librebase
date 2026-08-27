@@ -2168,6 +2168,78 @@ class LiorgHandler(BaseHTTPRequestHandler):
             self.send_json(200, {"mcpKey": mcp_key})
             return
 
+        # MCP usage logging — POST /org/v1/mcp/usage
+        if path == "/org/v1/mcp/usage" and self.command == "POST":
+            claims = self.mcp_claims()
+            if not claims:
+                self.send_json(401, {"error": "unauthorized"})
+                return
+            body = self._read_json() or {}
+            org_id = claims["org_id"]
+            tool_name = str(body.get("tool", ""))[:100]
+            status = str(body.get("status", "ok"))[:20]
+            latency_ms = body.get("latency_ms")
+            ip_address = str(body.get("ip", ""))[:45]
+            user_agent = str(body.get("user_agent", ""))[:200]
+            error_message = str(body.get("error", ""))[:500] if body.get("error") else None
+            try:
+                self.db.execute(
+                    "INSERT INTO mcp_usage_log (org_id, tool_name, status, latency_ms, ip_address, user_agent, error_message) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (org_id, tool_name, status, latency_ms, ip_address, user_agent, error_message),
+                )
+                self.db.commit()
+            except Exception:
+                pass  # best-effort
+            self.send_json(200, {"ok": True})
+            return
+
+        # MCP usage stats — GET /org/v1/orgs/{org}/mcp/stats
+        mcp_stats_match = re.fullmatch(r"/org/v1/orgs/([^/]+)/mcp/stats", path)
+        if mcp_stats_match and self.command == "GET":
+            claims = self.require_org_member(mcp_stats_match.group(1))
+            if not claims:
+                return
+            org_id = mcp_stats_match.group(1)
+            # Total calls
+            total = self.db.fetchone(
+                "SELECT COUNT(*) as cnt FROM mcp_usage_log WHERE org_id = ?", (org_id,)
+            )["cnt"]
+            # Calls by tool
+            by_tool = self.db.fetchall(
+                "SELECT tool_name, COUNT(*) as cnt, AVG(latency_ms) as avg_ms, "
+                "SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END) as errors "
+                "FROM mcp_usage_log WHERE org_id = ? GROUP BY tool_name ORDER BY cnt DESC",
+                (org_id,),
+            )
+            # Calls today
+            today = self.db.fetchone(
+                "SELECT COUNT(*) as cnt FROM mcp_usage_log WHERE org_id = ? AND created_at >= date('now')",
+                (org_id,),
+            )["cnt"]
+            # Calls last 24h by hour
+            hourly = self.db.fetchall(
+                "SELECT strftime('%Y-%m-%dT%H:00:00Z', created_at) as hour, COUNT(*) as cnt "
+                "FROM mcp_usage_log WHERE org_id = ? AND created_at >= datetime('now', '-24 hours') "
+                "GROUP BY hour ORDER BY hour",
+                (org_id,),
+            )
+            # Active MCP keys
+            keys = self.db.fetchall(
+                "SELECT id, created_at, revoked_at FROM mcp_keys WHERE org_id = ? ORDER BY created_at DESC",
+                (org_id,),
+            )
+            self.send_json(200, {
+                "totalCalls": total,
+                "callsToday": today,
+                "byTool": [dict(r) for r in by_tool],
+                "hourly": [dict(r) for r in hourly],
+                "mcpKeys": [dict(r) for r in keys],
+            })
+            return
+
+
+
         if path == "/org/v1/me/password":
             claims = self.bearer_claims()
             if not claims:

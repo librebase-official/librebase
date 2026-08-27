@@ -9,6 +9,7 @@ const NAV = [
   { href: "/dashboard/instances", label: "Instances", icon: "◈" },
   { href: "/dashboard/orgs", label: "Organizations", icon: "◫" },
   { href: "/dashboard/users", label: "Users", icon: "☺" },
+  { href: "/dashboard/mcp", label: "MCP Analytics", icon: "⚙" },
   { href: "/dashboard/system", label: "System", icon: "⚙" },
 ];
 

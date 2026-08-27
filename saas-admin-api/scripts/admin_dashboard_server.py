@@ -246,6 +246,38 @@ class AdminHandler(BaseHTTPRequestHandler):
             self._json(200, {"servers": out, "pricing": type_prices, "totalMonthly": round(total, 2)})
             return
 
+        if path == "/admin/v1/mcp/usage":
+            try:
+                total = db.execute("SELECT COUNT(*) AS n FROM mcp_usage_log").fetchone()["n"]
+            except Exception:
+                self._json(200, {"totalCalls": 0, "callsToday": 0, "byOrg": [], "byTool": [], "hourly": []})
+                return
+            today = db.execute(
+                "SELECT COUNT(*) AS n FROM mcp_usage_log WHERE created_at >= date('now')"
+            ).fetchone()["n"]
+            by_org = db.execute(
+                "SELECT org_id, COUNT(*) as cnt, MAX(created_at) as last_call "
+                "FROM mcp_usage_log GROUP BY org_id ORDER BY cnt DESC LIMIT 50"
+            ).fetchall()
+            by_tool = db.execute(
+                "SELECT tool_name, COUNT(*) as cnt, AVG(latency_ms) as avg_ms, "
+                "SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END) as errors "
+                "FROM mcp_usage_log GROUP BY tool_name ORDER BY cnt DESC"
+            ).fetchall()
+            hourly = db.execute(
+                "SELECT strftime('%Y-%m-%dT%H:00:00Z', created_at) as hour, COUNT(*) as cnt "
+                "FROM mcp_usage_log WHERE created_at >= datetime('now', '-24 hours') "
+                "GROUP BY hour ORDER BY hour"
+            ).fetchall()
+            self._json(200, {
+                "totalCalls": total,
+                "callsToday": today,
+                "byOrg": [dict(r) for r in by_org],
+                "byTool": [dict(r) for r in by_tool],
+                "hourly": [dict(r) for r in hourly],
+            })
+            return
+
         self._json(404, {"error": "not found"})
 
     # ── POST (direct Hetzner + local DB update) ──────────────────────

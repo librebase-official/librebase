@@ -139,6 +139,16 @@ export const deleteHost = (hostId: string) =>
     method: "DELETE",
   });
 
+export interface McpUsage {
+  totalCalls: number;
+  callsToday: number;
+  byOrg: { org_id: string; cnt: number; last_call: string }[];
+  byTool: { tool_name: string; cnt: number; avg_ms: number; errors: number }[];
+  hourly: { hour: string; cnt: number }[];
+}
+
+export const getMcpUsage = () => adminFetch<McpUsage>("/admin/v1/mcp/usage");
+
 export function adminEnabled(): boolean {
   return !!ADMIN_TOKEN;
 }

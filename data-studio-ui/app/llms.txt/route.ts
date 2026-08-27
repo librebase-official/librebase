@@ -7,10 +7,10 @@ function llmsBody(): string {
   const base = SITE_URL;
   return `# Librebase
 
-> Open-source Postgres app platform. AI agents manage projects, instances, auth, and secrets through MCP — the user authenticates once in their browser (no API keys pasted).
+> Open-source Postgres app platform. AI agents manage projects, instances, auth, and secrets through MCP -- the user authenticates once in their browser (no API keys pasted).
 
 ## For AI agents
-Librebase ships an MCP (Model Context Protocol) server. Add it to your agent, then call \`auth_login\`: the user's browser opens for a one-click **Approve**. The resulting token is stored in the OS keychain and is **never shown to the model**.
+Librebase ships an MCP (Model Context Protocol) server. Add it to your agent, then call \`auth_start\`: the user's browser opens for a one-click **Approve**. The resulting token is stored in the OS keychain and is **never shown to the model**.
 
 - Full setup (human + agent readable): ${base}/for-agents
 - Console origin: ${base}
@@ -19,7 +19,7 @@ Librebase ships an MCP (Model Context Protocol) server. Add it to your agent, th
 - Public admin ingress (local MCP talks to this): ${base}/api/admin-proxy
 - Agent approval page: ${base}/mcp/authorize
 
-## Hosted MCP (recommended — no install)
+## Hosted MCP (recommended -- no install)
 Point your agent at the hosted endpoint. Just add your MCP key:
 
 \`\`\`json
@@ -36,7 +36,9 @@ Point your agent at the hosted endpoint. Just add your MCP key:
 }
 \`\`\`
 
-## Local MCP (alternative — no network dependency)
+Or use auto-discovery: GET ${base}/.well-known/mcp.json returns the full config.
+
+## Local MCP (alternative -- no network dependency)
 The server is also available as a Python package. Add to your agent's MCP config:
 
 \`\`\`json
@@ -54,15 +56,18 @@ The server is also available as a Python package. Add to your agent's MCP config
 }
 \`\`\`
 
-## Auth (device flow)
-1. Call \`auth_status\`. If unauthenticated, call \`auth_login\`.
-2. The user's browser opens ${base}/mcp/authorize?user_code=XXXX-XXXX.
-3. The user signs in (if needed) and clicks **Approve**. The MCP stores the
-   user-bound token in the keychain; it is never returned to the model.
+## Auth (device flow -- self-signup)
+No pre-shared key needed. The agent calls \`auth_start\` to initiate browser login; the user approves in their browser; the agent stores the token.
+
+1. Call \`auth_start\` -- returns a user_code + verification URL.
+2. The user opens the URL, signs in, and clicks Approve.
+3. Call \`auth_poll\` until approved -- returns a session token.
+4. The agent stores the token; it is never shown to the model.
 
 ## Tools
+- \`auth_start\` / \`auth_poll\` -- browser login + device flow (self-signup)
 - \`org_whoami\`, \`project_list\`, \`project_create\`
-- \`auth_provider_list\` / \`auth_provider_upsert\` — OAuth (github/google/grok); client secret is KMS-sealed, never returned
+- \`auth_provider_list\` / \`auth_provider_upsert\` -- OAuth (github/google/grok); client secret is KMS-sealed, never returned
 - \`instance_list\` / \`instance_create\` / \`instance_launch\` / \`instance_stop\`
 - \`member_list\` / \`member_invite\` / \`member_update_role\`
 - \`host_list\` / \`host_create\`
