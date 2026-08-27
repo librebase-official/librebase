@@ -1,6 +1,6 @@
 [package]
 name = "li-container"
-version = "0.1.9"
+version = "0.1.10"
 edition = "2026"
 license = "GPL-3.0-or-later"
 description = "Li Container Engine — core types and OCI surface"
