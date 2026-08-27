@@ -393,7 +393,7 @@ async function callTool(
     case "auth_start": {
       const provider = String(args.provider ?? "grok");
       const res = await fetch(`${adminBaseUrl()}/org/v1/auth/${provider}/start`, {
-        method: "POST",
+        method: "GET",
         headers: { "Content-Type": "application/json" },
         cache: "no-store",
       });
@@ -649,15 +649,21 @@ export async function POST(request: Request) {
   const publicAuthTool = method === "tools/call" &&
     (toolName === "auth_start" || toolName === "auth_poll");
 
-  if (!publicAuthTool && !token) {
+  const publicMethod = method === "initialize" || method === "tools/list" || publicAuthTool;
+  if (!publicMethod && !token) {
     return NextResponse.json(
       { error: "Missing Authorization: Bearer <mcp_key>" },
-      { status: 401 },
+      {
+        status: 401,
+        headers: {
+          "WWW-Authenticate": 'Bearer realm="librebase-mcp", resource_metadata="https://app.librebase.xyz/.well-known/oauth-authorization-server"',
+        },
+      },
     );
   }
 
-  // Validate token prefix for protected calls; public auth tools do not need one.
-  if (!publicAuthTool && token && !token.startsWith("lb_mcp_") && !token.startsWith("lb_agt_")) {
+  // Validate token prefix for protected calls; public protocol/auth calls do not need one.
+  if (!publicMethod && token && !token.startsWith("lb_mcp_") && !token.startsWith("lb_agt_")) {
     return NextResponse.json(
       { error: "Invalid MCP key format (expected lb_mcp_ or lb_agt_)" },
       { status: 401 },

@@ -20,7 +20,7 @@ Librebase ships an MCP (Model Context Protocol) server. Add it to your agent, th
 - Agent approval page: ${base}/mcp/authorize
 
 ## Hosted MCP (recommended -- no install)
-Point your agent at the hosted endpoint. Just add your MCP key:
+Point your remote MCP-capable agent at the hosted endpoint. It should discover the OAuth authorization server and show a browser connect card; do not paste a key into chat:
 
 \`\`\`json
 {
@@ -28,8 +28,9 @@ Point your agent at the hosted endpoint. Just add your MCP key:
     "librebase": {
       "type": "mcp",
       "url": "${base}/api/mcp",
-      "headers": {
-        "Authorization": "Bearer <your-mcp-key>"
+      "auth": {
+        "authorization_server": "${base}/.well-known/oauth-authorization-server",
+        "scopes": ["mcp"]
       }
     }
   }
@@ -56,13 +57,13 @@ The server is also available as a Python package. Add to your agent's MCP config
 }
 \`\`\`
 
-## Auth (device flow -- self-signup)
-No pre-shared key needed. The agent calls \`auth_start\` to initiate browser login; the user approves in their browser; the agent stores the token.
+## Auth (remote OAuth/device flow -- self-signup)
+No pre-shared key is needed for interactive use. Remote MCP clients should use the OAuth metadata endpoint to open a browser connect card. Clients without OAuth support may call auth_start without a key, then auth_poll after the user approves.
 
 1. Call \`auth_start\` -- returns a user_code + verification URL.
 2. The user opens the URL, signs in, and clicks Approve.
 3. Call \`auth_poll\` until approved -- returns a session token.
-4. The agent stores the token; it is never shown to the model.
+4. The connector stores the token; it is never shown to the model.
 
 ## Tools
 - \`auth_start\` / \`auth_poll\` -- browser login + device flow (self-signup)
@@ -75,7 +76,7 @@ No pre-shared key needed. The agent calls \`auth_start\` to initiate browser log
 ## Security
 - Secrets are sealed in the KMS. \`key_get\` hands the value to the process only and redacts it in model output.
 - Every decrypt/sign is audited. Agent tokens are revocable instantly.
-- Never set \`LIBREBASE_MCP_KEY\` for interactive use (CI override only).
+- LIBREBASE_MCP_KEY is for local stdio/CI only; never request or paste it for interactive hosted use.
 `;
 }
 

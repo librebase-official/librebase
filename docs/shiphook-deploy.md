@@ -1,35 +1,54 @@
 # Shiphook deployment
 
-`.github/workflows/shiphook-deploy.yml` deploys `main` through Shiphook and waits for the returned deployment URL to answer `GET /health` with HTTP 200.
+The GitHub Actions workflow calls a self-hosted Shiphook instance. Shiphook authenticates the request, runs its configured pull-and-deploy operation, and returns the deployment result synchronously as JSON.
 
 ## GitHub setup
 
-Add these **Actions secrets** to the repository (Settings → Secrets and variables → Actions):
+Add these Actions secrets:
 
-- `SHIPHOOK_DEPLOY_URL`: Shiphook deploy webhook URL
-- `SHIPHOOK_DEPLOY_TOKEN`: Shiphook sender/API token
+- `SHIPHOOK_DEPLOY_URL`: public HTTPS Shiphook webhook URL, including its configured path
+- `SHIPHOOK_DEPLOY_TOKEN`: value configured as Shiphook `secret`
 
-The token is sent only as an `Authorization: Bearer` header. It is never written to logs or committed to the repository.
+The workflow sends:
 
-The workflow runs on pushes to `main` and can also be started manually with a deploy ref. It expects Shiphook to accept a JSON body containing `ref`, `commit`, `repository`, and `event`, and to return JSON containing a deployment URL in one of `deployment_url`, `url`, or `deploy_url`.
-
-The returned deployment URL must expose:
-
-```text
-GET <deployment-url>/health → 200
+```http
+POST <SHIPHOOK_DEPLOY_URL>?format=json
+X-Shiphook-Secret: <secret>
+Content-Type: application/json
 ```
 
-A failed trigger, missing deployment URL, or health timeout fails the workflow. The workflow uses a concurrency lock so production deployments do not overlap.
+```json
+{
+  "ref": "main",
+  "repository": "librebase-official/librebase",
+  "event": "github_actions"
+}
+```
 
-## Test safely
+Shiphook must run with the Librebase checkout and deploy script configured, for example:
 
-1. Configure the secrets with a staging Shiphook routine first.
-2. Run **Actions → Deploy via Shiphook → Run workflow** against the staging ref.
-3. Confirm the job summary includes the commit and deployment URL.
-4. Only then point `SHIPHOOK_DEPLOY_URL` at the production routine.
+```yaml
+port: 3141
+repoPath: /opt/librebase
+path: /deploy
+runScript: /opt/librebase/scripts/deploy-production.sh
+runTimeoutMs: 1800000
+```
 
-No live deployment was triggered while adding this workflow because the Shiphook URL and token are not available in the repository context.
+The deploy script owns the application-specific work: build/restart containers, wait for health, verify the deployed commit/version, and exit nonzero on failure. Shiphook’s successful HTTP response then represents a successful deployment.
 
-## Message for Grok Bot
+Expose port `3141` through HTTPS using nginx or another reverse proxy. Keep the Shiphook secret in GitHub Actions secrets or the server secret store; never put it in source, logs, Grok chat, or ordinary repository variables.
 
-> Deploy Librebase from the public GitHub `main` branch through the Shiphook routine. After Shiphook returns the deployment URL, poll `<deployment-url>/health` until it returns HTTP 200. Report the GitHub commit, Librebase version, deployment URL, elapsed time, and any failed health checks to the Librebase team panel. Do not expose the Shiphook token. If the deployment or health check fails, keep the failure details and URL for investigation; do not retry indefinitely.
+## Safe rollout
+
+1. Configure a staging Shiphook instance and secret.
+2. Run **Actions → Deploy via Shiphook → Run workflow** manually against staging.
+3. Confirm the JSON response reports `ok: true` and inspect its deployment log.
+4. Verify Studio, admin API, hosted MCP, version, and database health.
+5. Configure separate production URL and secret only afterward.
+
+The workflow serializes production deployments so two runs do not operate on the same target concurrently.
+
+## Grok Bot instruction
+
+> Trigger the Librebase Shiphook webhook for the `main` branch. Wait for the synchronous JSON response and report whether the deploy result has `ok: true`. Then verify Studio, admin API, hosted MCP, deployed commit, and Librebase version. Report duration and failure output when present. Never reveal the Shiphook secret.

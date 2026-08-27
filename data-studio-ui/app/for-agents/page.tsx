@@ -5,7 +5,7 @@ import { SITE_URL } from "@/lib/site";
 export const metadata: Metadata = {
   title: "Librebase for AI agents — connect via MCP",
   description:
-    "Connect an AI agent to Librebase with a local MCP server. The user authenticates once in their browser (device flow); secrets stay sealed in the KMS and are redacted from the model.",
+    "Connect an AI agent to Librebase with hosted remote MCP and browser authorization; secrets stay sealed in the KMS and are redacted from the model.",
   robots: { index: true, follow: true },
   alternates: { canonical: `${SITE_URL}/for-agents` },
 };
@@ -69,8 +69,7 @@ export default function ForAgentsPage() {
 
         <Section title="1. Connect via hosted MCP (no install)">
           <p>
-            Point your agent at <Code>{SITE_URL}/api/mcp</Code> — no local
-            repo needed. Just add your MCP key as a Bearer token:
+            Point your remote MCP-capable agent at <Code>{SITE_URL}/api/mcp</Code> — no local repo or pasted key needed. The agent should discover OAuth metadata and show a browser authorization card:
           </p>
           <pre
             style={{
@@ -89,8 +88,9 @@ export default function ForAgentsPage() {
     "librebase": {
       "type": "mcp",
       "url": "${SITE_URL}/api/mcp",
-      "headers": {
-        "Authorization": "Bearer <your-mcp-key>"
+      "auth": {
+        "authorization_server": "https://app.librebase.xyz/.well-known/oauth-authorization-server",
+        "scopes": ["mcp"]
       }
     }
   }
@@ -102,7 +102,7 @@ export default function ForAgentsPage() {
           </p>
         </Section>
 
-        <Section title="1b. Or run locally (no network dependency)">
+        <Section title="1b. Optional: run locally for CI or air-gapped use">
           <p>
             Clone the repo and run the MCP server locally:
           </p>
@@ -124,9 +124,7 @@ export default function ForAgentsPage() {
         <Section title="2. Authenticate (device flow)">
           <ol style={{ paddingLeft: 20, lineHeight: 1.7, margin: 0 }}>
             <li>
-              Call <Code>auth_start</Code> without a pre-shared key. The user
-              opens the returned verification URL and approves access; then call{" "}
-              <Code>auth_poll</Code> until a session token is issued.
+              Remote OAuth-capable agents should use the authorization metadata above to show a browser connect card. Clients without OAuth support may call <Code>auth_start</Code> without a pre-shared key, then call <Code>auth_poll</Code> until approval completes. Call <Code>auth_start</Code> first.
             </li>
             <li>
               The user&apos;s browser opens{" "}

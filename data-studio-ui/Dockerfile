@@ -14,6 +14,7 @@ ARG NEXT_PUBLIC_SITE_URL=https://app.librebase.xyz
 ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 ARG LIBREBASE_VERSION=0.1.12
 ENV LIBREBASE_VERSION=$LIBREBASE_VERSION
+RUN cp VERSION /tmp/librebase-version
 RUN npm run build
 
 FROM docker.io/node:22-alpine AS runner
