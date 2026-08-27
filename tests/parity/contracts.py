@@ -485,17 +485,17 @@ def p_rls_01() -> Result:
 
 
 def _find_embed() -> Path | None:
-    raw = os.environ.get("LIDB_EMBED", "").strip()
+    raw = os.environ.get("LIDB_ENGINE", "").strip()
     if raw and Path(raw).is_file():
         return Path(raw)
     root = os.environ.get("LIDB_ROOT", "").strip()
     if not root:
         return None
     for cand in (
-        Path(root) / "build" / "lidb_embed.exe",
-        Path(root) / "build" / "lidb_embed",
-        Path(root) / "build" / "smoke" / "lidb_embed.exe",
-        Path(root) / "build" / "smoke" / "lidb_embed",
+        Path(root) / "build" / "lidb-engine.exe",
+        Path(root) / "build" / "lidb-engine",
+        Path(root) / "build" / "smoke" / "lidb-engine.exe",
+        Path(root) / "build" / "smoke" / "lidb-engine",
     ):
         if cand.is_file():
             return cand
@@ -503,14 +503,14 @@ def _find_embed() -> Path | None:
 
 
 def p_io_01() -> Result:
-    """Export → import SQL round-trip via lidb_embed (required)."""
+    """Export → import SQL round-trip via lidb-engine (required)."""
     import shutil
     import subprocess
     import tempfile
 
     embed = _find_embed()
     if embed is None:
-        return Result("P-IO-01", "fail", "LIDB_EMBED or LIDB_ROOT/build/lidb_embed required")
+        return Result("P-IO-01", "fail", "LIDB_ENGINE or LIDB_ROOT/build/lidb-engine required")
     tmp = Path(tempfile.mkdtemp(prefix="parity-io-"))
     data_a = tmp / "a"
     data_b = tmp / "b"

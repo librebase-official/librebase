@@ -6,7 +6,7 @@
  * Loads ROWS into an indexed `items` table, measures ingest + indexed queries.
  *
  * STACK=sb|lidb   LIBREBASE_API (PostgREST) + SERVICE_ROLE for sb;
- *                 LIDB_EMBED + data dir for lidb.
+ *                 LIDB_ENGINE + data dir for lidb.
  */
 import { performance } from "node:perf_hooks";
 import { createHmac } from "node:crypto";
@@ -70,16 +70,16 @@ async function benchSupabase() {
 }
 
 function lidbExec(dataDir, sql, params = []) {
-  const embed = process.env.LIDB_EMBED ?? "/Users/julian/Documents/coding-projects/li-langverse-gitlab/li-langverse/lidb/build/smoke/lidb_embed";
+  const embed = process.env.LIDB_ENGINE ?? "/Users/julian/Documents/coding-projects/li-langverse-gitlab/li-langverse/lidb/build/smoke/lidb-engine";
   const r = spawnSync(embed, ["exec-json", dataDir, sql], { input: JSON.stringify(params), encoding: "utf8" });
   if (r.status !== 0) throw new Error(`lidb exec failed: ${r.stderr || r.stdout}`);
   return JSON.parse(r.stdout);
 }
 
-/** Persistent `lidb_embed session` (NDJSON) — the realistic server path, avoids
+/** Persistent `lidb-engine session` (NDJSON) — the realistic server path, avoids
  *  per-query subprocess spawn (which dominated the old benchmark at ~5ms/query). */
 function lidbSession(dataDir) {
-  const embed = process.env.LIDB_EMBED ?? "/Users/julian/Documents/coding-projects/li-langverse-gitlab/li-langverse/lidb/build/smoke/lidb_embed";
+  const embed = process.env.LIDB_ENGINE ?? "/Users/julian/Documents/coding-projects/li-langverse-gitlab/li-langverse/lidb/build/smoke/lidb-engine";
   const child = spawn(embed, ["session", dataDir], { stdio: ["pipe", "pipe", "ignore"] });
   let buf = "";
   let gotReady = false;
@@ -119,7 +119,7 @@ function lidbSession(dataDir) {
 async function benchLidb() {
   const dir = process.env.LIDB_DATA ?? "/tmp/lb-bench-data";
   mkdirSync(dir, { recursive: true });
-  spawnSync(process.env.LIDB_EMBED ?? "lidb_embed", ["migrate", dir], { encoding: "utf8" });
+  spawnSync(process.env.LIDB_ENGINE ?? "lidb-engine", ["migrate", dir], { encoding: "utf8" });
   const s = lidbSession(dir);
   await s.ready;
   const r0 = await s.exec("CREATE TABLE IF NOT EXISTS items (id TEXT, code TEXT, value TEXT)");

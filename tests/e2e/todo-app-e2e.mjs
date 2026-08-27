@@ -7,7 +7,7 @@
  *   3. MCP: admin_setup → create_host → create_instance → create_project → apply_migration
  *   4. verify project REST surface + run the todo app (signup → signin → todos CRUD)
  *
- * Prereqs (env): LIS_ROOT, LIDB_ROOT (or siblings under ../..). Builds lidb_embed if missing.
+ * Prereqs (env): LIS_ROOT, LIDB_ROOT (or siblings under ../..). Builds lidb-engine if missing.
  *
  * Run: node tests/e2e/todo-app-e2e.mjs
  */
@@ -112,19 +112,19 @@ async function cleanup() {
   await sh("pkill", ["-f", "bin/lis db"]).catch(() => {});
 }
 
-// ---- 1. build lidb_embed if missing ----------------------------------------
-let embed = process.env.LIDB_EMBED;
+// ---- 1. build lidb-engine if missing ----------------------------------------
+let embed = process.env.LIDB_ENGINE;
 if (!embed || !fs.existsSync(embed)) {
   const cands = [
-    path.join(LIDB, "build", "smoke", "lidb_embed"),
-    path.join(LIDB, "build", "lidb_embed"),
+    path.join(LIDB, "build", "smoke", "lidb-engine"),
+    path.join(LIDB, "build", "lidb-engine"),
   ];
   embed = cands.find((c) => fs.existsSync(c));
   if (!embed) {
     const r = await sh("bash", [path.join(LIDB, "scripts", "ensure_embed.sh")], { cwd: LIDB });
     assert.equal(r.code, 0, `lidb embed build failed: ${r.err}`);
-    embed = path.join(LIDB, "build", "smoke", "lidb_embed");
-    assert.ok(fs.existsSync(embed), "lidb_embed missing after build");
+    embed = path.join(LIDB, "build", "smoke", "lidb-engine");
+    assert.ok(fs.existsSync(embed), "lidb-engine missing after build");
   }
 }
 
@@ -134,7 +134,7 @@ const lisEnv = {
   ...process.env,
   LI_PROFILE: "librebase",
   LIDB_ROOT: LIDB,
-  LIDB_EMBED: embed,
+  LIDB_ENGINE: embed,
   LI_JWT_SECRET: "e2e-secret-change-me",
   LI_DATA_DIR: DATA_DIR,
   LIDB_MIGRATIONS: MIGRATIONS,

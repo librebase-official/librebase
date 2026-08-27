@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Persistent LiDB HTTP supervisor.
 
-Wraps lidb_embed as a per-query subprocess but maintains data persistence
+Wraps lidb-engine as a per-query subprocess but maintains data persistence
 through a consistent data directory. Exposes /v1/sql, /health, and /rest/v1/*
 endpoints compatible with the Librebase runtime contract.
 
@@ -44,21 +44,21 @@ def _find_embed() -> str:
     global _EMBED
     if _EMBED:
         return _EMBED
-    # Check LIDB_EMBED env, then PATH, then common locations
+    # Check LIDB_ENGINE env, then PATH, then common locations
     for candidate in [
-        os.environ.get("LIDB_EMBED", ""),
-        shutil.which("lidb_embed") or "",
-        "/usr/local/bin/lidb_embed",
-        "/opt/li/lidb/build/lidb_embed",
+        os.environ.get("LIDB_ENGINE", ""),
+        shutil.which("lidb-engine") or "",
+        "/usr/local/bin/lidb-engine",
+        "/opt/li/lidb/build/lidb-engine",
     ]:
         if candidate and Path(candidate).is_file():
             _EMBED = candidate
             return _EMBED
-    raise RuntimeError("lidb_embed not found")
+    raise RuntimeError("lidb-engine not found")
 
 
 def _run_embed(args: list[str], stdin: str = "[]", timeout: float = 30) -> dict[str, Any]:
-    """Run lidb_embed and return parsed JSON result."""
+    """Run lidb-engine and return parsed JSON result."""
     embed = _find_embed()
     data = Path(_DATA_DIR)
     data.mkdir(parents=True, exist_ok=True)
@@ -93,7 +93,7 @@ def ensure_database() -> bool:
 
 
 def execute_sql(sql: str, params: list[str] | None = None) -> dict[str, Any]:
-    """Execute SQL via lidb_embed exec-json."""
+    """Execute SQL via lidb-engine exec-json."""
     params = params or []
     try:
         result = _run_embed(

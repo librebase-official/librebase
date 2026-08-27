@@ -23,13 +23,13 @@ import lidb_supervisor as sup
 
 
 def _embed_available() -> bool:
-    """Check if lidb_embed is available on the system."""
-    embed = sup.shutil.which("lidb_embed")
+    """Check if lidb-engine is available on the system."""
+    embed = sup.shutil.which("lidb-engine")
     if embed:
         return True
     for candidate in (
-        "/usr/local/bin/lidb_embed",
-        "/opt/li/lidb/build/lidb_embed",
+        "/usr/local/bin/lidb-engine",
+        "/opt/li/lidb/build/lidb-engine",
     ):
         if Path(candidate).is_file():
             return True
@@ -37,11 +37,11 @@ def _embed_available() -> bool:
 
 
 EMBED_AVAILABLE = _embed_available()
-SKIP_REASON = "lidb_embed not available" if not EMBED_AVAILABLE else None
+SKIP_REASON = "lidb-engine not available" if not EMBED_AVAILABLE else None
 
 
 class TestLidbSupervisorUnit(unittest.TestCase):
-    """Unit tests that don't require lidb_embed."""
+    """Unit tests that don't require lidb-engine."""
 
     def test_ddl_regex(self):
         self.assertRegex("CREATE TABLE foo (id INT)", sup._DDL_RE)
@@ -66,7 +66,7 @@ class TestLidbSupervisorUnit(unittest.TestCase):
         sup._EMBED = None
         try:
             with mock.patch("shutil.which", return_value=None):
-                with mock.patch.dict(os.environ, {"LIDB_EMBED": ""}, clear=False):
+                with mock.patch.dict(os.environ, {"LIDB_ENGINE": ""}, clear=False):
                     with self.assertRaises(RuntimeError):
                         sup._find_embed()
         finally:
@@ -117,7 +117,7 @@ class TestLidbSupervisorUnit(unittest.TestCase):
 
 @unittest.skipUnless(EMBED_AVAILABLE, SKIP_REASON)
 class TestLidbSupervisorIntegration(unittest.TestCase):
-    """Integration tests requiring lidb_embed."""
+    """Integration tests requiring lidb-engine."""
 
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp(prefix="lidb-test-")

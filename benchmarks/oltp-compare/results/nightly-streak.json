@@ -6,10 +6,10 @@
   "librebase_branch": "feat/p5-oltp-index-impl-detect",
   "librebase_sha": "6322b585a70b0248774fed34990f892398a77993",
   "lidb_pin": "d7f5cb5",
-  "mode": "embed_execjson",
+  "mode": "engine_execjson",
   "embed_ipc": "session_subprocess",
   "ci_match": {
-    "OLTP_MODE": "embed_execjson",
+    "OLTP_MODE": "engine_execjson",
     "OLTP_SCENARIOS": "core",
     "OLTP_RATIO_MAX": 1.2,
     "BENCH_ROWS": 10000,

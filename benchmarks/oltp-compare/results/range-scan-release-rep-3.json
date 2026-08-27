@@ -3,20 +3,20 @@
   "rows_seeded": 10000,
   "warmup": 30,
   "measure": 200,
-  "mode": "embed_execjson",
-  "lidb_mode": "embed_execjson",
+  "mode": "engine_execjson",
+  "lidb_mode": "engine_execjson",
   "embed_ipc": "session_subprocess",
   "scenarios_selected": [
     "range_scan_name_prefix"
   ],
-  "embed": "C:\\Users\\Julian\\Documents\\Programming\\li\\lidb\\build\\smoke-release\\lidb_embed.exe",
+  "embed": "C:\\Users\\Julian\\Documents\\Programming\\li\\lidb\\build\\smoke-release\\lidb-engine.exe",
   "lidb_pin": "170c8e6",
   "lidb_root": "C:\\Users\\Julian\\Documents\\Programming\\li\\lidb",
   "runner_os": "Windows-11-10.0.26200-SP0",
   "hardware_note": "local win32 Release clang + lb-pg-bench:5433",
   "index_impl": "sorted_tree",
   "postgres": true,
-  "honesty": "Aims only until CI green. mode=embed_execjson \u2014 embed_execjson is the CI hard-gate path (lidb_embed session subprocess vs TCP Postgres). index_impl=sorted_tree \u2014 sorted_tree is in-memory ordered map (not disk B-tree / Postgres parity); range_scan_name_prefix is diagnostic until \u2264 1.2\u00d7. gated marketing claim needs multi-day CI PASS + PH-DB-7 (or forever footnote).",
+  "honesty": "Aims only until CI green. mode=engine_execjson \u2014 engine_execjson is the CI hard-gate path (lidb-engine session subprocess vs TCP Postgres). index_impl=sorted_tree \u2014 sorted_tree is in-memory ordered map (not disk B-tree / Postgres parity); range_scan_name_prefix is diagnostic until \u2264 1.2\u00d7. gated marketing claim needs multi-day CI PASS + PH-DB-7 (or forever footnote).",
   "scenarios": [
     {
       "engine": "lidb",

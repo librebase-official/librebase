@@ -1,6 +1,6 @@
 // tiny-lb — minimal static HTTP CRUD server for the Librebase lidb engine.
 //
-// Speaks the lidb_embed `session` NDJSON protocol over a persistent child process
+// Speaks the lidb-engine `session` NDJSON protocol over a persistent child process
 // so per-request latency stays sub-ms (no per-request spawn). Routes mirror the
 // todo-app surface: GET/POST /rest/v1/todos, PATCH/DELETE /rest/v1/todos/{id},
 // GET /health. Built CGO_ENABLED=0 → static, runs on scratch.
@@ -90,9 +90,9 @@ func main() {
 	if dataDir == "" {
 		dataDir = "/data"
 	}
-	embed := os.Getenv("LIDB_EMBED")
+	embed := os.Getenv("LIDB_ENGINE")
 	if embed == "" {
-		embed = "/usr/local/bin/lidb_embed"
+		embed = "/usr/local/bin/lidb-engine"
 	}
 	port := os.Getenv("PORT")
 	if port == "" {

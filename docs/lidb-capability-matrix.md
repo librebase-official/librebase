@@ -51,4 +51,4 @@ Measured evidence (all published PASS artifacts linked in the unlock checklist):
 | Range prefix scan | **0.36×** median (`range_scan_name_prefix`) | Release build only; Debug inflated ~1.94× |
 | HTTP REST vs PostgREST | soft **0.60×** median max | Soft gate only; Python MVP surface |
 
-Always keep caveats (`sorted_tree` ≠ B-tree, Release `lidb_embed`, `embed_execjson` session IPC) in any speed/RSS claim. Scheduled nightly CI stays the regression guard.
+Always keep caveats (`sorted_tree` ≠ B-tree, Release `lidb-engine`, `engine_execjson` session IPC) in any speed/RSS claim. Scheduled nightly CI stays the regression guard.

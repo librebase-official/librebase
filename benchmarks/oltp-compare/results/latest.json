@@ -3,8 +3,8 @@
   "rows_seeded": 5000,
   "warmup": 20,
   "measure": 100,
-  "mode": "embed_execjson",
-  "lidb_mode": "embed_execjson",
+  "mode": "engine_execjson",
+  "lidb_mode": "engine_execjson",
   "embed_ipc": "session_subprocess",
   "scenarios_selected": [
     "point_lookup_no_index",
@@ -12,14 +12,14 @@
     "point_insert",
     "indexed_read_write_mix"
   ],
-  "embed": "C:\\Users\\Julian\\Documents\\Programming\\li\\lidb\\build\\smoke\\Debug\\lidb_embed.exe",
+  "embed": "C:\\Users\\Julian\\Documents\\Programming\\li\\lidb\\build\\smoke\\Debug\\lidb-engine.exe",
   "lidb_pin": "d7f5cb5",
   "lidb_root": "C:\\Users\\Julian\\Documents\\Programming\\li\\lidb",
   "runner_os": "Windows-11-10.0.26200-SP0",
-  "hardware_note": "local win32 127.0.0.1:5433 embed_execjson session_subprocess sorted_tree d7f5cb5 Debug",
+  "hardware_note": "local win32 127.0.0.1:5433 engine_execjson session_subprocess sorted_tree d7f5cb5 Debug",
   "index_impl": "sorted_tree",
   "postgres": true,
-  "honesty": "Aims only until CI green. mode=embed_execjson \u2014 embed_execjson is the CI hard-gate path (lidb_embed session subprocess vs TCP Postgres). index_impl=sorted_tree \u2014 sorted_tree is in-memory ordered map (not disk B-tree / Postgres parity); range_scan is gated when index_impl is sorted_tree/btree. gated marketing claim needs multi-day CI PASS + PH-DB-7 (or forever footnote).",
+  "honesty": "Aims only until CI green. mode=engine_execjson \u2014 engine_execjson is the CI hard-gate path (lidb-engine session subprocess vs TCP Postgres). index_impl=sorted_tree \u2014 sorted_tree is in-memory ordered map (not disk B-tree / Postgres parity); range_scan is gated when index_impl is sorted_tree/btree. gated marketing claim needs multi-day CI PASS + PH-DB-7 (or forever footnote).",
   "scenarios": [
     {
       "engine": "lidb",

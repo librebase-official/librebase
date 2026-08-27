@@ -5,7 +5,7 @@
   "gate": "check_gate.py",
   "gate_exit": 0,
   "skipped": false,
-  "mode": "embed_execjson",
+  "mode": "engine_execjson",
   "embed_ipc": "session_subprocess",
   "lidb_pin": "d7f5cb5",
   "index_impl": "hash_map",

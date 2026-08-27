@@ -5,7 +5,7 @@
 
 ## Approach (locked)
 
-Close Wave A by **editing sibling lidb/lis**, proving with Librebase `parity_runner`, then add **export/import (SQL + COPY)** on `lidb_embed` with lis CLI wrappers. Defer lit until Li APIs exist.
+Close Wave A by **editing sibling lidb/lis**, proving with Librebase `parity_runner`, then add **export/import (SQL + COPY)** on `lidb-engine` with lis CLI wrappers. Defer lit until Li APIs exist.
 
 **Why:** Pin-only tracking cannot ensure tables or replace in-memory REST; constitution forbids fake ✅ and vendor forks.
 
@@ -26,7 +26,7 @@ flowchart TB
   end
   subgraph lidb [lidb]
     Boot[bootstrap parity_items]
-    Embed[lidb_embed exec]
+    Embed[lidb-engine exec]
     IO[export import sql copy]
   end
   Runner --> Rest
@@ -49,9 +49,9 @@ flowchart TB
 ## APIs
 
 ```text
-lidb_embed migrate <data-dir>          # ensures bootstrap incl. parity_items
-lidb_embed export <data-dir> --format sql|copy --tables t1,t2 -o path
-lidb_embed import <data-dir> --format sql|copy -i path
+lidb-engine migrate <data-dir>          # ensures bootstrap incl. parity_items
+lidb-engine export <data-dir> --format sql|copy --tables t1,t2 -o path
+lidb-engine import <data-dir> --format sql|copy -i path
 lis db migrate
 lis db export ...
 lis db import ...
@@ -90,5 +90,5 @@ Allowlist v1: `parity_items` (+ registry tables only if SELECT/INSERT already wo
 
 1. SDD artifacts committed under this directory.
 2. Live Wave A required IDs pass with Li configured.
-3. `lidb_embed export/import` (sql) round-trips allowlisted table; lis wrappers documented.
+3. `lidb-engine export/import` (sql) round-trips allowlisted table; lis wrappers documented.
 4. No lit / “native Li tested” claims for C++-only surfaces.

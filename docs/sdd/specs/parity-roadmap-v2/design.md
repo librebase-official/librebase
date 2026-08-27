@@ -10,7 +10,7 @@
 
 **North star:** True Supabase-shaped surface on linative (`lidb` + `lis` + opt-ins), Librebase as product — measured by HTTP/SQL contracts, not matrix emoji.
 
-**Coupling rule (locked):** Every wave that adds *new* runtime/API surface lands a matching self-hosted `lic` (or `.li` package) milestone **first**. No Python/C++ shortcuts for that new surface. Existing Wave A Python / `lidb_embed` MVP may remain until a dedicated rewrite wave retires it — it is not a license to extend.
+**Coupling rule (locked):** Every wave that adds *new* runtime/API surface lands a matching self-hosted `lic` (or `.li` package) milestone **first**. No Python/C++ shortcuts for that new surface. Existing Wave A Python / `lidb-engine` MVP may remain until a dedicated rewrite wave retires it — it is not a license to extend.
 
 **Self-host rule:** All `lic` gates run on the self-hosted compiler path (homelab / GitLab runners / repaired selfhost tree). Improving `lic` is in-band with each wave’s gate.
 

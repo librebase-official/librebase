@@ -18,7 +18,7 @@ As a **contributor**, I want Wave A contracts to pass against a real lis+lidb st
 As a **platform engineer**, I want `parity_items` present after native migrate/ensure so that SQL/REST contracts have a real table.
 
 **Acceptance criteria**
-- AC-2.1: After `lidb_embed migrate` (or documented ensure), INSERT/SELECT on `parity_items` works via embed exec.
+- AC-2.1: After `lidb-engine migrate` (or documented ensure), INSERT/SELECT on `parity_items` works via embed exec.
 - AC-2.2: Smoke or pytest covers that round-trip (named test).
 - AC-2.3: Docs state whether ensure is bootstrap hardcode vs SQL-file apply (honest).
 
@@ -34,7 +34,7 @@ As a **API consumer**, I want `/rest/v1/parity_items` to read/write lidb, not a 
 As an **operator**, I want to export and import allowlisted tables as plain SQL and text COPY so I can move fixture/app data without pg_dump custom format.
 
 **Acceptance criteria**
-- AC-4.1: `lidb_embed export` writes SQL INSERTs for allowlisted tables; `import` reloads them; SELECT matches.
+- AC-4.1: `lidb-engine export` writes SQL INSERTs for allowlisted tables; `import` reloads them; SELECT matches.
 - AC-4.2: COPY text format round-trips the same allowlist.
 - AC-4.3: `lis db export` / `lis db import` wrap the embed commands; docs distinguish from `lis db backup` (registry heap tarball).
 - AC-4.4: Unknown tables are refused with a clear error.

@@ -5,17 +5,17 @@ Honesty
 -------
 - Reports measured P50/P95 (and ops/sec where relevant) — never invents ratios
   without a Postgres URL.
-- Modes: embed_execjson (long-lived ``lidb_embed session`` subprocess + NDJSON IPC,
-  **CI hard gate**) vs embed_inprocess (EmbeddedSession in Python, diagnostic-only).
-- Hard gate: point_lookup_with_index + range_scan_name_prefix in embed_execjson
+- Modes: engine_execjson (long-lived ``lidb-engine session`` subprocess + NDJSON IPC,
+  **CI hard gate**) vs engine_inprocess (EmbeddedSession in Python, diagnostic-only).
+- Hard gate: point_lookup_with_index + range_scan_name_prefix in engine_execjson
   (CI: --scenarios core,range_scan_name_prefix).
 - ``index_impl`` autodetection: btree | sorted_tree | hash_map | unknown.
 - Marketing unlock: see MARKETING_UNLOCK.md — cite sorted_tree (not disk B-tree),
-  Release embed, and fair embed_execjson session.
+  Release embed, and fair engine_execjson session.
 
 Env
 ---
-  LIDB_ROOT / LIDB_EMBED  — lidb checkout or embed binary
+  LIDB_ROOT / LIDB_ENGINE  — lidb checkout or embed binary
   POSTGRES_URL            — optional; enables Postgres compare
   BENCH_ROWS / BENCH_WARMUP / BENCH_MEASURE
   HARDWARE_NOTE           — free-text runner description for the JSON payload
@@ -125,7 +125,7 @@ def detect_index_impl(*, root: Path, data_dir: Path | None = None) -> str:
     """Detect lidb index_impl (btree|sorted_tree|hash_map|unknown) for honesty JSON.
 
     Prefer liorm.probe_index_impl when LIDB_ROOT is importable; else parse
-    ``.lidb/migration_intent.txt`` or ``lidb_embed open`` stdout.
+    ``.lidb/migration_intent.txt`` or ``lidb-engine open`` stdout.
     """
     known = ("btree", "sorted_tree", "hash_map")
     if str(root) not in sys.path:
@@ -195,22 +195,22 @@ def detect_index_impl(*, root: Path, data_dir: Path | None = None) -> str:
 
 
 def find_embed() -> Path | None:
-    override = os.environ.get("LIDB_EMBED", "").strip()
+    override = os.environ.get("LIDB_ENGINE", "").strip()
     if override and Path(override).is_file():
         return Path(override)
     root = find_lidb_root()
     for cand in (
-        root / "build" / "smoke-release" / "lidb_embed.exe",
-        root / "build" / "smoke-release" / "lidb_embed",
-        root / "build" / "smoke" / "Release" / "lidb_embed.exe",
-        root / "build" / "smoke" / "Release" / "lidb_embed",
-        root / "build" / "smoke" / "lidb_embed.exe",
-        root / "build" / "smoke" / "lidb_embed",
-        root / "build" / "Release" / "lidb_embed.exe",
-        root / "build" / "lidb_embed.exe",
-        root / "build" / "lidb_embed",
-        root / "build" / "smoke" / "Debug" / "lidb_embed.exe",
-        root / "build" / "smoke" / "Debug" / "lidb_embed",
+        root / "build" / "smoke-release" / "lidb-engine.exe",
+        root / "build" / "smoke-release" / "lidb-engine",
+        root / "build" / "smoke" / "Release" / "lidb-engine.exe",
+        root / "build" / "smoke" / "Release" / "lidb-engine",
+        root / "build" / "smoke" / "lidb-engine.exe",
+        root / "build" / "smoke" / "lidb-engine",
+        root / "build" / "Release" / "lidb-engine.exe",
+        root / "build" / "lidb-engine.exe",
+        root / "build" / "lidb-engine",
+        root / "build" / "smoke" / "Debug" / "lidb-engine.exe",
+        root / "build" / "smoke" / "Debug" / "lidb-engine",
     ):
         if cand.is_file():
             return cand
@@ -235,7 +235,7 @@ def detect_build_type(embed: Path | None) -> str:
 def _configure_lidb_import(root: Path, embed: Path | None) -> None:
     os.environ.setdefault("LIDB_ROOT", str(root))
     if embed:
-        os.environ["LIDB_EMBED"] = str(embed)
+        os.environ["LIDB_ENGINE"] = str(embed)
 
 
 def try_session(data: Path):
@@ -255,17 +255,17 @@ def try_session(data: Path):
 
 
 def try_persistent_embed(data: Path):
-    """Long-lived lidb_embed session subprocess (WP-J NDJSON protocol)."""
+    """Long-lived lidb-engine session subprocess (WP-J NDJSON protocol)."""
     root = find_lidb_root()
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
     try:
-        from liorm.embed_engine import PersistentEmbedProcess  # type: ignore
+        from liorm.embed_engine import PersistentEngineProcess  # type: ignore
     except Exception:
         return None
     _configure_lidb_import(root, find_embed())
     try:
-        return PersistentEmbedProcess(data)
+        return PersistentEngineProcess(data)
     except Exception:
         return None
 
@@ -387,7 +387,7 @@ def run(
 ) -> dict:
     embed = find_embed()
     if embed is None:
-        raise RuntimeError("lidb_embed not found — set LIDB_EMBED or LIDB_ROOT")
+        raise RuntimeError("lidb-engine not found — set LIDB_ENGINE or LIDB_ROOT")
 
     root = find_lidb_root()
     pin = lidb_pin(root)
@@ -405,28 +405,28 @@ def run(
         concurrent_note = None
         embed_ipc = "unknown"
 
-        if mode == "embed_inprocess":
+        if mode == "engine_inprocess":
             session = try_session(data)
             if session is None:
                 raise RuntimeError(
-                    "embed_inprocess requested but EmbeddedSession unavailable "
-                    "(liorm/embed_engine + migrate). Use --mode embed_execjson or fix LIDB_ROOT."
+                    "engine_inprocess requested but EmbeddedSession unavailable "
+                    "(liorm/embed_engine + migrate). Use --mode engine_execjson or fix LIDB_ROOT."
                 )
             embed_ipc = "python_embedded_session"
             concurrent_note = (
                 "lidb concurrent_readers uses a mutex around EmbeddedSession "
                 "(embed not assumed thread-safe) — soft/diagnostic throughput"
             )
-        elif mode == "embed_execjson":
+        elif mode == "engine_execjson":
             persistent = try_persistent_embed(data)
             if persistent is None:
                 raise RuntimeError(
-                    "embed_execjson requires lidb_embed session mode (WP-J NDJSON). "
-                    "Rebuild lidb_embed with session support or set LIDB_EMBED."
+                    "engine_execjson requires lidb-engine session mode (WP-J NDJSON). "
+                    "Rebuild lidb-engine with session support or set LIDB_ENGINE."
                 )
             embed_ipc = "session_subprocess"
             concurrent_note = (
-                "lidb concurrent_readers uses one lidb_embed session subprocess per worker "
+                "lidb concurrent_readers uses one lidb-engine session subprocess per worker "
                 "(NDJSON IPC; process spawn amortized across warmup+measure)"
             )
         else:
@@ -508,7 +508,7 @@ def run(
                         scenario="point_lookup_with_index",
                         index=True,
                         status="index_unsupported",
-                        note="CREATE INDEX not available in this lidb_embed build",
+                        note="CREATE INDEX not available in this lidb-engine build",
                     )
                 )
 
@@ -879,9 +879,9 @@ def run(
         "honesty": (
             f"Aims only until CI green. mode={mode} — "
             + (
-                "embed_execjson is the CI hard-gate path (lidb_embed session subprocess vs TCP Postgres)."
-                if mode == "embed_execjson"
-                else "embed_inprocess is diagnostic-only (unfair vs TCP Postgres)."
+                "engine_execjson is the CI hard-gate path (lidb-engine session subprocess vs TCP Postgres)."
+                if mode == "engine_execjson"
+                else "engine_inprocess is diagnostic-only (unfair vs TCP Postgres)."
             )
             + f" index_impl={index_impl} — "
             + (
@@ -892,7 +892,7 @@ def run(
                 if index_impl == "btree"
                 else "hash_map — not B-tree / Postgres parity; "
             )
-                + " see MARKETING_UNLOCK.md (UNLOCKED with sorted_tree / Release / embed_execjson caveats)."
+                + " see MARKETING_UNLOCK.md (UNLOCKED with sorted_tree / Release / engine_execjson caveats)."
         ),
         "scenarios": out_scenarios,
     }
@@ -915,9 +915,9 @@ def main() -> int:
     )
     ap.add_argument(
         "--mode",
-        choices=("embed_inprocess", "embed_execjson"),
-        default=os.environ.get("OLTP_MODE", "embed_execjson"),
-        help="Fairness mode (default: embed_execjson — CI hard gate)",
+        choices=("engine_inprocess", "engine_execjson"),
+        default=os.environ.get("OLTP_MODE", "engine_execjson"),
+        help="Fairness mode (default: engine_execjson — CI hard gate)",
     )
     ap.add_argument(
         "--scenarios",

@@ -33,7 +33,7 @@
 
 | Check | Where | Pin / gate |
 |-------|-------|------------|
-| OLTP SQL hard gate | [`.github/workflows/oltp-compare.yml`](../.github/workflows/oltp-compare.yml) | lidb @ **`e5d6b00`** (`embed_execjson`, `check_gate.py`) |
+| OLTP SQL hard gate | [`.github/workflows/oltp-compare.yml`](../.github/workflows/oltp-compare.yml) | lidb @ **`e5d6b00`** (`engine_execjson`, `check_gate.py`) |
 | Lean RSS ≤ 64 MB steady | lidb `scripts/smoke.sh` + `lidb-bench --profile librebase-lean` | lidb @ **`e5d6b00`** (PH-DB-7 merged to main) |
 | Honesty doc | [lidb `docs/footprint.md`](https://gitlab.lilangverse.xyz/li-langverse/lidb/-/blob/main/docs/footprint.md) | Targets are **aims** until PH-DB-7 CI publishes green RSS rows |
 | Marketing unlock | [`benchmarks/oltp-compare/MARKETING_UNLOCK.md`](../benchmarks/oltp-compare/MARKETING_UNLOCK.md) | Requires measured RSS **or** keep “64 MB aim” copy forever |

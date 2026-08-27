@@ -3,7 +3,7 @@
 **Date:** 2026-08-05  
 **Status:** **implemented** (Phase 0–1 + Phase 3.1–3.2 + Linux RSS PASS + range_scan hard-gate promote); HTTP hard-gate still optional  
 **Branch:** `feat/p5-oltp-index-impl-detect` (librebase) · lidb `feat/p5-sorted-tree-index` · lis `feat/deepen-phase1-refresh-buckets`  
-**Related:** [`benchmarks/oltp-compare/MARKETING_UNLOCK.md`](../../benchmarks/oltp-compare/MARKETING_UNLOCK.md) — **UNLOCKED** (sorted_tree / Release / embed_execjson caveats)
+**Related:** [`benchmarks/oltp-compare/MARKETING_UNLOCK.md`](../../benchmarks/oltp-compare/MARKETING_UNLOCK.md) — **UNLOCKED** (sorted_tree / Release / engine_execjson caveats)
 
 ## Goal
 
@@ -15,7 +15,7 @@ Close the open paths that keep marketing **LOCKED** — **done for required rows
 | HTTP REST vs PostgREST | median max **~0.60×** (soft PASS) | soft-green ≤ **1.2×** — **met**; CI hard-gate optional |
 | PH-DB-7 lean RSS | Linux VmRSS **3.797 MB PASS** (job 99197) | citable Linux green — **met** |
 
-Core SQL gate is already **PASS** (`point_lookup_with_index` ~0.19–0.25× via `embed_execjson` + `PersistentEmbedProcess`). Do not regress it.
+Core SQL gate is already **PASS** (`point_lookup_with_index` ~0.19–0.25× via `engine_execjson` + `PersistentEngineProcess`). Do not regress it.
 
 ---
 
@@ -29,9 +29,9 @@ Core SQL gate is already **PASS** (`point_lookup_with_index` ~0.19–0.25× via 
 
 **Harness honesty notes already recorded:**
 
-- Range reps used **Debug** `lidb_embed` on Windows — re-measure Release before claiming structural limits.
+- Range reps used **Debug** `lidb-engine` on Windows — re-measure Release before claiming structural limits.
 - Scenario SQL: `WHERE name LIKE 'lookup-%' LIMIT 50` on 10k rows (`benchmarks/oltp-compare/README.md`).
-- HTTP gap root cause: **Python REST surface** (stdlib HTTP + auth), not embed spawn after `PersistentEmbedProcess` in `lidb_store._exec_json`.
+- HTTP gap root cause: **Python REST surface** (stdlib HTTP + auth), not embed spawn after `PersistentEngineProcess` in `lidb_store._exec_json`.
 
 ---
 
@@ -49,7 +49,7 @@ Core SQL gate is already **PASS** (`point_lookup_with_index` ~0.19–0.25× via 
 
 ### lis — REST / embed IPC today
 
-- Non-RLS: `PersistentEmbedProcess` (long-lived `lidb_embed session`, NDJSON line protocol) via `_exec_json`.
+- Non-RLS: `PersistentEngineProcess` (long-lived `lidb-engine session`, NDJSON line protocol) via `_exec_json`.
 - RLS (`LI_RLS_ENGINE=1`): `_session_exec` still **spawns a fresh `session` subprocess per call** (stdin batch → quit) — must not stay on the hot path if RLS is on for HTTP benches.
 - Serve path: Python `ThreadingHTTPServer` / registry handler stack; Wave 4 `packages/lis-rest` is allowlist + lic gate only; **Li HTTP serve blocked on lic P0 httpd** ([Wave 4 release note](https://github.com/li-langverse/lis) / `lis/docs/release-notes/2026-08-03-wave-4-lis-rest.md`).
 
@@ -111,7 +111,7 @@ From range-scan-rep-1: Postgres P95 ≈ **0.39 ms** → 1.2× budget ≈ **0.47 
 
 ### Phase 0 — Measurement hygiene (0.5–1 day) — **do first**
 
-1. Rebuild `lidb_embed` **Release** (and RelWithDebInfo) on the same Windows host; re-run 3× `range_scan_name_prefix`.
+1. Rebuild `lidb-engine` **Release** (and RelWithDebInfo) on the same Windows host; re-run 3× `range_scan_name_prefix`.
 2. Add harness fields: `build_type` (Debug/Release), `embed_ipc`, compiler flags.
 3. Microbench inside embed (no IPC): same SQL via in-process `EmbeddedDatabase::exec_parameterized` to split **engine vs NDJSON**.
 4. Optional Linux cross-check early (same seed) so we do not optimize Windows-Debug-only artifacts.
@@ -155,7 +155,7 @@ Target: shrink **~4–6× → ≤2×** first (honest soft progress), then chase 
 
 | # | Change | Notes | Est. |
 |---|--------|-------|------|
-| 3.1 | **RLS path:** route `_session_exec` through `PersistentEmbedProcess` + `set_claims` NDJSON cmds (no spawn/quit per request) | Critical if benches enable RLS | 1 d |
+| 3.1 | **RLS path:** route `_session_exec` through `PersistentEngineProcess` + `set_claims` NDJSON cmds (no spawn/quit per request) | Critical if benches enable RLS | 1 d |
 | 3.2 | **Embed session pool** (N processes or N in-proc handles) behind ThreadingHTTPServer | Avoid global lock serialization | 1–2 d |
 | 3.3 | Cut handler overhead: cache JWT verify; avoid double `get` after update; smaller JSON encode | Profile with `py-spy` / cProfile on `rest_get_eq_name` | 1–2 d |
 | 3.4 | Replace stdlib server with **uvicorn/hypercorn** (or waitress) behind feature flag for librebase profile | Keep lean default if RSS matters | 1–2 d |
@@ -180,7 +180,7 @@ Target: shrink **~4–6× → ≤2×** first (honest soft progress), then chase 
 |--------|------|--------|
 | A. Keep NDJSON session (status quo) | Enough for SQL gate | done |
 | B. Shared-memory ring + seqlock/polling | REST still IPC-bound after Python cuts | 1–2 w |
-| C. In-process library (`lidb_embed` as `.so`/`.dll` + C API; Python/`li` FFI) | Best latency; CIDR “no isolation” | 1–3 w |
+| C. In-process library (`lidb-engine` as `.so`/`.dll` + C API; Python/`li` FFI) | Best latency; CIDR “no isolation” | 1–3 w |
 | D. Unix domain socket + length-prefixed binary | Middle ground; portable | 1 w |
 
 Sequence: **C for lis-local**, **B if multi-language clients must stay out-of-process**. Measure with Phase 0 microbench harness.
@@ -256,7 +256,7 @@ flowchart TD
 
 ## Top 3 recommended next engineering moves
 
-1. **Re-baseline range_scan on Release + in-process microbench** (Phase 0) — current ~1.94× includes Debug `lidb_embed`; do not design P2 disk btree until this is known.  
+1. **Re-baseline range_scan on Release + in-process microbench** (Phase 0) — current ~1.94× includes Debug `lidb-engine`; do not design P2 disk btree until this is known.  
 2. **lidb Phase 1.1–1.3:** prefix successor bounds + kill `std::map` row copies + replace secondary `std::map` with btree_map/sorted vector — highest probability path to ≤1.2× without persistence rewrite.  
 3. **lis Phase 3.1–3.2:** persistent session for RLS + session pool under HTTP — removes known spawn/lock tax before chasing Li httpd; re-run HTTP 3-rep soft streak.
 

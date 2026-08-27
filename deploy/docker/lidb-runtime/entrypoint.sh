@@ -11,7 +11,7 @@ mkdir -p "$DATA_DIR"
 echo "librebase lidb-runtime starting (LIDB_RUNTIME_MODE=${MODE}) app=${APP_NAME:-default}"
 
 # Production: persistent LiDB supervisor (preferred)
-if [ -f /opt/librebase/scripts/lidb_supervisor.py ] && command -v lidb_embed >/dev/null 2>&1; then
+if [ -f /opt/librebase/scripts/lidb_supervisor.py ] && command -v lidb-engine >/dev/null 2>&1; then
   echo "PRODUCTION: LiDB supervisor — persistent SQL engine"
   exec python3 /opt/librebase/scripts/lidb_supervisor.py \
     --data-dir "$DATA_DIR" \
@@ -19,9 +19,9 @@ if [ -f /opt/librebase/scripts/lidb_supervisor.py ] && command -v lidb_embed >/d
     --app-name "${APP_NAME:-default}"
 fi
 
-# Fallback: librebase_api.py with lidb_embed backing
-if command -v lidb_embed >/dev/null 2>&1; then
-  echo "FALLBACK: librebase_api.py with lidb_embed"
+# Fallback: librebase_api.py with lidb-engine backing
+if command -v lidb-engine >/dev/null 2>&1; then
+  echo "FALLBACK: librebase_api.py with lidb-engine"
   exec python3 /opt/librebase/scripts/librebase_api.py \
     --data-dir "$DATA_DIR" \
     --api-port "$API_PORT" \
@@ -36,7 +36,7 @@ if [ -n "$LIDB_ROOT" ] && [ -d "$LIDB_ROOT" ] && command -v lis >/dev/null 2>&1;
 fi
 
 # Dev stub
-echo "DEV MODE — file-backed stub (no lidb_embed)"
+echo "DEV MODE — file-backed stub (no lidb-engine)"
 exec python3 /opt/librebase/scripts/dev_runtime_stub.py \
   --data-dir "$DATA_DIR" \
   --api-port "$API_PORT" \

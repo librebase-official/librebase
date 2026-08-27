@@ -149,7 +149,7 @@ memory, cold on disk):
 # both stacks must be up: full Supabase (podman, :8000 Kong) + lis (:54321) + lidb
 cd benchmarks/full-stack
 STACK=sb LIBREBASE_API=http://127.0.0.1:8000/rest/v1 LIBREBASE_SERVICE_ROLE=<key> node ingest-index.mjs
-STACK=lidb LIDB_EMBED=<lidb> LIDB_DATA=<dir> node ingest-index.mjs
+STACK=lidb LIDB_ENGINE=<lidb> LIDB_DATA=<dir> node ingest-index.mjs
 LIBREBASE_SERVICE_ROLE=<key> LIBREBASE_JWT_SECRET=<secret> node vector.mjs
 
 # official postgrest-js suite (see postgrest-js-suite/README.md)

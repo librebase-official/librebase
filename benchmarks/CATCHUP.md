@@ -68,7 +68,7 @@ Postgres page B-tree/MVCC, WASM ≠ Deno).
 
 - `MARKETING_UNLOCK.md` is `UNLOCKED` (rows 1–3 + 5 green). Copy may cite
   measured numbers with the caveats: `sorted_tree` ≠ disk B-tree, Release
-  `lidb_embed`, `embed_execjson` session IPC.
+  `lidb-engine`, `engine_execjson` session IPC.
 - Never invent figures. Cite committed / CI-published PASS artifacts only.
 - Do **not** claim full Supabase replacement. Realtime dual-stack parity still
   unmeasured (Supabase realtime cluster unhealthy in the podman stack).

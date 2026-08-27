@@ -6,7 +6,7 @@
   "librebase_branch": "feat/p5-oltp-index-impl-detect",
   "lidb_pin": "041b9a2",
   "lidb_branch": "feat/p5-sorted-tree-index",
-  "mode": "embed_execjson",
+  "mode": "engine_execjson",
   "embed_ipc": "session_subprocess",
   "build_type": "Release",
   "index_impl": "sorted_tree",

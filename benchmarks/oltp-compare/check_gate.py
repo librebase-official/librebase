@@ -3,7 +3,7 @@
 
 Hard gate (exit 1):
   - payload skipped / missing postgres
-  - mode != embed_execjson (embed_inprocess is diagnostic-only)
+  - mode != engine_execjson (engine_inprocess is diagnostic-only)
   - lidb point_lookup_with_index missing, not measured, or index_unsupported
   - point_lookup_with_index ratio_vs_postgres_p95 > OLTP_RATIO_MAX (default 1.2)
   - lidb range_scan_name_prefix missing / not measured / index_unsupported /
@@ -28,7 +28,7 @@ REPO = Path(__file__).resolve().parents[2]
 DEFAULT_JSON = REPO / "benchmarks" / "oltp-compare" / "results" / "latest.json"
 
 HARD_GATED = ("point_lookup_with_index", "range_scan_name_prefix")
-GATED_MODE = "embed_execjson"
+GATED_MODE = "engine_execjson"
 SOFT_GATED = ("point_insert", "indexed_read_write_mix")
 
 
@@ -69,7 +69,7 @@ def check(payload: dict) -> int:
     if mode != GATED_MODE:
         errors.append(
             f"mode={mode!r} — CI hard gate requires {GATED_MODE!r} "
-            "(embed_inprocess is diagnostic-only; unfair vs TCP Postgres)"
+            "(engine_inprocess is diagnostic-only; unfair vs TCP Postgres)"
         )
 
     scenarios = payload.get("scenarios") or []

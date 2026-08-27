@@ -137,37 +137,37 @@ def verify_jwt(token: str, secret: str = JWT_SECRET) -> dict[str, Any] | None:
 
 
 # ---------------------------------------------------------------------------
-# lidb_embed integration — real SQL engine when the binary is available.
+# lidb-engine integration — real SQL engine when the binary is available.
 # ---------------------------------------------------------------------------
-_LIDB_EMBED: str | None = None  # cached path, resolved once at startup
+_LIDB_ENGINE: str | None = None  # cached path, resolved once at startup
 
 
-def _find_lidb_embed() -> str | None:
-    """Locate the lidb_embed binary. Checks PATH, then common install locations."""
-    global _LIDB_EMBED
-    if _LIDB_EMBED is not None:
-        return _LIDB_EMBED
+def _find_lidb_engine() -> str | None:
+    """Locate the lidb-engine binary. Checks PATH, then common install locations."""
+    global _LIDB_ENGINE
+    if _LIDB_ENGINE is not None:
+        return _LIDB_ENGINE
     # 1. On PATH
-    found = shutil.which("lidb_embed")
+    found = shutil.which("lidb-engine")
     if found:
-        _LIDB_EMBED = found
-        return _LIDB_EMBED
+        _LIDB_ENGINE = found
+        return _LIDB_ENGINE
     # 2. LIDB_ROOT env var (set by host-agent)
     lidb_root = os.environ.get("LIDB_ROOT", "")
     if lidb_root:
-        candidate = Path(lidb_root) / "build" / "lidb_embed"
+        candidate = Path(lidb_root) / "build" / "lidb-engine"
         if candidate.is_file():
-            _LIDB_EMBED = str(candidate)
-            return _LIDB_EMBED
+            _LIDB_ENGINE = str(candidate)
+            return _LIDB_ENGINE
     # 3. Standard locations
     for candidate in (
-        "/usr/local/bin/lidb_embed",
-        "/opt/lidb/build/lidb_embed",
-        "/opt/li/lidb/build/lidb_embed",
+        "/usr/local/bin/lidb-engine",
+        "/opt/lidb/build/lidb-engine",
+        "/opt/li/lidb/build/lidb-engine",
     ):
         if Path(candidate).is_file():
-            _LIDB_EMBED = candidate
-            return _LIDB_EMBED
+            _LIDB_ENGINE = candidate
+            return _LIDB_ENGINE
     return None
 
 
@@ -196,7 +196,7 @@ def _get_lidb_engine(data_dir: str) -> Any | None:
     if lidb_str not in sys.path:
         sys.path.insert(0, lidb_str)
     os.environ.setdefault("LIDB_ROOT", lidb_str)
-    os.environ.setdefault("LIDB_EMBED", "/usr/local/bin/lidb_embed")
+    os.environ.setdefault("LIDB_ENGINE", "/usr/local/bin/lidb-engine")
     os.environ["LIDB_DATA_DIR"] = data_dir
     os.environ["LI_DATA_DIR"] = data_dir
     try:
@@ -225,7 +225,7 @@ def _exec_lidb_sql(data_dir: str, sql: str) -> dict[str, Any] | None:
         rows = engine.execute_sql(sql, [])
         return {"ok": True, "rows": rows}
     except RuntimeError:
-        # lidb_embed returns exit 1 for DDL/DML (CREATE/INSERT/UPDATE/DELETE)
+        # lidb-engine returns exit 1 for DDL/DML (CREATE/INSERT/UPDATE/DELETE)
         # when rows are empty + affected=0. This is expected — treat as success.
         if _DDL_RE.match(sql):
             return {"ok": True, "rows": [], "message": "statement executed"}
@@ -777,12 +777,12 @@ class Handler(BaseHTTPRequestHandler):
         if auth.get("role") not in ("authenticated", "service_role"):
             self._send(401, {"error": "unauthorized", "message": "Sign in required"})
             return
-        # Try lidb_embed first — real SQL engine when available.
+        # Try lidb-engine first — real SQL engine when available.
         lidb_result = _exec_lidb_sql(self.data_dir, sql)
         if lidb_result is not None:
             self._send(200, lidb_result)
             return
-        # Fallback: file-backed stub for environments without lidb_embed.
+        # Fallback: file-backed stub for environments without lidb-engine.
         lowered = " ".join(sql.lower().split())
         if "information_schema.tables" in lowered:
             snap = self.store.snapshot()

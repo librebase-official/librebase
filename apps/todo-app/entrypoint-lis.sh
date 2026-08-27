@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Start the Librebase lis backend (auth + REST + storage) on :54321.
-# Pure-stdlib python — no lidb_embed, mock auth, in-memory REST store.
+# Pure-stdlib python — no lidb-engine, mock auth, in-memory REST store.
 set -euo pipefail
 export PYTHONPATH=/opt/lis
 export LI_API_PORT="${LI_API_PORT:-54321}"

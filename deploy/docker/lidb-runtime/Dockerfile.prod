@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Production lidb-runtime — compiles lidb_embed from C++ source,
+# Production lidb-runtime — compiles lidb-engine from C++ source,
 # bundles lidb_supervisor.py (persistent SQL gateway) + librebase_api.py.
 #
 # Usage:
@@ -13,7 +13,7 @@
 #   LIBREBASE_PG_PORT     — Postgres wire port (default: 54322)
 #   LIBREBASE_ALLOW_INSECURE_DEFAULTS — set to "1" for local dev
 
-# ── Stage 1: build lidb_embed ────────────────────────────────────────
+# ── Stage 1: build lidb-engine ────────────────────────────────────────
 FROM docker.io/ubuntu:24.04 AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -24,10 +24,10 @@ WORKDIR /build
 COPY lidb/ /build/lidb/
 RUN cd lidb && mkdir -p build && cd build \
     && cmake .. -DCMAKE_BUILD_TYPE=Release \
-    && cmake --build . --target lidb_embed -j$(nproc)
+    && cmake --build . --target lidb-engine -j$(nproc)
 
 # Smoke test
-RUN /build/lidb/build/lidb_embed migrate /tmp/test-lidb && echo "lidb_embed OK"
+RUN /build/lidb/build/lidb-engine migrate /tmp/test-lidb && echo "lidb-engine OK"
 
 # ── Stage 2: runtime image ───────────────────────────────────────────
 FROM docker.io/ubuntu:24.04
@@ -38,8 +38,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /opt/librebase
 
-# lidb_embed binary
-COPY --from=builder /build/lidb/build/lidb_embed /usr/local/bin/lidb_embed
+# lidb-engine binary
+COPY --from=builder /build/lidb/build/lidb-engine /usr/local/bin/lidb-engine
 
 # liorm for embed_engine integration
 COPY --from=builder /build/lidb/liorm /opt/li/lidb/liorm
@@ -54,13 +54,13 @@ COPY scripts/dev_runtime_stub.py /opt/librebase/scripts/dev_runtime_stub.py
 COPY deploy/docker/lidb-runtime/entrypoint.sh /opt/librebase/entrypoint.sh
 
 RUN chmod +x /opt/librebase/entrypoint.sh \
-    /usr/local/bin/lidb_embed \
+    /usr/local/bin/lidb-engine \
     /opt/librebase/scripts/*.py \
     && mkdir -p /data
 
 ENV LI_DATA_DIR=/data \
     LIDB_ROOT=/opt/li/lidb \
-    LIDB_EMBED=/usr/local/bin/lidb_embed \
+    LIDB_ENGINE=/usr/local/bin/lidb-engine \
     LIDB_RUNTIME_MODE=production \
     LIBREBASE_API_PORT=54320 \
     LIBREBASE_PG_PORT=54322 \

@@ -1,6 +1,6 @@
 name: OLTP compare (gated)
 
-# Postgres 16 + lidb_embed head-to-head. Fails on intentional runs when embed
+# Postgres 16 + lidb-engine head-to-head. Fails on intentional runs when embed
 # cannot be built, Postgres is unhealthy, or gated ratio breaches OLTP_RATIO_MAX.
 on:
   workflow_dispatch:
@@ -37,7 +37,7 @@ jobs:
       BENCH_ROWS: "10000"
       BENCH_WARMUP: "30"
       BENCH_MEASURE: "200"
-      OLTP_MODE: embed_execjson
+      OLTP_MODE: engine_execjson
       # Hard gate: core lookups/insert/mix + range_scan (promoted after Release 3-rep ≤1.2×)
       OLTP_SCENARIOS: core,range_scan_name_prefix
       OLTP_RATIO_MAX: "1.2"
@@ -86,7 +86,7 @@ jobs:
           token: ${{ secrets.LIDB_CHECKOUT_TOKEN || github.token }}
         continue-on-error: true
 
-      - name: Build lidb_embed (smoke)
+      - name: Build lidb-engine (smoke)
         id: build
         if: steps.lidb.outcome == 'success'
         working-directory: _deps/lidb
@@ -96,14 +96,14 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq cmake g++ ninja-build
           cmake -S . -B build/smoke -DCMAKE_BUILD_TYPE=Release
-          cmake --build build/smoke --target lidb_embed -j"$(nproc)"
-          test -x build/smoke/lidb_embed
-          echo "embed=${{ github.workspace }}/_deps/lidb/build/smoke/lidb_embed" >> "$GITHUB_OUTPUT"
+          cmake --build build/smoke --target lidb-engine -j"$(nproc)"
+          test -x build/smoke/lidb-engine
+          echo "embed=${{ github.workspace }}/_deps/lidb/build/smoke/lidb-engine" >> "$GITHUB_OUTPUT"
 
       - name: Run oltp-compare + gate
         env:
           LIDB_ROOT: ${{ github.workspace }}/_deps/lidb
-          LIDB_EMBED: ${{ steps.build.outputs.embed }}
+          LIDB_ENGINE: ${{ steps.build.outputs.embed }}
           FORCE_SKIP_OK: ${{ github.event.inputs.force_skip_ok || 'false' }}
           LIDB_CHECKOUT_OK: ${{ steps.lidb.outcome }}
           LIDB_BUILD_OK: ${{ steps.build.outcome }}
@@ -117,8 +117,8 @@ jobs:
             allow_skip=true
           fi
 
-          if [ "${LIDB_CHECKOUT_OK}" != "success" ] || [ "${LIDB_BUILD_OK}" != "success" ] || [ ! -f "${LIDB_EMBED:-}" ]; then
-            export SKIP_REASON="lidb checkout/build failed or lidb_embed missing (set LIDB_CHECKOUT_TOKEN if private; pin=${{ steps.pin.outputs.sha }})"
+          if [ "${LIDB_CHECKOUT_OK}" != "success" ] || [ "${LIDB_BUILD_OK}" != "success" ] || [ ! -f "${LIDB_ENGINE:-}" ]; then
+            export SKIP_REASON="lidb checkout/build failed or lidb-engine missing (set LIDB_CHECKOUT_TOKEN if private; pin=${{ steps.pin.outputs.sha }})"
             export SKIP_PIN="${{ steps.pin.outputs.sha }}"
             echo "ERROR: $SKIP_REASON"
             python3 - <<'PY'
@@ -130,9 +130,9 @@ jobs:
                       "suite": "librebase-oltp-index-compare",
                       "postgres": True,
                       "skipped": True,
-                      "skip_reason": os.environ.get("SKIP_REASON", "lidb_embed unavailable"),
+                      "skip_reason": os.environ.get("SKIP_REASON", "lidb-engine unavailable"),
                       "lidb_pin": os.environ.get("SKIP_PIN", "unknown"),
-                      "mode": "embed_execjson",
+                      "mode": "engine_execjson",
                       "index_impl": "hash_map",
                       "honesty": "Intentional CI run — skip is a gate failure unless force_skip_ok.",
                       "scenarios": [],
@@ -151,7 +151,7 @@ jobs:
             exit 1
           fi
 
-          export LIDB_EMBED
+          export LIDB_ENGINE
           export LIDB_ROOT
           python3 benchmarks/oltp-compare/run_compare.py \
             --mode "$OLTP_MODE" \
@@ -280,7 +280,7 @@ jobs:
           token: ${{ secrets.LIDB_CHECKOUT_TOKEN || github.token }}
         continue-on-error: true
 
-      - name: Build lidb_embed (smoke)
+      - name: Build lidb-engine (smoke)
         id: build
         if: steps.lidb.outcome == 'success'
         working-directory: _deps/lidb
@@ -290,8 +290,8 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq cmake g++ ninja-build
           cmake -S . -B build/smoke -DCMAKE_BUILD_TYPE=Release
-          cmake --build build/smoke --target lidb_embed -j"$(nproc)"
-          test -x build/smoke/lidb_embed
+          cmake --build build/smoke --target lidb-engine -j"$(nproc)"
+          test -x build/smoke/lidb-engine
 
       - name: Start lean lis registry (background)
         id: lis_stack
@@ -299,7 +299,7 @@ jobs:
         env:
           LIS_ROOT: ${{ github.workspace }}/_deps/lis
           LIDB_ROOT: ${{ github.workspace }}/_deps/lidb
-          LIDB_EMBED: ${{ github.workspace }}/_deps/lidb/build/smoke/lidb_embed
+          LIDB_ENGINE: ${{ github.workspace }}/_deps/lidb/build/smoke/lidb-engine
           LI_PROFILE: librebase
           LI_REST_BACKEND: lidb
           LI_JWT_SECRET: ci-http-bench-secret-change-me
@@ -335,7 +335,7 @@ jobs:
         env:
           LIS_REST_URL: ${{ steps.lis_stack.outputs.url || vars.LIS_REST_URL || '' }}
           LIDB_ROOT: ${{ github.workspace }}/_deps/lidb
-          LIDB_EMBED: ${{ github.workspace }}/_deps/lidb/build/smoke/lidb_embed
+          LIDB_ENGINE: ${{ github.workspace }}/_deps/lidb/build/smoke/lidb-engine
           LIS_ROOT: ${{ github.workspace }}/_deps/lis
         run: |
           set -euo pipefail

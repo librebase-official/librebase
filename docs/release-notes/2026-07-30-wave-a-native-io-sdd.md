@@ -7,7 +7,7 @@ Wave A parity harness has **no soft skips**: P-IO-01 (SQL export/import) and P-R
 ## Agent continuation
 
 1. **Read:** `docs/sdd/specs/wave-a-native-io/`, `tests/parity/contracts.py`.
-2. **Run:** registry API + `python routes/realtime/server.py --port <ws>`; set `LIBREBASE_PARITY_API`, `LIBREBASE_PARITY_WS`, `LIDB_ROOT`/`LIDB_EMBED`; `PARITY_FORCE=1 python scripts/parity_runner.py`.
+2. **Run:** registry API + `python routes/realtime/server.py --port <ws>`; set `LIBREBASE_PARITY_API`, `LIBREBASE_PARITY_WS`, `LIDB_ROOT`/`LIDB_ENGINE`; `PARITY_FORCE=1 python scripts/parity_runner.py`.
 3. **Then:** human-merge PR #9; open GitLab MRs for lidb/lis.
 4. **Blocked on:** CREATE TABLE DDL; engine RLS; sibling MR merges.
 
@@ -37,4 +37,4 @@ N/A.
 
 ## Downstream
 
-Requires `websockets` for P-RT-01; lidb_embed for P-IO-01.
+Requires `websockets` for P-RT-01; lidb-engine for P-IO-01.

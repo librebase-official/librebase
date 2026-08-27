@@ -3,8 +3,8 @@
   "rows_seeded": 10000,
   "warmup": 30,
   "measure": 200,
-  "mode": "embed_execjson",
-  "lidb_mode": "embed_execjson",
+  "mode": "engine_execjson",
+  "lidb_mode": "engine_execjson",
   "embed_ipc": "session_subprocess",
   "scenarios_selected": [
     "point_lookup_no_index",
@@ -12,14 +12,14 @@
     "point_insert",
     "indexed_read_write_mix"
   ],
-  "embed": "C:\\Users\\Julian\\Documents\\Programming\\li\\lidb\\build\\smoke\\Release\\lidb_embed.exe",
+  "embed": "C:\\Users\\Julian\\Documents\\Programming\\li\\lidb\\build\\smoke\\Release\\lidb-engine.exe",
   "lidb_pin": "d7f5cb5",
   "lidb_root": "C:\\Users\\Julian\\Documents\\Programming\\li\\lidb",
   "runner_os": "Windows-11-10.0.26200-SP0",
   "hardware_note": "local win32 + lb-pg-bench:5433 manual 3-rep streak 2026-08-05",
   "index_impl": "hash_map",
   "postgres": true,
-  "honesty": "Aims only until CI green. mode=embed_execjson \u2014 embed_execjson is the CI hard-gate path (lidb_embed session subprocess vs TCP Postgres). index_impl=hash_map \u2014 hash_map \u2014 not B-tree / Postgres parity;  gated marketing claim needs multi-day CI PASS + PH-DB-7 (or forever footnote).",
+  "honesty": "Aims only until CI green. mode=engine_execjson \u2014 engine_execjson is the CI hard-gate path (lidb-engine session subprocess vs TCP Postgres). index_impl=hash_map \u2014 hash_map \u2014 not B-tree / Postgres parity;  gated marketing claim needs multi-day CI PASS + PH-DB-7 (or forever footnote).",
   "scenarios": [
     {
       "engine": "lidb",

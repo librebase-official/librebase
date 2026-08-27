@@ -1,7 +1,7 @@
 # librebase-tiny — tiniest Librebase runtime container
 
 A **scratch**-based, single-static-binary Librebase runtime: a small Go HTTP shim
-driving the native `lidb_embed` engine over its persistent `session` NDJSON
+driving the native `lidb-engine` engine over its persistent `session` NDJSON
 protocol. No Python, no Node, no shell — just two static binaries in an 8 MB image.
 
 ## Meets the footprint criteria (measured)
@@ -33,7 +33,7 @@ podman build -f librebase/deploy/docker/librebase-tiny/Containerfile -t librebas
 ```
 
 The Containerfile is multi-stage:
-1. `gcc:13` — builds a **static** `lidb_embed` (`-static -O2`)
+1. `gcc:13` — builds a **static** `lidb-engine` (`-static -O2`)
 2. `golang:1.23-alpine` — builds the static Go shim (`CGO_ENABLED=0`)
 3. `scratch` — copies only the two binaries + SQL migrations
 
@@ -53,7 +53,7 @@ node apps/todo-app/test/bench-crud.mjs   # against the lis HTTP app, or point LI
 
 ## Layout
 
-- `server.go` — static Go HTTP shim (health + `GET/POST /rest/v1/todos`, `PATCH/DELETE /rest/v1/todos/{id}`); keeps a persistent `lidb_embed session` child for sub-ms CRUD
+- `server.go` — static Go HTTP shim (health + `GET/POST /rest/v1/todos`, `PATCH/DELETE /rest/v1/todos/{id}`); keeps a persistent `lidb-engine session` child for sub-ms CRUD
 - `migrations/001_todos.sql` — `todos` table (all-TEXT to match the engine's string catalog)
 - `Containerfile` — multi-stage scratch build
 

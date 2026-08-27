@@ -1,8 +1,8 @@
 # librebase-tiny — the smallest Librebase runtime: static Go HTTP shim + static
 # lidb engine in a scratch image. Target: ≤64MB RSS, <300ms startup, sub-ms CRUD
-# (lidb_embed `session` NDJSON over a persistent child).
+# (lidb-engine `session` NDJSON over a persistent child).
 
-# ---- stage 1: build static lidb_embed (Linux) ----
+# ---- stage 1: build static lidb-engine (Linux) ----
 FROM docker.io/library/gcc:13-bookworm AS lidb
 RUN apt-get update && apt-get install -y --no-install-recommends cmake ninja-build && rm -rf /var/lib/apt/lists/*
 WORKDIR /src
@@ -11,7 +11,7 @@ COPY lidb/ ./
 RUN cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_CXX_FLAGS="-static -O2" \
       -DCMAKE_EXE_LINKER_FLAGS="-static -lstdc++fs" >/dev/null && \
-    cmake --build build --target lidb_embed -j$(nproc) >/dev/null
+    cmake --build build --target lidb-engine -j$(nproc) >/dev/null
 
 # ---- stage 2: build static Go shim ----
 FROM docker.io/library/golang:1.23-alpine AS go
@@ -21,7 +21,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o tiny-lb server.go
 
 # ---- stage 3: scratch (tiniest possible) ----
 FROM scratch
-COPY --from=lidb /src/build/lidb_embed /usr/local/bin/lidb_embed
+COPY --from=lidb /src/build/lidb-engine /usr/local/bin/lidb-engine
 COPY --from=go /shim/tiny-lb /usr/local/bin/tiny-lb
 COPY librebase/deploy/docker/librebase-tiny/migrations/ /etc/librebase/migrations/
 ENV LI_DATA_DIR=/data PORT=8788 LIDB_MIGRATIONS=/etc/librebase/migrations
