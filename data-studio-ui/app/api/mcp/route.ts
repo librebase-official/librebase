@@ -660,7 +660,11 @@ export async function POST(request: Request) {
   const publicAuthTool = method === "tools/call" &&
     (toolName === "auth_start" || toolName === "auth_poll");
 
-  const publicMethod = method === "initialize" || method === "tools/list" || publicAuthTool;
+  const publicMethod =
+    method === "initialize" ||
+    method === "notifications/initialized" ||
+    method === "tools/list" ||
+    publicAuthTool;
   if (!publicMethod && !token) {
     return NextResponse.json(
       { error: "Missing Authorization: Bearer <mcp_key>" },
