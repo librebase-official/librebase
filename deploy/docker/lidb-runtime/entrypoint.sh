@@ -8,23 +8,36 @@ MODE="${LIDB_RUNTIME_MODE:-dev}"
 
 mkdir -p "$DATA_DIR"
 
-echo "librebase lidb-runtime starting (LIDB_RUNTIME_MODE=${MODE})"
+echo "librebase lidb-runtime starting (LIDB_RUNTIME_MODE=${MODE}) app=${APP_NAME:-default}"
 
-if [ -n "$LIDB_ROOT" ] && [ -d "$LIDB_ROOT" ] && command -v lis >/dev/null 2>&1; then
-  echo "production runtime: lis db start (LIDB_ROOT=$LIDB_ROOT)"
-  export LI_DATA_DIR="$DATA_DIR"
-  export LIBREBASE_API_PORT="$API_PORT"
-  export LIBREBASE_PG_PORT="$PG_PORT"
-  exec lis db start
+# Production: persistent LiDB supervisor (preferred)
+if [ -f /opt/librebase/scripts/lidb_supervisor.py ] && command -v lidb_embed >/dev/null 2>&1; then
+  echo "PRODUCTION: LiDB supervisor — persistent SQL engine"
+  exec python3 /opt/librebase/scripts/lidb_supervisor.py \
+    --data-dir "$DATA_DIR" \
+    --api-port "$API_PORT" \
+    --app-name "${APP_NAME:-default}"
 fi
 
-if [ "$MODE" = "dev" ]; then
-  echo "DEV MODE — dev_runtime_stub (not production lidb)"
-  exec python3 /opt/librebase/scripts/dev_runtime_stub.py \
+# Fallback: librebase_api.py with lidb_embed backing
+if command -v lidb_embed >/dev/null 2>&1; then
+  echo "FALLBACK: librebase_api.py with lidb_embed"
+  exec python3 /opt/librebase/scripts/librebase_api.py \
     --data-dir "$DATA_DIR" \
     --api-port "$API_PORT" \
     --postgres-port "$PG_PORT"
 fi
 
-echo "ERROR: no LIDB_ROOT/lis and LIDB_RUNTIME_MODE is not dev"
-exit 1
+# lis db start if available
+if [ -n "$LIDB_ROOT" ] && [ -d "$LIDB_ROOT" ] && command -v lis >/dev/null 2>&1; then
+  echo "production runtime: lis db start (LIDB_ROOT=$LIDB_ROOT)"
+  export LI_DATA_DIR="$DATA_DIR"
+  exec lis db start
+fi
+
+# Dev stub
+echo "DEV MODE — file-backed stub (no lidb_embed)"
+exec python3 /opt/librebase/scripts/dev_runtime_stub.py \
+  --data-dir "$DATA_DIR" \
+  --api-port "$API_PORT" \
+  --postgres-port "$PG_PORT"

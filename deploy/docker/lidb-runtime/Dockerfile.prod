@@ -1,0 +1,71 @@
+# syntax=docker/dockerfile:1
+# Production lidb-runtime — compiles lidb_embed from C++ source,
+# bundles lidb_supervisor.py (persistent SQL gateway) + librebase_api.py.
+#
+# Usage:
+#   docker build -t librebase/lidb-runtime:prod -f Dockerfile.prod .
+#   docker run -p 54320:54320 -e APP_NAME=myapp librebase/lidb-runtime:prod
+#
+# Environment:
+#   APP_NAME              — instance label (default: "default")
+#   LI_DATA_DIR           — persistent data directory (default: /data)
+#   LIBREBASE_API_PORT    — HTTP API port (default: 54320)
+#   LIBREBASE_PG_PORT     — Postgres wire port (default: 54322)
+#   LIBREBASE_ALLOW_INSECURE_DEFAULTS — set to "1" for local dev
+
+# ── Stage 1: build lidb_embed ────────────────────────────────────────
+FROM docker.io/ubuntu:24.04 AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    g++ cmake make git ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+COPY lidb/ /build/lidb/
+RUN cd lidb && mkdir -p build && cd build \
+    && cmake .. -DCMAKE_BUILD_TYPE=Release \
+    && cmake --build . --target lidb_embed -j$(nproc)
+
+# Smoke test
+RUN /build/lidb/build/lidb_embed migrate /tmp/test-lidb && echo "lidb_embed OK"
+
+# ── Stage 2: runtime image ───────────────────────────────────────────
+FROM docker.io/ubuntu:24.04
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 python3-venv tini ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt/librebase
+
+# lidb_embed binary
+COPY --from=builder /build/lidb/build/lidb_embed /usr/local/bin/lidb_embed
+
+# liorm for embed_engine integration
+COPY --from=builder /build/lidb/liorm /opt/li/lidb/liorm
+
+# Librebase scripts
+COPY scripts/librebase_api.py /opt/librebase/scripts/librebase_api.py
+COPY scripts/lidb_supervisor.py /opt/librebase/scripts/lidb_supervisor.py
+COPY scripts/lidb_engine.py /opt/librebase/scripts/lidb_engine.py
+COPY scripts/dev_runtime_stub.py /opt/librebase/scripts/dev_runtime_stub.py
+
+# Entrypoint
+COPY deploy/docker/lidb-runtime/entrypoint.sh /opt/librebase/entrypoint.sh
+
+RUN chmod +x /opt/librebase/entrypoint.sh \
+    /usr/local/bin/lidb_embed \
+    /opt/librebase/scripts/*.py \
+    && mkdir -p /data
+
+ENV LI_DATA_DIR=/data \
+    LIDB_ROOT=/opt/li/lidb \
+    LIDB_EMBED=/usr/local/bin/lidb_embed \
+    LIDB_RUNTIME_MODE=production \
+    LIBREBASE_API_PORT=54320 \
+    LIBREBASE_PG_PORT=54322 \
+    LIBREBASE_ALLOW_INSECURE_DEFAULTS=1
+
+EXPOSE 54320 54322
+
+ENTRYPOINT ["/usr/bin/tini", "--", "/opt/librebase/entrypoint.sh"]
