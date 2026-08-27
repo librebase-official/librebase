@@ -1,6 +1,6 @@
 {
   "name": "@librebase/librebase",
-  "version": "0.1.18",
+  "version": "0.1.19",
   "description": "Minimal supabase-js-shaped client for Librebase / lis (/rest/v1, /v1/auth, /storage/v1)",
   "type": "module",
   "main": "./src/index.js",
