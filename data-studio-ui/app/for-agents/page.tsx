@@ -62,7 +62,7 @@ export default function ForAgentsPage() {
       <div style={{ maxWidth: 760, width: "100%" }}>
         <h1 style={{ fontSize: 28, margin: "0 0 8px" }}>Librebase for AI agents</h1>
         <p style={{ color: "#9aa4b2", marginTop: 0, fontSize: 15 }}>
-          Connect an AI agent to Librebase with a local MCP server. The user
+          Connect an AI agent to Librebase with hosted MCP. The user
           authenticates once in their browser — no API keys are ever pasted, and
           secrets stay sealed in the KMS.
         </p>
@@ -124,8 +124,9 @@ export default function ForAgentsPage() {
         <Section title="2. Authenticate (device flow)">
           <ol style={{ paddingLeft: 20, lineHeight: 1.7, margin: 0 }}>
             <li>
-              Call <Code>auth_status</Code>. If unauthenticated, call{" "}
-              <Code>auth_login</Code>.
+              Call <Code>auth_start</Code> without a pre-shared key. The user
+              opens the returned verification URL and approves access; then call{" "}
+              <Code>auth_poll</Code> until a session token is issued.
             </li>
             <li>
               The user&apos;s browser opens{" "}

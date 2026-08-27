@@ -1132,7 +1132,7 @@ class TestGrokLoginHTTP(unittest.TestCase):
             db.close(); tmp.cleanup()
 
     def test_grok_poll_expired_device_code(self) -> None:
-        """GET /org/v1/auth/grok/poll with expired deviceCode returns 410."""
+        """Expired codes return 410 and are removed from the pending store."""
         mod, tmp, db, base, server, jwt, old_db, old_jwt = self._boot()
         try:
             mod._grok_pending["dc_old"] = {
@@ -1146,6 +1146,66 @@ class TestGrokLoginHTTP(unittest.TestCase):
             with self.assertRaises(urllib.error.HTTPError) as ctx:
                 urllib.request.urlopen(req, timeout=5)
             self.assertEqual(ctx.exception.code, 410)
+            self.assertNotIn("dc_old", mod._grok_pending)
+        finally:
+            server.shutdown(); server.server_close()
+            mod.LiorgHandler.db = old_db
+            mod.LiorgHandler.jwt_secret = old_jwt
+            mod._grok_pending.clear()
+            db.close(); tmp.cleanup()
+
+    def test_grok_poll_replay_is_rejected(self) -> None:
+        """A completed device code cannot be polled a second time."""
+        mod, tmp, db, base, server, jwt, old_db, old_jwt = self._boot()
+        try:
+            mod._grok_pending["dc_replay"] = {
+                "user_code": "REPLAY-1",
+                "verification_uri": "https://accounts.x.ai/oauth2/device",
+                "expires_in": 900,
+                "interval": 5,
+                "created_at": time.time(),
+            }
+            with mock.patch.object(mod, "grok_poll_token", return_value={"error": "access_denied"}):
+                req = urllib.request.Request(f"{base}/org/v1/auth/grok/poll?deviceCode=dc_replay")
+                with self.assertRaises(urllib.error.HTTPError) as ctx:
+                    urllib.request.urlopen(req, timeout=5)
+                self.assertEqual(ctx.exception.code, 403)
+            self.assertNotIn("dc_replay", mod._grok_pending)
+
+            req = urllib.request.Request(f"{base}/org/v1/auth/grok/poll?deviceCode=dc_replay")
+            with self.assertRaises(urllib.error.HTTPError) as ctx:
+                urllib.request.urlopen(req, timeout=5)
+            self.assertEqual(ctx.exception.code, 404)
+        finally:
+            server.shutdown(); server.server_close()
+            mod.LiorgHandler.db = old_db
+            mod.LiorgHandler.jwt_secret = old_jwt
+            mod._grok_pending.clear()
+            db.close(); tmp.cleanup()
+
+    def test_grok_identity_uses_existing_membership(self) -> None:
+        """A returning Grok identity receives a token for its own org only."""
+        mod, tmp, db, base, server, jwt, old_db, old_jwt = self._boot()
+        try:
+            now = mod.utc_now()
+            db.execute("INSERT INTO organizations (id, name, slug, edition, created_at) VALUES (?, ?, ?, ?, ?)",
+                       ("org_grok", "Grok Org", "grok-org", "cloud-paid", now))
+            db.execute("INSERT INTO users (id, email, oauth_sub, created_at, email_verified) VALUES (?, ?, ?, ?, ?)",
+                       ("u_grok", "grok@example.com", "grok-sub-1", now, 1))
+            db.execute("INSERT INTO members (org_id, user_id, role, created_at) VALUES (?, ?, ?, ?)",
+                       ("org_grok", "u_grok", "member", now))
+            identity = ("grok-sub-1", "grok@example.com")
+            mod._grok_pending["dc_org"] = {
+                "user_code": "ORG-1", "expires_in": 900, "created_at": time.time()
+            }
+            with mock.patch.object(mod, "grok_fetch_identity", return_value=identity), \
+                 mock.patch.object(mod, "grok_poll_token", return_value={"access_token": "x"}):
+                req = urllib.request.Request(f"{base}/org/v1/auth/grok/poll?deviceCode=dc_org")
+                with urllib.request.urlopen(req, timeout=5) as res:
+                    body = json.loads(res.read().decode())
+            self.assertEqual(res.status, 200)
+            self.assertEqual(body["orgId"], "org_grok")
+            self.assertEqual(mod.verify_jwt(body["token"], jwt)["org_id"], "org_grok")
         finally:
             server.shutdown(); server.server_close()
             mod.LiorgHandler.db = old_db

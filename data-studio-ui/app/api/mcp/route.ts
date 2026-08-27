@@ -9,6 +9,16 @@
  */
 import { NextResponse } from "next/server";
 import { adminApiEnabled, adminBaseUrl } from "@/lib/librebase-admin-client";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+
+async function appVersion(): Promise<string> {
+  try {
+    return (await readFile(join(process.cwd(), "VERSION"), "utf8")).trim();
+  } catch {
+    return process.env.LIBREBASE_VERSION ?? "0.0.0";
+  }
+}
 
 /* ------------------------------------------------------------------ */
 /* Tool definitions (mirrors mcp/librebase_mcp/__main__.py)           */
@@ -188,6 +198,75 @@ const TOOLS: Tool[] = [
       },
     },
   },
+
+  {
+    name: "key_list",
+    description: "List all KMS keys/secrets for the org. Returns key metadata (not values).",
+    inputSchema: { type: "object", properties: {} },
+  },
+  {
+    name: "key_create",
+    description: "Create a new KMS key/secret. The value is sealed in the KMS and shown only once.",
+    inputSchema: {
+      type: "object",
+      required: ["name", "value"],
+      properties: {
+        name: { type: "string", description: "Human-readable key name" },
+        value: { type: "string", description: "The secret value to store" },
+        kind: { type: "string", enum: ["secret", "keypair"], description: "Key type (default: secret)" },
+        projectId: { type: "string", description: "Optional project scope" },
+      },
+    },
+  },
+  {
+    name: "key_get",
+    description: "Get key metadata (name, kind, project). Does NOT return the value.",
+    inputSchema: {
+      type: "object",
+      required: ["keyId"],
+      properties: { keyId: { type: "string" } },
+    },
+  },
+  {
+    name: "key_decrypt",
+    description: "Decrypt a key's value. Only the calling process sees the plaintext -- it is never shown to the model.",
+    inputSchema: {
+      type: "object",
+      required: ["keyId"],
+      properties: { keyId: { type: "string" } },
+    },
+  },
+  {
+    name: "key_rotate",
+    description: "Rotate a key's secret value. Returns the new value once; old value is invalidated.",
+    inputSchema: {
+      type: "object",
+      required: ["keyId"],
+      properties: { keyId: { type: "string" } },
+    },
+  },
+  {
+    name: "key_update",
+    description: "Update key metadata (name, expiresAt).",
+    inputSchema: {
+      type: "object",
+      required: ["keyId"],
+      properties: {
+        keyId: { type: "string" },
+        name: { type: "string" },
+        expiresAt: { type: "string", description: "ISO 8601 expiry" },
+      },
+    },
+  },
+  {
+    name: "key_delete",
+    description: "Revoke/delete a key. Soft-delete -- can be restored by admin.",
+    inputSchema: {
+      type: "object",
+      required: ["keyId"],
+      properties: { keyId: { type: "string" } },
+    },
+  },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -340,6 +419,23 @@ async function callTool(
       });
       return await res.json();
     }
+
+    case "key_list":
+      return adminFetch("GET", `/org/v1/orgs/${orgId}/keys`, token);
+    case "key_create": {
+      const body = { ...clean(args) };
+      return adminFetch("POST", `/org/v1/orgs/${orgId}/keys`, token, body);
+    }
+    case "key_get":
+      return adminFetch("GET", `/org/v1/keys/${String(args.keyId)}`, token);
+    case "key_decrypt":
+      return adminFetch("POST", `/org/v1/keys/${String(args.keyId)}/decrypt`, token, {});
+    case "key_rotate":
+      return adminFetch("POST", `/org/v1/keys/${String(args.keyId)}/rotate`, token, {});
+    case "key_update":
+      return adminFetch("PATCH", `/org/v1/keys/${String(args.keyId)}`, token, clean(args));
+    case "key_delete":
+      return adminFetch("DELETE", `/org/v1/keys/${String(args.keyId)}`, token);
     default:
       return { error: "not_found", message: `unknown tool ${name}` };
   }
@@ -396,7 +492,7 @@ async function handleJsonRpc(
     return jsonRpc(id, {
       protocolVersion: "2024-11-05",
       capabilities: { tools: {} },
-      serverInfo: { name: "librebase", version: "0.1.5" },
+      serverInfo: { name: "librebase", version: await appVersion() },
     });
   }
   if (method === "notifications/initialized") return null;
@@ -547,20 +643,6 @@ export async function POST(request: Request) {
   }
 
   const token = extractBearer(request);
-  if (!token) {
-    return NextResponse.json(
-      { error: "Missing Authorization: Bearer <mcp_key>" },
-      { status: 401 },
-    );
-  }
-
-  // Validate token prefix
-  if (!token.startsWith("lb_mcp_") && !token.startsWith("lb_agt_")) {
-    return NextResponse.json(
-      { error: "Invalid MCP key format (expected lb_mcp_ or lb_agt_)" },
-      { status: 401 },
-    );
-  }
 
   let body: Record<string, unknown>;
   try {
@@ -572,13 +654,29 @@ export async function POST(request: Request) {
     );
   }
 
-  const started = Date.now();
   const method = String(body.method ?? "");
-  const toolName = method === "tools/call"
-    ? String(((body.params as Record<string, unknown>) ?? {}).name ?? "")
-    : method;
+  const params = (body.params ?? {}) as Record<string, unknown>;
+  const toolName = method === "tools/call" ? String(params.name ?? "") : "";
+  const publicAuthTool = method === "tools/call" &&
+    (toolName === "auth_start" || toolName === "auth_poll");
 
-  const response = await handleJsonRpc(body, token);
+  if (!publicAuthTool && !token) {
+    return NextResponse.json(
+      { error: "Missing Authorization: Bearer <mcp_key>" },
+      { status: 401 },
+    );
+  }
+
+  // Validate token prefix for protected calls; public auth tools do not need one.
+  if (!publicAuthTool && token && !token.startsWith("lb_mcp_") && !token.startsWith("lb_agt_")) {
+    return NextResponse.json(
+      { error: "Invalid MCP key format (expected lb_mcp_ or lb_agt_)" },
+      { status: 401 },
+    );
+  }
+
+  const started = Date.now();
+  const response = await handleJsonRpc(body, token ?? "");
   const latencyMs = Date.now() - started;
 
   if (response === null) {
@@ -607,7 +705,7 @@ export async function GET() {
   }
   return NextResponse.json({
     name: "Librebase MCP",
-    version: "0.1.5",
+    version: await appVersion(),
     protocol: "2024-11-05",
     capabilities: { tools: {} },
     toolCount: TOOLS.length,
