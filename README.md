@@ -30,6 +30,33 @@ Studio persistence (instances + projects JSON) lives under:
 
 Override with `LIBREBASE_STUDIO_DATA_DIR`.
 
+## For AI agents (MCP)
+
+Librebase exposes a hosted MCP endpoint — no local repo needed:
+
+1. **Auto-discover:** `GET https://app.librebase.xyz/.well-known/mcp.json`
+2. **Connect:** `POST https://app.librebase.xyz/api/mcp` with `Authorization: Bearer <mcp_key>`
+3. **Use tools:** `org_whoami`, `project_list`, `project_create`, `instance_list`, `instance_create`, `host_list`, etc.
+
+Or run the MCP server locally:
+
+```json
+{
+  "mcpServers": {
+    "librebase": {
+      "command": "python3",
+      "args": ["-m", "librebase_mcp"],
+      "env": {
+        "LIBREBASE_ADMIN_URL": "https://app.librebase.xyz/api/admin-proxy",
+        "LIBREBASE_CONSOLE_URL": "https://app.librebase.xyz"
+      }
+    }
+  }
+}
+```
+
+Docs: https://app.librebase.xyz/for-agents · https://app.librebase.xyz/llms.txt
+
 ## Development
 
 From the repo root:

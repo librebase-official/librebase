@@ -330,6 +330,27 @@ async function handleJsonRpc(
   const method = msg.method as string;
   const id = msg.id as string | number | null;
 
+  // Validate key early — only for methods that need auth
+  let orgId = "";
+  if (method !== "initialize" && method !== "notifications/initialized") {
+    const orgRes = await adminFetch("GET", "/org/v1/mcp/org", token);
+    orgId = String(orgRes.orgId ?? "");
+    if (!orgId) {
+      // Invalid key — return MCP error, not HTTP error
+      return jsonRpc(id, {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              error: "auth_error",
+              message: "Invalid or revoked MCP key",
+            }),
+          },
+        ],
+      });
+    }
+  }
+
   if (method === "initialize") {
     return jsonRpc(id, {
       protocolVersion: "2024-11-05",
@@ -347,24 +368,6 @@ async function handleJsonRpc(
     const params = (msg.params ?? {}) as Record<string, unknown>;
     const toolName = String(params.name ?? "");
     const args = (params.arguments ?? {}) as Record<string, unknown>;
-
-    // Resolve org from token (cached per request)
-    const orgRes = await adminFetch("GET", "/org/v1/mcp/org", token);
-    const orgId = String(orgRes.orgId ?? "");
-
-    if (!orgId) {
-      return jsonRpc(id, {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify({
-              error: "auth_error",
-              message: "could not resolve org from MCP key",
-            }),
-          },
-        ],
-      });
-    }
 
     try {
       const payload = await callTool(toolName, args, token, orgId);
@@ -393,6 +396,53 @@ async function handleJsonRpc(
 }
 
 /* ------------------------------------------------------------------ */
+/* Rate limiting (per-IP, in-memory token bucket)                      */
+/* ------------------------------------------------------------------ */
+
+const RATE_LIMIT = {
+  /** Max requests per window. */
+  max: 30,
+  /** Window in seconds. */
+  windowSec: 60,
+};
+
+const hits = new Map<string, { count: number; resetAt: number }>();
+
+// Evict stale entries every 5 min to prevent unbounded growth.
+let lastEvict = Date.now();
+function evictStale() {
+  const now = Date.now();
+  if (now - lastEvict < 300_000) return;
+  lastEvict = now;
+  for (const [k, v] of hits) {
+    if (v.resetAt <= now) hits.delete(k);
+  }
+}
+
+function rateLimit(ip: string): { ok: boolean; retryAfter: number } {
+  evictStale();
+  const now = Date.now();
+  const entry = hits.get(ip);
+  if (!entry || entry.resetAt <= now) {
+    hits.set(ip, { count: 1, resetAt: now + RATE_LIMIT.windowSec * 1000 });
+    return { ok: true, retryAfter: 0 };
+  }
+  entry.count++;
+  if (entry.count > RATE_LIMIT.max) {
+    return { ok: false, retryAfter: Math.ceil((entry.resetAt - now) / 1000) };
+  }
+  return { ok: true, retryAfter: 0 };
+}
+
+function getClientIp(request: Request): string {
+  return (
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    request.headers.get("x-real-ip") ??
+    "unknown"
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* HTTP route                                                         */
 /* ------------------------------------------------------------------ */
 
@@ -401,6 +451,24 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: "Admin API disabled" },
       { status: 503 },
+    );
+  }
+
+  // Rate limit by IP
+  const ip = getClientIp(request);
+  const rl = rateLimit(ip);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "Rate limited", retryAfter: rl.retryAfter },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(rl.retryAfter),
+          "X-RateLimit-Limit": String(RATE_LIMIT.max),
+          "X-RateLimit-Remaining": "0",
+          "X-RateLimit-Reset": String(Math.ceil(Date.now() / 1000) + rl.retryAfter),
+        },
+      },
     );
   }
 
@@ -440,6 +508,8 @@ export async function POST(request: Request) {
     headers: {
       "Content-Type": "application/json",
       "Mcp-Session-Id": crypto.randomUUID(),
+      "X-RateLimit-Limit": String(RATE_LIMIT.max),
+      "X-RateLimit-Remaining": String(Math.max(0, RATE_LIMIT.max - (hits.get(ip)?.count ?? 0))),
     },
   });
 }
