@@ -47,6 +47,12 @@ function pathAllowed(upstreamPath: string, request: Request): boolean {
   if (/^\/org\/v1\/host-agent\/backups\/[^/]+\/complete$/.test(upstreamPath)) return true;
   if (/^\/org\/v1\/host-agent\/instances\/[^/]+\/backup-keys$/.test(upstreamPath)) return true;
   if (/^\/org\/v1\/host-agent\/buckets\/[^/]+\/creds$/.test(upstreamPath)) return true;
+  // KMS key management (scoped to caller's org via admin-api auth)
+  if (/^\/org\/v1\/orgs\/[^/]+\/keys$/.test(upstreamPath)) return true;
+  if (/^\/org\/v1\/keys\/[^/]+$/.test(upstreamPath)) return true;
+  if (/^\/org\/v1\/keys\/[^/]+\/decrypt$/.test(upstreamPath)) return true;
+  if (/^\/org\/v1\/keys\/[^/]+\/rotate$/.test(upstreamPath)) return true;
+  if (/^\/org\/v1\/me\/keys$/.test(upstreamPath)) return true;
   // BYO external buckets — Studio (session JWT) and MCP (agent) both allowed (admin validates org membership)
   if (/^\/org\/v1\/orgs\/[^/]+\/buckets$/.test(upstreamPath)) return true;
   if (/^\/org\/v1\/orgs\/[^/]+\/buckets\/[^/]+$/.test(upstreamPath)) return true;

@@ -42,6 +42,7 @@ HELM_CHART = "deploy/helm/librebase-instance/Chart.yaml"
 # Dockerfiles with LIBREBASE_VERSION build arg
 DOCKERFILES = [
     "data-studio-ui/Dockerfile",
+    "saas-admin-api/Dockerfile",
 ]
 
 # Python MCP serverInfo version
