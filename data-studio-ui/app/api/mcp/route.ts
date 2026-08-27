@@ -456,9 +456,20 @@ async function handleJsonRpc(
   const method = msg.method as string;
   const id = msg.id as string | number | null;
 
-  // Validate key early — only for methods that need auth
+  // Validate key early — only for methods that need auth.
+  // Public protocol and device-flow calls work without a key:
+  // initialize, notifications/initialized, tools/list, and
+  // tools/call auth_start / auth_poll.
+  const msgParams = (msg.params ?? {}) as Record<string, unknown>;
+  const msgToolName = method === "tools/call" ? String(msgParams.name ?? "") : "";
+  const needsOrg =
+    method !== "initialize" &&
+    method !== "notifications/initialized" &&
+    method !== "tools/list" &&
+    !(method === "tools/call" && (msgToolName === "auth_start" || msgToolName === "auth_poll"));
+
   let orgId = "";
-  if (method !== "initialize" && method !== "notifications/initialized") {
+  if (needsOrg) {
     const orgRes = await adminFetch("GET", "/org/v1/mcp/org", token);
     orgId = String(orgRes.orgId ?? "");
     if (!orgId) {
