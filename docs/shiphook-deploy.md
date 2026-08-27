@@ -1,54 +1,57 @@
-# Shiphook deployment
+# Shiphook deployment integration
 
-The GitHub Actions workflow calls a self-hosted Shiphook instance. Shiphook authenticates the request, runs its configured pull-and-deploy operation, and returns the deployment result synchronously as JSON.
+Librebase uses a self-hosted Shiphook instance for deployments:
 
-## GitHub setup
+```text
+GitHub Actions or an authorized agent
+  → POST <SHIPHOOK_DEPLOY_URL>?format=json
+  → Shiphook pulls and runs the configured deploy script
+  → Shiphook returns the deployment result
+```
 
-Add these Actions secrets:
+## Trigger configuration
 
-- `SHIPHOOK_DEPLOY_URL`: public HTTPS Shiphook webhook URL, including its configured path
-- `SHIPHOOK_DEPLOY_TOKEN`: value configured as Shiphook `secret`
+Add these GitHub Actions secrets:
 
-The workflow sends:
+- `SHIPHOOK_DEPLOY_URL`: public HTTPS Shiphook URL, including its configured path
+- `SHIPHOOK_DEPLOY_TOKEN`: Shiphook deployment secret
+
+Requests use:
 
 ```http
-POST <SHIPHOOK_DEPLOY_URL>?format=json
-X-Shiphook-Secret: <secret>
+X-Shiphook-Secret: <deployment-secret>
 Content-Type: application/json
 ```
 
-```json
-{
-  "ref": "main",
-  "repository": "librebase-official/librebase",
-  "event": "github_actions"
-}
-```
+The JSON response contains `ok`; HTTP `200` alone does not mean deployment success.
 
-Shiphook must run with the Librebase checkout and deploy script configured, for example:
+## Server configuration
 
 ```yaml
 port: 3141
 repoPath: /opt/librebase
-path: /deploy
+path: /
 runScript: /opt/librebase/scripts/deploy-production.sh
 runTimeoutMs: 1800000
 ```
 
-The deploy script owns the application-specific work: build/restart containers, wait for health, verify the deployed commit/version, and exit nonzero on failure. Shiphook’s successful HTTP response then represents a successful deployment.
+The deploy script owns Librebase-specific build, restart, health, version, and commit checks. Expose Shiphook through HTTPS and keep the deployment secret in the server secret store.
 
-Expose port `3141` through HTTPS using nginx or another reverse proxy. Keep the Shiphook secret in GitHub Actions secrets or the server secret store; never put it in source, logs, Grok chat, or ordinary repository variables.
+## Deployment status feed
+
+The deployment-status feed is a separate Shiphook feature, not a Librebase endpoint. It is read-only and protected by a dedicated feed token:
+
+```http
+GET <SHIPHOOK_EVENTS_URL>?limit=20
+Authorization: Bearer <events-read-token>
+```
+
+It returns bounded, newest-first, sanitized deployment metadata and never exposes secrets, environment values, or raw command output. It cannot trigger deployments. The feed token is distinct from the deployment trigger secret.
 
 ## Safe rollout
 
-1. Configure a staging Shiphook instance and secret.
-2. Run **Actions → Deploy via Shiphook → Run workflow** manually against staging.
-3. Confirm the JSON response reports `ok: true` and inspect its deployment log.
-4. Verify Studio, admin API, hosted MCP, version, and database health.
-5. Configure separate production URL and secret only afterward.
-
-The workflow serializes production deployments so two runs do not operate on the same target concurrently.
-
-## Grok Bot instruction
-
-> Trigger the Librebase Shiphook webhook for the `main` branch. Wait for the synchronous JSON response and report whether the deploy result has `ok: true`. Then verify Studio, admin API, hosted MCP, deployed commit, and Librebase version. Report duration and failure output when present. Never reveal the Shiphook secret.
+1. Test Shiphook against staging.
+2. Confirm the deployment response reports `ok: true`.
+3. Verify Studio, admin API, hosted MCP, version, and database health.
+4. Confirm the status feed reports the completed deployment.
+5. Configure production only afterward.

@@ -14,7 +14,7 @@ ARG NEXT_PUBLIC_SITE_URL=https://app.librebase.xyz
 ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 ARG LIBREBASE_VERSION=0.1.14
 ENV LIBREBASE_VERSION=$LIBREBASE_VERSION
-RUN cp VERSION /tmp/librebase-version
+RUN echo "$LIBREBASE_VERSION" > /app/VERSION
 RUN npm run build
 
 FROM docker.io/node:22-alpine AS runner
@@ -25,6 +25,9 @@ ENV PORT=3005
 ENV HOSTNAME=0.0.0.0
 
 RUN addgroup -S nextjs && adduser -S nextjs -G nextjs
+
+ARG LIBREBASE_VERSION=0.1.14
+ENV LIBREBASE_VERSION=$LIBREBASE_VERSION
 
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nextjs /app/.next/standalone ./

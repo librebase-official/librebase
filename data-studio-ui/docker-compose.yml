@@ -4,6 +4,7 @@ services:
       context: .
       args:
         NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://app.librebase.xyz}
+        LIBREBASE_VERSION: ${LIBREBASE_VERSION:-0.1.14}
     container_name: librebase_web_1
     restart: unless-stopped
     ports:
