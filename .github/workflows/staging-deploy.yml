@@ -1,0 +1,89 @@
+name: Staging Deploy
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository_owner }}/librebase-staging
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            TAG="pr-${{ github.event.pull_request.number }}"
+          else
+            TAG="main-${GITHUB_SHA::8}"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$(cat VERSION)" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push admin-api
+        uses: docker/build-push-action@v5
+        with:
+          context: ./admin-api
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-admin:${{ steps.meta.outputs.tag }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-admin:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push KMS
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./kms/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-kms:${{ steps.meta.outputs.tag }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-kms:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push Studio
+        uses: docker/build-push-action@v5
+        with:
+          context: ./data-studio-ui
+          push: true
+          build-args: |
+            NEXT_PUBLIC_SITE_URL=https://stage.librebase.xyz
+            LIBREBASE_VERSION=${{ steps.meta.outputs.version }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-studio:${{ steps.meta.outputs.tag }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-studio:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Comment PR with staging URL
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = '${{ steps.meta.outputs.tag }}';
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🚀 **Staging deploy ready**\n\nImages pushed with tag \`${tag}\`.\n\nTo deploy on engine:\n\`\`\`bash\nssh engine 'DEPLOY_TAG=${tag} /tmp/deploy-staging.sh'\n\`\`\`\n\nOr wait for auto-deploy (runs every 5 min).`
+            })
