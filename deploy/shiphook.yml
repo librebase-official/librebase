@@ -1,0 +1,6 @@
+port: 3141
+repoPath: /opt/librebase
+path: /
+runScript: /bin/bash
+runArgs: ["/opt/librebase/scripts/deploy-production.sh"]
+runTimeoutMs: 1800000
