@@ -3,6 +3,10 @@
 # Builds the Studio image with the tracked VERSION, recreates the container,
 # then waits (with retries) for each health endpoint instead of failing on a
 # still-booting container.
+#
+# LIB-21: Git tracks this file as 100755. If Shiphook spawn() hits EACCES,
+# invoke via bash (see docs/shiphook-deploy.md) or chmod +x this path — do
+# not rely on a working tree that lost the execute bit (core.fileMode false).
 set -Eeuo pipefail
 cd /opt/librebase
 
