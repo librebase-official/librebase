@@ -27,21 +27,11 @@ The JSON response contains `ok`; HTTP `200` alone does not mean deployment succe
 
 ## Server configuration
 
-```yaml
-port: 3141
-repoPath: /opt/librebase
-path: /
-# Prefer bash so a lost execute bit cannot 444ms-fail the deploy (LIB-21 EACCES).
-# If your Shiphook only accepts a single executable path, chmod +x the script
-# after clone (`git ls-files -s` shows 100755) and keep core.fileMode true.
-runScript: /bin/bash
-runArgs: ["/opt/librebase/scripts/deploy-production.sh"]
-runTimeoutMs: 1800000
-```
+Live-intended Shiphook config lives in [`deploy/shiphook.yml`](../deploy/shiphook.yml) so git owns it (LIB-21). Point the VPS Shiphook instance at that file after it is on the server; do not keep a divergent inline copy here.
 
 The deploy script owns Librebase-specific build, restart, health, version, and commit checks. Expose Shiphook through HTTPS and keep the deployment secret in the server secret store.
 
-One-time repair if spawn reports `EACCES`: `chmod +x /opt/librebase/scripts/deploy-production.sh` (and `git config core.fileMode true` in `/opt/librebase`). The next pull of a content change also restores the tracked 100755 mode.
+`runScript: /bin/bash` plus `runArgs` avoids spawn EACCES if the working tree lost the script's execute bit. One-time repair if spawn still reports `EACCES`: `chmod +x /opt/librebase/scripts/deploy-production.sh` (and `git config core.fileMode true` in `/opt/librebase`). The next pull of a content change also restores the tracked 100755 mode.
 
 ## Deployment status feed
 
