@@ -15,6 +15,7 @@ Thumbs.db
 # Env (never commit secrets)
 .env
 .env.*
+!deploy/compose/.env.staging.example
 
 # Rust / licontainer
 licontainer/target/
