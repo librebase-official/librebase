@@ -1,72 +1,78 @@
 services:
-  staging-admin:
-    build:
-      context: ../../admin-api
-      dockerfile: Dockerfile
-    container_name: librebase_staging_admin
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:54331:54330"
-    env_file:
-      - .env.staging
+  db:
+    image: postgres:16-alpine
+    container_name: staging-db
     environment:
-      LIBREBASE_ADMIN_BIND: 0.0.0.0
-      LIBREBASE_ADMIN_PORT: 54330
-      LIBREBASE_ADMIN_DB_PATH: /data/admin.db
-      LIBREBASE_KMS_URL: http://staging-kms:54340
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: stagingpass
+      POSTGRES_DB: librebase
     volumes:
-      - librebase-staging-admin-data:/data
+      - staging_db_data:/var/lib/postgresql/data
+    ports:
+      - "15432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  admin-api:
+    image: staging-admin-api
+    container_name: staging-admin
+    ports:
+      - "54331:54330"
+    environment:
+      ADMIN_DB_HOST: db
+      ADMIN_DB_PORT: "5432"
+      ADMIN_DB_USER: postgres
+      ADMIN_DB_PASS: stagingpass
+      ADMIN_DB_NAME: librebase
+      ADMIN_PORT: "54330"
+      ADMIN_DASHBOARD_TOKEN: staging-dashboard-token
+      LIBREBASE_GROK_CLIENT_ID: b1a00492-073a-47ea-816f-4c329264a828
+      LIBREBASE_KMS_URL: http://kms:54340
+    depends_on:
+      db:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:54330/health"]
-      interval: 30s
-      timeout: 3s
+      interval: 15s
+      timeout: 5s
       retries: 3
-    networks:
-      - librebase-staging-net
 
-  staging-kms:
-    build:
-      context: ../..
-      dockerfile: kms/Dockerfile
-    container_name: librebase_staging_kms
-    restart: unless-stopped
-    env_file:
-      - .env.staging
+  kms:
+    image: staging-kms
+    container_name: staging-kms
     environment:
       LIBREBASE_KMS_BIND: 0.0.0.0
-      LIBREBASE_KMS_PORT: 54340
+      LIBREBASE_KMS_PORT: "54340"
       LIBREBASE_KMS_DB_PATH: /data/kms.db
     volumes:
-      - librebase-staging-kms-data:/data
-    networks:
-      - librebase-staging-net
+      - staging_kms_data:/data
 
-  staging-web:
-    build:
-      context: ../../data-studio-ui
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_SITE_URL: https://stage.librebase.xyz
-        LIBREBASE_VERSION: ${LIBREBASE_VERSION:-0.1.19}
-    container_name: librebase_staging_web
-    restart: unless-stopped
+  studio:
+    image: staging-studio
+    container_name: staging-studio
     ports:
-      - "127.0.0.1:3007:3005"
-    env_file:
-      - .env.staging
+      - "3006:3005"
     environment:
       NODE_ENV: production
-      PORT: 3005
-      LIBREBASE_ADMIN_URL: http://staging-admin:54330
+      PORT: "3005"
+      LIBREBASE_ADMIN_URL: http://admin-api:54330
     depends_on:
-      staging-admin:
+      admin-api:
         condition: service_healthy
-    networks:
-      - librebase-staging-net
 
-networks:
-  librebase-staging-net:
+  nginx:
+    image: nginx:alpine
+    container_name: staging-nginx
+    ports:
+      - "3007:3007"
+    volumes:
+      - ./nginx-staging.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - studio
 
 volumes:
-  librebase-staging-admin-data:
-  librebase-staging-kms-data:
+  staging_db_data:
+  staging_kms_data:
