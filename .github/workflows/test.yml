@@ -7,7 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  unit:
+    name: unit
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -33,9 +34,9 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: pip install cryptography
 
-      - name: Python tests (lidb_engine dev runtime + admin-api + KMS)
+      - name: Python unit tests
         working-directory: ${{ github.workspace }}
-        run: python -m unittest discover -s tests -p "test_*.py"
+        run: bash scripts/ci-python-unit.sh
 
       - name: Unit tests
         run: npm test
@@ -45,12 +46,12 @@ jobs:
         run: npm test
 
       - name: MCP unit + smoke tests
-        working-directory: ${{ github.workspace }}/packages/mcp
-        run: npm install --no-audit --no-fund && npm test
+        working-directory: ${{ github.workspace }}
+        run: bash scripts/ci-mcp-unit.sh
 
-      - name: Todo app unit + E2E tests
-        working-directory: ${{ github.workspace }}/apps/todo-app
-        run: npm install --no-audit --no-fund && node test/unit.mjs && LIS_ROOT=${{ github.workspace }}/../lis node test/e2e.mjs
+      - name: Todo app unit tests
+        working-directory: ${{ github.workspace }}
+        run: bash scripts/ci-todo-unit.sh
 
       - name: Coverage report
         run: npm run test:coverage -- --coverage.thresholds.lines=0
@@ -58,3 +59,65 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  pentest:
+    name: pentest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: In-process pentest
+        run: bash scripts/ci-python-pentest.sh
+
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Python e2e
+        run: bash scripts/ci-python-e2e.sh
+
+      - name: MCP e2e
+        run: bash scripts/ci-mcp-e2e.sh
+
+      - name: Todo app e2e
+        run: bash scripts/ci-todo-e2e.sh
+
+  staging-e2e:
+    name: staging-e2e
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Staging HTTP e2e
+        run: bash scripts/ci-staging-e2e.sh
+
+  staging-security:
+    name: staging-security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Staging defensive security
+        run: bash scripts/ci-staging-security.sh
