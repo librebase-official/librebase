@@ -42,10 +42,13 @@ python admin-api/scripts/admin_server.py
 
 ## Port checklist (route families)
 
+Tracked in **[docs/superpowers/plans/2026-10-18-li-admin-api-port.md](../../docs/superpowers/plans/2026-10-18-li-admin-api-port.md)** (LIB-133).
+
 - [x] Package layout + seam stubs
 - [x] `GET /health`
-- [ ] `POST /org/v1/setup` + SQLite/lidb migrations
-- [ ] Auth (login/refresh/logout/MFA/OAuth)
+- [ ] Contract harness + CI (`tests/admin_contract`, `admin-api-li.yml`)
+- [ ] `POST /org/v1/setup` + SQLite/lidb migrations (LIB-135)
+- [ ] Auth (login/refresh/logout/MFA/OAuth) (LIB-136)
 - [ ] Org projects / instances / hosts CRUD
 - [ ] MCP keys + usage
 - [ ] Stripe billing webhook/session/portal
