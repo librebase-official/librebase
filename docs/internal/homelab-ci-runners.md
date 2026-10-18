@@ -1,6 +1,6 @@
 # Homelab GitHub Actions runners (Librebase)
 
-GitHub-hosted runners cannot reach `https://stage.librebase.xyz/` on the Fritz LAN. Use the org scale set **`librebase-homelab`** on homelab k3s.
+GitHub-hosted runners cannot reach `https://stage.librebase.xyz/` on the Fritz LAN. Use the org scale set **`librebase-homelab`** on homelab k3s (**`engine` node only** — not MacBook or laptops).
 
 ## Workflow labels
 

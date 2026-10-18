@@ -13,6 +13,6 @@ Jobs that need `stage.librebase.xyz` or homelab kubectl should use:
 runs-on: [self-hosted, librebase-homelab, linux]
 ```
 
-Scale set `librebase-homelab` on k3s (`cap-jmk-launchpad/homelab-k3s`). Optional repo variable: `LIBREBASE_SELF_HOSTED_RUNNER=true`.
+Scale set `librebase-homelab` on k3s node `engine` (`cap-jmk-launchpad/homelab-k3s`). Never on MacBook. Optional repo variable: `LIBREBASE_SELF_HOSTED_RUNNER=true`.
 
 Build/push to GHCR can remain on `ubuntu-latest` unless you need LAN-only resources.
