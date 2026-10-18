@@ -114,17 +114,36 @@ export function AuthorizeAgent({ userCode }: { userCode: string }) {
     </div>
   );
 
+  const oauthNext = encodeURIComponent(`/mcp/authorize?user_code=${formatted}`);
+
   if (unauthenticated) {
     return (
       <div className="auth-card">
         {brand}
         <h1>Authorize agent</h1>
-        <p className="muted">Sign in to approve this agent’s access to your org.</p>
+        <p className="muted">
+          Sign in with Google or GitHub, then approve MCP access. No API key is pasted into Cursor.
+        </p>
         <p className="mcp-user-code" aria-label="Device code">
           {formatted || "————————"}
         </p>
-        <Link className="btn btn-primary" href={loginHref}>
-          Sign in to continue
+        <div className="auth-oauth">
+          <a
+            className="btn oauth-btn"
+            href={`/api/admin/oauth/start?provider=google&next=${oauthNext}`}
+          >
+            Continue with Google
+          </a>
+          <a
+            className="btn oauth-btn"
+            href={`/api/admin/oauth/start?provider=github&next=${oauthNext}`}
+          >
+            Continue with GitHub
+          </a>
+        </div>
+        <div className="auth-divider">or</div>
+        <Link className="btn btn-ghost" href={loginHref} style={{ width: "100%", justifyContent: "center" }}>
+          Sign in with email
         </Link>
       </div>
     );

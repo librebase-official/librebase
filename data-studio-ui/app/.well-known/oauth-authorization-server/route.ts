@@ -6,6 +6,7 @@ export function GET() {
     {
       issuer: SITE_URL,
       authorization_endpoint: `${SITE_URL}/mcp/authorize`,
+      device_authorization_endpoint: `${SITE_URL}/api/mcp/device/start`,
       token_endpoint: `${SITE_URL}/api/mcp/device/token`,
       scopes_supported: ["mcp"],
       response_types_supported: ["code"],

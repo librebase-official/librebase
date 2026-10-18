@@ -19,6 +19,10 @@ export async function GET() {
         librebase: {
           type: "http",
           url: `${SITE_URL}/api/mcp`,
+          auth: {
+            authorization_server: `${SITE_URL}/.well-known/oauth-authorization-server`,
+            scopes: ["mcp"],
+          },
         },
       },
     },

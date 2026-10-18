@@ -70,10 +70,9 @@ export default function ForAgentsPage() {
             <code>{`{
   "mcpServers": {
     "librebase": {
-      "type": "mcp",
       "url": "${SITE_URL}/api/mcp",
       "auth": {
-        "authorization_server": "https://app.librebase.xyz/.well-known/oauth-authorization-server",
+        "authorization_server": "${SITE_URL}/.well-known/oauth-authorization-server",
         "scopes": ["mcp"]
       }
     }

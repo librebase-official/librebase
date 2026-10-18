@@ -54,22 +54,25 @@ Python mirrors the **first 11** hosted tools only. It does **not** implement dev
 
 Repo `.cursor/mcp.json` points at production with a placeholder bearer. Cursor MCP discovery **fails** until a real `lb_mcp_…` key is set (or OAuth device flow is used per agent client). In this cloud run, the `librebase` MCP namespace reports **tool discovery error** for that reason.
 
-**Recommended Cursor config (hosted):**
+**Recommended Cursor config (hosted, no pasted key):**
 
 ```json
 {
   "mcpServers": {
     "librebase": {
       "url": "https://app.librebase.xyz/api/mcp",
-      "headers": {
-        "Authorization": "Bearer lb_mcp_YOUR_KEY_FROM_CONSOLE"
+      "auth": {
+        "authorization_server": "https://app.librebase.xyz/.well-known/oauth-authorization-server",
+        "scopes": ["mcp"]
       }
     }
   }
 }
 ```
 
-For **local** Studio with admin enabled, use the same pattern with `http://127.0.0.1:54324/api/mcp` and a key from `/admin` setup.
+Cursor opens a browser card; you **Continue with Google** (or GitHub) on `/mcp/authorize` and approve. The resulting `lb_agt_*` token is stored by Cursor — not typed into settings.
+
+`LIBREBASE_MCP_KEY` / console keys remain for **CI and local stdio only**.
 
 ## Branding / UX
 

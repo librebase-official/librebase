@@ -2,8 +2,9 @@
   "mcpServers": {
     "librebase": {
       "url": "https://app.librebase.xyz/api/mcp",
-      "headers": {
-        "Authorization": "Bearer ${env:LIBREBASE_MCP_KEY}"
+      "auth": {
+        "authorization_server": "https://app.librebase.xyz/.well-known/oauth-authorization-server",
+        "scopes": ["mcp"]
       }
     }
   }

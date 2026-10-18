@@ -168,22 +168,24 @@ const TOOLS: Tool[] = [
 
   {
     name: "auth_start",
-    description: "Start browser login flow. Returns a verification URL the user must open. No MCP key needed -- this is how agents self-signup.",
+    description:
+      "Start MCP device authorization. User opens verificationUri (or verificationUriComplete), signs in with Google/GitHub, and approves. No MCP key needed.",
     inputSchema: {
       type: "object",
       properties: {
-        provider: { type: "string", enum: ["grok"], description: "OAuth provider (default: grok)" },
+        clientName: { type: "string", description: "Shown on the approve screen (default: MCP Agent)" },
       },
     },
   },
   {
     name: "auth_poll",
-    description: "Poll browser login status. Call repeatedly after auth_start until approved or expired.",
+    description:
+      "Poll device authorization. Call after auth_start until accessToken is returned (lb_agt_*). Use that token as Bearer for other tools.",
     inputSchema: {
       type: "object",
       required: ["deviceCode"],
       properties: {
-        deviceCode: { type: "string", description: "The device_code from auth_start" },
+        deviceCode: { type: "string", description: "The deviceCode from auth_start" },
       },
     },
   },
@@ -391,19 +393,29 @@ async function callTool(
       );
 
     case "auth_start": {
-      const provider = String(args.provider ?? "grok");
-      const res = await fetch(`${adminBaseUrl()}/org/v1/auth/${provider}/start`, {
-        method: "GET",
+      const clientName = String(args.clientName ?? "MCP Agent");
+      const res = await fetch(`${adminBaseUrl()}/org/v1/mcp/device/start`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientName }),
         cache: "no-store",
       });
-      return await res.json();
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(
+          typeof payload === "object" && payload && "error" in payload
+            ? String((payload as { error?: string }).error)
+            : `device start failed (${res.status})`,
+        );
+      }
+      return payload;
     }
     case "auth_poll": {
       const dc = String(args.deviceCode ?? "");
-      const provider = String(args.provider ?? "grok");
-      const res = await fetch(`${adminBaseUrl()}/org/v1/auth/${provider}/poll?deviceCode=${encodeURIComponent(dc)}`, {
-        method: "GET",
+      const res = await fetch(`${adminBaseUrl()}/org/v1/mcp/device/token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deviceCode: dc }),
         cache: "no-store",
       });
       return await res.json();

@@ -61,9 +61,9 @@ export function McpKeys({ orgId, initial }: { orgId: string; initial: McpKey[] }
         </Button>
       </div>
       <p className="muted text-sm mt-1">
-        Console keys are for CI. Agents should call <code>auth_start</code>, approve
-        in the browser, then call <code>auth_poll</code>; the token is stored in the OS keychain and
-        never belongs in a prompt.
+        For Cursor and other remote MCP clients, use OAuth in MCP settings (see{" "}
+        <code>/.well-known/mcp.json</code>) — sign in with Google and approve; do not paste a key.
+        Console keys below are for CI and local stdio only.
       </p>
 
       {error ? <p className="auth-error text-sm">{error}</p> : null}
