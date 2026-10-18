@@ -1,0 +1,18 @@
+---
+description: Librebase homelab GitHub Actions runner labels for staging/LAN jobs
+alwaysApply: false
+globs:
+  - ".github/workflows/**"
+---
+
+# Librebase homelab GHA runners
+
+Jobs that need `stage.librebase.xyz` or homelab kubectl should use:
+
+```yaml
+runs-on: [self-hosted, librebase-homelab, linux]
+```
+
+Scale set `librebase-homelab` on k3s (`cap-jmk-launchpad/homelab-k3s`). Optional repo variable: `LIBREBASE_SELF_HOSTED_RUNNER=true`.
+
+Build/push to GHCR can remain on `ubuntu-latest` unless you need LAN-only resources.
