@@ -10,17 +10,17 @@
   --text: #171c1a;
   --text-secondary: #5c6662;
   --muted: #7a847f;
-  --accent: #1f7a6e;
-  --accent-dim: #18635a;
-  --accent-soft: #d8f0eb;
-  --accent-on: #ffffff;
-  --signal: #2fd4c2;
+  --accent: #008ff0;
+  --accent-dim: #0078cc;
+  --accent-soft: #e2f1fb;
+  --accent-on: #fdfdfd;
+  --signal: #008ff0;
   --warn: #b45309;
   --danger: #b42318;
-  --success: #1f7a6e;
-  --success-dim: #18635a;
-  --info: #2563eb;
-  --ring: rgba(31, 122, 110, 0.28);
+  --success: #008ff0;
+  --success-dim: #0078cc;
+  --info: #008ff0;
+  --ring: rgba(0, 143, 240, 0.28);
   --radius: 6px;
   --radius-sm: 4px;
   --radius-md: 8px;
@@ -35,15 +35,15 @@
   --transition: 160ms cubic-bezier(0.22, 1, 0.36, 1);
   --focus: 0 0 0 3px var(--ring);
 
-  /* marketing (landing only — stay dark) */
-  --lb-ink: #071014;
-  --lb-panel: #0e1a1c;
-  --lb-fog: #9bb0aa;
-  --lb-paper: #e7f2ec;
-  --lb-signal: #2fd4c2;
-  --lb-signal-dim: #1fa89a;
+  /* marketing (landing only — Figma librebase final palette) */
+  --lb-ink: #051114;
+  --lb-panel: #052a43;
+  --lb-fog: #9bb8cc;
+  --lb-paper: #fdfdfd;
+  --lb-signal: #008ff0;
+  --lb-signal-dim: #0078cc;
   --lb-warn: #e8a838;
-  --lb-line: rgba(231, 242, 236, 0.12);
+  --lb-line: rgba(226, 241, 251, 0.14);
   --lb-ease: cubic-bezier(0.22, 1, 0.36, 1);
 
   --space-1: 4px;
@@ -95,26 +95,26 @@
 
 html[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0c1211;
-  --surface: #121a19;
-  --surface-muted: #1a2322;
-  --surface-2: #16201e;
-  --border: #24302e;
-  --border-strong: #33403d;
-  --text: #e7f2ec;
-  --text-secondary: #9bb0aa;
-  --muted: #7e8e89;
-  --accent: #2a9a8a;
-  --accent-dim: #1f7a6e;
-  --accent-soft: #16352f;
-  --accent-on: #071014;
-  --signal: #2fd4c2;
+  --bg: #051114;
+  --surface: #052a43;
+  --surface-muted: #0a1f32;
+  --surface-2: #072033;
+  --border: #1a3a52;
+  --border-strong: #2a4d66;
+  --text: #fdfdfd;
+  --text-secondary: #e2f1fb;
+  --muted: #9bb8cc;
+  --accent: #008ff0;
+  --accent-dim: #0078cc;
+  --accent-soft: #0a2a42;
+  --accent-on: #fdfdfd;
+  --signal: #008ff0;
   --warn: #e8a838;
   --danger: #f07167;
-  --success: #3d9b8a;
-  --success-dim: #2a7a6d;
+  --success: #008ff0;
+  --success-dim: #0078cc;
   --info: #5aa8f7;
-  --ring: rgba(47, 212, 194, 0.28);
+  --ring: rgba(0, 143, 240, 0.32);
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
   --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.45);
@@ -2437,14 +2437,14 @@ dl dd {
 .lb-blog a.lb-btn-primary:hover {
   background: var(--lb-signal);
   border-color: var(--lb-signal-dim);
-  color: var(--lb-ink);
+  color: var(--lb-paper);
 }
 
 .lb-btn-primary:hover,
 .lb-landing a.lb-btn-primary:hover,
 .lb-blog a.lb-btn-primary:hover {
   background: var(--lb-signal-dim);
-  color: var(--lb-ink);
+  color: var(--lb-paper);
 }
 
 .lb-btn-ghost,
@@ -2761,7 +2761,7 @@ dl dd {
   line-height: 0.94;
   letter-spacing: -0.02em;
   color: var(--lb-paper);
-  filter: drop-shadow(0 0 34px rgba(47, 212, 194, 0.22));
+  filter: drop-shadow(0 0 34px rgba(0, 143, 240, 0.28));
 }
 .lb-cin-wordmark .lb-cin-base {
   color: var(--lb-signal);
@@ -3487,7 +3487,7 @@ dl dd {
   font-family: var(--font-display), system-ui, sans-serif;
   font-weight: 700;
 }
-.fb-wordmark span { color: #2fd4c2; }
+.fb-wordmark span { color: #008ff0; }
 .fb-wordmark em { font-style: normal; font-weight: 500; color: #9bb0aa; }
 .fb-bar-right { display: flex; align-items: center; gap: 0.75rem; }
 .fb-who { font-family: var(--font-mono), monospace; font-size: 0.75rem; color: #9bb0aa; }
@@ -3498,7 +3498,7 @@ dl dd {
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #2fd4c2;
+  color: #008ff0;
 }
 .fb-main h1 { margin: 0 0 0.4rem; font-size: 1.8rem; }
 .fb-sub { color: #9bb0aa; margin: 0 0 1.4rem; }
@@ -3534,7 +3534,7 @@ dl dd {
 .fb-tabs button.active {
   background: rgba(47, 212, 194, 0.12);
   border-color: rgba(47, 212, 194, 0.28);
-  color: #2fd4c2;
+  color: #008ff0;
 }
 .fb-auth-form label { margin-top: 0.65rem; }
 .fb-auth-form input {
@@ -3579,7 +3579,7 @@ dl dd {
   font: inherit;
   cursor: pointer;
 }
-.fb-btn.primary { background: #1f7a6e; border-color: #1f7a6e; }
+.fb-btn.primary { background: #008ff0; border-color: #008ff0; }
 .fb-btn.ghost { font-size: 0.85rem; }
 .fb-hint { margin: 0.9rem 0 0; color: #9bb0aa; font-size: 0.85rem; }
 .fb-hint a { color: #2fd4c2; }

@@ -1,36 +1,31 @@
 # Figma → Librebase brand sync
 
-The **blue bird** identity lives in Figma. Agents and CI should treat that file as the source of truth for logo SVGs and color tokens—not the legacy Majico sage-green export in `majico-export/`.
+**Source file:** [li — librebase final](https://www.figma.com/design/YGRFmItfhPVBdpPsYmWyQZ/li?node-id=327-8199) (`fileKey` `YGRFmItfhPVBdpPsYmWyQZ`)
 
-## Figma MCP (this environment)
+## Palette (from Figma “Color Palette” frame)
 
-- Connected account: **Julian Kleber** (`julian.kleber@obsevia.com`), Pro team `team::1577975305834753111`.
-- MCP can **create** files (verified). It cannot **read** the brand file until that file is shared with this account with at least **can view** (Figma MCP currently returns *"don't have edit access"* for unknown or restricted keys).
+| Token | Hex | Use |
+| --- | --- | --- |
+| Twitter Blue (primary) | `#008FF0` | Accent, CTAs, icon background |
+| White | `#FDFDFD` | Text on blue, paper |
+| Deep Blue | `#051114` | Marketing ink / dark bg |
+| Slate Grey | `#052A43` | Panels, dark surfaces |
+| Grey Blue | `#E2F1FB` | Soft fills, secondary text (light mode) |
 
-## What we need from you
+## Exported assets (repo)
 
-1. Open the brand file in Figma (blue palette + bird mark).
-2. **Share** it with `julian.kleber@obsevia.com` (viewer is enough if MCP allows read; editor if tools require it).
-3. Paste the design URL in chat, e.g.  
-   `https://www.figma.com/design/<FILE_KEY>/Librebase-Brand?node-id=...`
+| File | Figma node |
+| --- | --- |
+| `data-studio-ui/public/brand/librebase-mark.svg` | Icon pattern `417:1681` (bird on blue) |
+| `data-studio-ui/public/brand/librebase-logo-full.svg` | Full lockup `423:22326` |
+| `data-studio-ui/public/brand/librebase-logo-lockup.png` | Compact lockup `522:22394` |
+| `data-studio-ui/public/og.png` | Icon export (PNG) |
+| `data-studio-ui/app/icon.png` | App icon |
 
-## Agent workflow (once URL is known)
+Studio uses `IconMark` → `/brand/librebase-mark.svg`. CSS tokens: `data-studio-ui/app/globals.css` (`--accent`, `--lb-signal`, marketing `--lb-*`).
 
-1. `create_session` with `fileKey` from the URL.
-2. `get_metadata` (no `nodeId`) → list pages; pick **Logo** / **Brand** / **Tokens**.
-3. `get_variable_defs` or `get_design_context` on logo + primary color styles.
-4. `download_assets` on the bird mark node → save under `data-studio-ui/public/brand/`.
-5. Update tokens per [STUDIO.md](./STUDIO.md):
-   - `data-studio-ui/app/globals.css` (`--accent`, `--lb-signal`, landing `--lb-*`)
-   - `docs/brand/DESIGN.md`, `docs/brand/BRAND.md`
-6. Wire logo in nav (`lb-wordmark` / `StudioFrame` header) and `app/icon` + `og.png` if provided in Figma.
+## Re-sync after Figma changes
 
-## Repo state before sync
-
-- Studio + landing still use **teal/sage** tokens (`#1f7a6e`, `#2fd4c2`) from the 2026 Majico handoff.
-- `BRAND.md` still says no official logo in repo scope—that should be revised after Figma assets land.
-
-## Temporary test file (safe to delete)
-
-A blank file was created only to verify MCP write access:  
-https://www.figma.com/design/F3IKCFzFN9fU74eek1hXWf (`Librebase Brand Sync Test`)
+1. `create_session` with `fileKey` `YGRFmItfhPVBdpPsYmWyQZ`.
+2. `download_assets` on `417:1681` (icon) and `423:22326` (full logo).
+3. Refresh `librebase-mark.svg` if the bird vectors changed; update `:root` / `[data-theme="dark"]` if palette text in frame `522:22356` changes.

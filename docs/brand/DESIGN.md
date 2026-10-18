@@ -13,16 +13,16 @@ Our focus remains on honest health status indicators that reflect true infrastru
 Librebase positions itself as an agent-first data layer that simplifies SQL management while eliminating hidden costs associated with proprietary client libraries. This approach empowers teams to own their infrastructure fully instead of depending on ready-made templates created by other vendors. We deliver a secure scalable and transparent foundation for the next generation of autonomous agents and collaborative workspaces without compromise. The single takeaway for how this brand positions as first mover is its commitment to honest metrics low memory usage and full control over agent data flows.
 
 ## 2. Color Palette & Roles
-- **Background (#ffffff)**: Base canvas and long-form reading areas.
-- **Background Muted (#f4f4f5)**: Subtle section fills and low-emphasis surfaces.
-- **Primary Text (#0a0a0a)**: Default text color for headings and body content.
-- **Secondary Text (#52525b)**: Supportive labels, metadata, and helper copy.
-- **Accent (#495d36)**: Primary actions, links, highlighted states, and key emphasis.
-- **Accent On (#fafafa)**: Foreground text/icon color used on top of accent surfaces.
-- **Accent Muted (#2e3a21)**: Hover, pressed, and secondary accent interactions.
-- **Border (#e4e4e7)**: Strokes, dividers, and input outlines.
 
-Dark-theme anchor colors include Background (#0a0a0a), Text (#fafafa), and Accent (#495d36).
+**Current (Figma “librebase final”, 2026):** see [FIGMA.md](./FIGMA.md). Studio and marketing CSS implement:
+
+- **Accent / signal (#008FF0)**: Primary actions, links, icon tile, highlights.
+- **Paper (#FDFDFD)**: Text on accent; light marketing copy.
+- **Ink (#051114)**: Marketing dark background; dark theme base.
+- **Panel (#052A43)**: Dark surfaces, secondary marketing depth.
+- **Grey blue (#E2F1FB)**: Soft accent fills, secondary text on dark.
+
+Legacy Majico sage tokens in older PDF exports are superseded for product UI.
 
 ## 3. Typography Rules
 Headlines use **IBM Plex Sans** to create a recognizable top-level voice and strong hierarchy.

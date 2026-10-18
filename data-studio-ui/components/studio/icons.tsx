@@ -1,4 +1,4 @@
-import type { SVGProps } from "react";
+import type { ImgHTMLAttributes, SVGProps } from "react";
 
 type IconProps = SVGProps<SVGSVGElement>;
 
@@ -238,14 +238,17 @@ export function IconShield(p: IconProps) {
   );
 }
 
-export function IconMark(p: IconProps) {
+export function IconMark({ className, ...props }: ImgHTMLAttributes<HTMLImageElement>) {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" {...p}>
-      <rect x="1" y="1" width="16" height="16" rx="4" fill="var(--accent)" />
-      <rect x="4.2" y="5" width="9.6" height="2" rx="1" fill="var(--accent-on)" />
-      <rect x="4.2" y="8" width="7.2" height="2" rx="1" fill="var(--accent-on)" opacity="0.85" />
-      <rect x="4.2" y="11" width="4.6" height="2" rx="1" fill="var(--accent-on)" opacity="0.65" />
-    </svg>
+    // eslint-disable-next-line @next/next/no-img-element -- brand SVG from Figma export
+    <img
+      src="/brand/librebase-mark.svg"
+      alt=""
+      width={18}
+      height={18}
+      className={className}
+      {...props}
+    />
   );
 }
 
