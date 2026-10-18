@@ -1,0 +1,3 @@
+{
+  "install": "bash .cursor/bin/configure-github-git.sh"
+}
