@@ -278,7 +278,7 @@ def _handle(msg: dict[str, Any]) -> dict[str, Any] | None:
             "result": {
                 "protocolVersion": "2024-11-05",
                 "capabilities": {"tools": {}},
-                "serverInfo": {"name": "librebase", "version": "0.1.27"},
+                "serverInfo": {"name": "librebase", "version": "0.1.28"},
             },
         }
     if method == "notifications/initialized":
