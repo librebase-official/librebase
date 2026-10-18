@@ -29,6 +29,12 @@
 
 **lis tip note:** All feature lines merged to `main` — one pin (`main` @ `6268be5`) carries notify + changefeed + echo + edge + deepen Phase 1.
 
+## librebase-admin (CI)
+
+| Surface | lic pin (CI) | Notes |
+|---------|--------------|-------|
+| **admin-api/li** | `main` @ tip (checkout default branch) | [`.github/workflows/admin-api-li.yml`](../.github/workflows/admin-api-li.yml) checks out `li-langverse/lic` with no ref pin yet — record SHA here once CI publishes a stable green build |
+
 ## Footprint / PH-DB-7 (64 MB aim)
 
 | Check | Where | Pin / gate |

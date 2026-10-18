@@ -1,0 +1,53 @@
+# .github/workflows/admin-api-li.yml
+name: admin-api-li
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "admin-api/li/**"
+      - "tests/admin_contract/**"
+      - ".github/workflows/admin-api-li.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "admin-api/li/**"
+      - "tests/admin_contract/**"
+      - ".github/workflows/admin-api-li.yml"
+
+jobs:
+  li-build-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Checkout lic compiler
+        uses: actions/checkout@v4
+        with:
+          repository: li-langverse/lic
+          path: lic
+        continue-on-error: true
+
+      - name: Build Li admin_server
+        env:
+          LIC_ROOT: ${{ github.workspace }}/lic
+        run: |
+          chmod +x admin-api/li/scripts/build-li.sh
+          admin-api/li/scripts/build-li.sh
+
+      - name: Contract tests (python always)
+        run: python -m unittest tests.admin_contract.test_health -v
+
+      - name: Contract tests (li when binary exists)
+        env:
+          LIBREBASE_ADMIN_CONTRACT_LI: "1"
+        run: |
+          if [[ -x admin-api/li/build/admin_server ]]; then
+            python -m unittest discover -s tests/admin_contract -p "test_*.py" -v
+          else
+            echo "Li binary not built — python contracts only (lic unavailable)"
+          fi

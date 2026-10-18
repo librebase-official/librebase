@@ -18,15 +18,36 @@ served by the Python interim until lidb seam + JWT/crypto paths land.
 
 ## Build
 
-Requires sibling `lic` with KMS/net runtime externs (same as li-kms):
+From repo root (preferred):
 
 ```bash
-export LIC_ROOT=/path/to/lic
+export LIC_ROOT=/path/to/lic   # default: ../lic sibling
+chmod +x admin-api/li/scripts/build-li.sh
+admin-api/li/scripts/build-li.sh
+# → admin-api/li/build/admin_server when lic is available
+```
+
+If `lic` is missing at `LIC_ROOT`, the script lists `*.li` sources and exits 0
+(syntax smoke only).
+
+Requires sibling `lic` with KMS/net runtime externs (same as li-kms) when
+building a binary:
+
+```bash
 export LI_NATIVE_RT=1
 export LI_RT_LIB="$LIC_ROOT/build-mac/runtime/libli_rt.a"   # or Linux build dir
-# from repo root or this directory once lic flatten supports package roots:
-lic build admin-api/li/src/admin_server.li
 ```
+
+## CI
+
+Workflow [`.github/workflows/admin-api-li.yml`](../../.github/workflows/admin-api-li.yml)
+on changes under `admin-api/li/**` or `tests/admin_contract/**`:
+
+1. Checkout `li-langverse/lic` into `lic/` (same pattern as licontainer-build)
+2. Run `admin-api/li/scripts/build-li.sh`
+3. Always run Python `tests.admin_contract.test_health`
+4. When `admin-api/li/build/admin_server` exists, run full contract suite with
+   `LIBREBASE_ADMIN_CONTRACT_LI=1`
 
 ## Run (Li)
 
@@ -46,7 +67,7 @@ Tracked in **[docs/superpowers/plans/2026-10-18-li-admin-api-port.md](../../docs
 
 - [x] Package layout + seam stubs
 - [x] `GET /health`
-- [ ] Contract harness + CI (`tests/admin_contract`, `admin-api-li.yml`)
+- [x] Contract harness + CI (`tests/admin_contract`, `admin-api-li.yml`)
 - [ ] `POST /org/v1/setup` + SQLite/lidb migrations (LIB-135)
 - [ ] Auth (login/refresh/logout/MFA/OAuth) (LIB-136)
 - [ ] Org projects / instances / hosts CRUD
