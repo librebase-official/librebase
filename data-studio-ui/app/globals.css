@@ -2687,9 +2687,9 @@ dl dd {
   padding: clamp(var(--space-10), 12vh, var(--space-13)) var(--space-6) clamp(var(--space-9), 9vh, var(--space-12));
   overflow: hidden;
   background:
-    radial-gradient(60% 45% at 18% 8%, rgba(47, 212, 194, 0.14), transparent 60%),
-    radial-gradient(50% 40% at 96% 4%, rgba(47, 212, 194, 0.08), transparent 55%),
-    radial-gradient(70% 60% at 50% 110%, rgba(47, 212, 194, 0.06), transparent 60%),
+    radial-gradient(60% 45% at 18% 8%, rgba(0, 143, 240, 0.18), transparent 60%),
+    radial-gradient(50% 40% at 96% 4%, rgba(0, 143, 240, 0.1), transparent 55%),
+    radial-gradient(70% 60% at 50% 110%, rgba(0, 143, 240, 0.08), transparent 60%),
     linear-gradient(170deg, #0a1618 0%, var(--lb-ink) 46%, #04090b 100%);
 }
 .lb-cin-hero::after {
@@ -2721,7 +2721,7 @@ dl dd {
   height: 520px;
   left: -160px;
   top: 8%;
-  background: radial-gradient(circle, rgba(47, 212, 194, 0.28), transparent 70%);
+  background: radial-gradient(circle, rgba(0, 143, 240, 0.32), transparent 70%);
   animation: lb-cin-drift-a 14s ease-in-out infinite alternate;
 }
 .lb-cin-orb-b {
@@ -2729,7 +2729,7 @@ dl dd {
   height: 420px;
   right: -120px;
   top: 42%;
-  background: radial-gradient(circle, rgba(47, 212, 194, 0.18), transparent 70%);
+  background: radial-gradient(circle, rgba(0, 143, 240, 0.2), transparent 70%);
   animation: lb-cin-drift-b 18s ease-in-out infinite alternate;
 }
 @keyframes lb-cin-drift-a {
