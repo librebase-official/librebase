@@ -62,24 +62,39 @@ class AdminServer:
         else:
             raise ValueError(f"unknown runtime {self.runtime!r}")
         self._proc = subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
-        deadline = time.time() + 8
-        while time.time() < deadline:
-            try:
-                st, body = http_json("GET", f"{self.base_url}/health")
-                if st == 200 and body.get("ok") is True:
-                    return self
-            except Exception:
-                time.sleep(0.1)
-        err = self._proc.stderr.read().decode() if self._proc.stderr else ""
-        raise RuntimeError(f"admin {self.runtime} failed to become healthy: {err}")
+        try:
+            deadline = time.time() + 8
+            while time.time() < deadline:
+                try:
+                    st, body = http_json("GET", f"{self.base_url}/health")
+                    if st == 200 and body.get("ok") is True:
+                        return self
+                except Exception:
+                    time.sleep(0.1)
+            err = self._proc.stderr.read().decode() if self._proc.stderr else ""
+            raise RuntimeError(f"admin {self.runtime} failed to become healthy: {err}")
+        except BaseException:
+            if self._proc and self._proc.poll() is None:
+                self._proc.terminate()
+                try:
+                    self._proc.wait(timeout=3)
+                except subprocess.TimeoutExpired:
+                    self._proc.kill()
+            if self._proc and self._proc.stderr is not None and not self._proc.stderr.closed:
+                self._proc.stderr.close()
+            raise
 
     def __exit__(self, *args) -> None:
-        if self._proc and self._proc.poll() is None:
-            self._proc.terminate()
-            try:
-                self._proc.wait(timeout=3)
-            except subprocess.TimeoutExpired:
-                self._proc.kill()
+        if self._proc:
+            if self._proc.poll() is None:
+                self._proc.terminate()
+                try:
+                    self._proc.wait(timeout=3)
+                except subprocess.TimeoutExpired:
+                    self._proc.kill()
+                    self._proc.wait(timeout=3)
+            if self._proc.stderr is not None and not self._proc.stderr.closed:
+                self._proc.stderr.close()
         if self._tmpdir:
             self._tmpdir.cleanup()
 
