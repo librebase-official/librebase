@@ -23,18 +23,10 @@ function useReveal() {
 }
 
 export function LandingPage() {
-  const [ready, setReady] = useState(false);
   const bench = useReveal();
 
-  useEffect(() => {
-    const t = requestAnimationFrame(() => setReady(true));
-    return () => cancelAnimationFrame(t);
-  }, []);
-
-  const heroIn = ready;
-
   return (
-    <div className={`lb-landing${ready ? " is-ready" : ""}`}>
+    <div className="lb-landing is-ready">
       <header className="lb-nav">
         <Link href="/landing" className="lb-wordmark" style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <Image src="/brand/librebase-mark.svg" alt="" width={28} height={28} priority />
@@ -53,23 +45,23 @@ export function LandingPage() {
           <div className="lb-cin-orb lb-cin-orb-a" />
           <div className="lb-cin-orb lb-cin-orb-b" />
         </div>
-        <div className={`lb-cin-reveal lb-brand-signal${heroIn ? " is-in" : ""}`}>
+        <div className="lb-cin-reveal lb-brand-signal is-in">
           Postgres-compatible · agent-first
         </div>
-        <h1 className={`lb-cin-reveal lb-cin-wordmark${heroIn ? " is-in" : ""}`} style={{ transitionDelay: "80ms" }}>
+        <h1 className="lb-cin-reveal lb-cin-wordmark is-in" style={{ transitionDelay: "80ms" }}>
           Libre<span className="lb-cin-base">base</span>
         </h1>
-        <p className={`lb-cin-reveal lb-cin-title${heroIn ? " is-in" : ""}`} style={{ transitionDelay: "140ms" }}>
+        <p className="lb-cin-reveal lb-cin-title is-in" style={{ transitionDelay: "140ms" }}>
           Honest data for <span className="lb-cin-em">builders &amp; agents</span>
         </p>
-        <p className={`lb-cin-reveal lb-cin-sub${heroIn ? " is-in" : ""}`} style={{ transitionDelay: "200ms" }}>
+        <p className="lb-cin-reveal lb-cin-sub is-in" style={{ transitionDelay: "200ms" }}>
           A small-footprint Postgres layer with real health status, MCP tools, and REST — no fake-green dashboards.
         </p>
-        <div className={`lb-cin-reveal lb-cin-cta${heroIn ? " is-in" : ""}`} style={{ transitionDelay: "260ms" }}>
+        <div className="lb-cin-reveal lb-cin-cta is-in" style={{ transitionDelay: "260ms" }}>
           <Link className="lb-btn lb-btn-primary lb-btn-lg" href="/setup">Create organization</Link>
           <Link className="lb-btn lb-btn-ghost lb-btn-lg" href="/for-agents">Connect via MCP</Link>
         </div>
-        <div className={`lb-cin-reveal lb-cin-herostat${heroIn ? " is-in" : ""}`} style={{ transitionDelay: "340ms" }}>
+        <div className="lb-cin-reveal lb-cin-herostat is-in" style={{ transitionDelay: "340ms" }}>
           <p className="lb-cin-herostat-label">Designed footprint</p>
           <p className="lb-cin-herostat-value">
             &lt;64<span className="lb-cin-unit">MB</span>
