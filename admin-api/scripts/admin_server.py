@@ -1619,7 +1619,7 @@ class LiorgHandler(BaseHTTPRequestHandler):
             return
 
         if path == "/health":
-            self.send_json(200, {"ok": True})
+            self.send_json(200, {"ok": True, "service": "librebase-admin"})
             return
 
         if path == "/org/v1/auth/grok/start":
