@@ -1,4 +1,5 @@
 # Librebase product package — installable CLI surface (lip).
+# Control-plane Li sources live under admin-api/li/; lidb embed decls in seam.li.
 
 def librebase_version() -> int
   requires true

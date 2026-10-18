@@ -1,0 +1,61 @@
+# Trusted runtime seam for Librebase Admin (pure Li).
+# Net/TCP HTTP helpers mirror li-kms; lidb_* are the embed surface for org.db.
+# Implementations live in lic runtime + lidb — not in this repo.
+
+extern def tcp_listen(port: int) raises Net -> int
+  requires 0 < port
+  requires port < 65536
+  ensures true
+  decreases 0
+
+extern def tcp_accept(fd: int) raises Net -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def tcp_recv_i(fd: int, cap: int) raises Net, IO, Alloc -> ptr
+  requires 0 < cap
+  ensures true
+  decreases 0
+
+extern def tcp_http_write_response(fd: int, status: int, body: ptr) raises Net, IO -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def tcp_close(fd: int) raises Net -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def net_byte_at_i(buf: ptr, i: int) raises IO -> int
+  requires 0 <= i
+  ensures true
+  decreases 0
+
+extern def net_buf_alloc(n: int) raises Alloc -> ptr
+  requires 0 < n
+  ensures true
+  decreases 0
+
+extern def li_rt_vec_i32_set(buf: ptr, i: int, v: int) raises IO -> int
+  requires 0 <= i
+  ensures true
+  decreases 0
+
+# lidb embed — open org database and exec SQL (JSON row protocol).
+
+extern def lidb_open_i(path: ptr) raises IO, Alloc -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def lidb_exec_json_i(db: int, sql: ptr, out: ptr, cap: int) raises IO, Alloc -> int
+  requires 0 < cap
+  ensures true
+  decreases 0
+
+extern def lidb_close_i(db: int) raises IO -> int
+  requires true
+  ensures true
+  decreases 0

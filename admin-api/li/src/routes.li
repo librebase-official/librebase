@@ -1,0 +1,110 @@
+# Route classifiers for Librebase Admin HTTP.
+# Byte compares avoid string deps; keep paths aligned with admin_server.py.
+
+import seam
+
+def is_get(req: ptr) raises IO -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  if net_byte_at_i(req, 0) != 71:
+    return 0
+  if net_byte_at_i(req, 1) != 69:
+    return 0
+  if net_byte_at_i(req, 2) != 84:
+    return 0
+  if net_byte_at_i(req, 3) != 32:
+    return 0
+  return 1
+
+def is_post(req: ptr) raises IO -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  if net_byte_at_i(req, 0) != 80:
+    return 0
+  if net_byte_at_i(req, 1) != 79:
+    return 0
+  if net_byte_at_i(req, 2) != 83:
+    return 0
+  if net_byte_at_i(req, 3) != 84:
+    return 0
+  return 1
+
+def path_starts_health(req: ptr, off: int) raises IO -> int
+  requires 0 <= off
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  if net_byte_at_i(req, off) != 47:
+    return 0
+  if net_byte_at_i(req, off + 1) != 104:
+    return 0
+  if net_byte_at_i(req, off + 2) != 101:
+    return 0
+  if net_byte_at_i(req, off + 3) != 97:
+    return 0
+  if net_byte_at_i(req, off + 4) != 108:
+    return 0
+  if net_byte_at_i(req, off + 5) != 116:
+    return 0
+  if net_byte_at_i(req, off + 6) != 104:
+    return 0
+  return 1
+
+def is_health_get(req: ptr) raises IO -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  if is_get(req) != 1:
+    return 0
+  return path_starts_health(req, 4)
+
+def is_setup_post(req: ptr) raises IO -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  if is_post(req) != 1:
+    return 0
+  if net_byte_at_i(req, 5) != 47:
+    return 0
+  if net_byte_at_i(req, 6) != 111:
+    return 0
+  if net_byte_at_i(req, 7) != 114:
+    return 0
+  if net_byte_at_i(req, 8) != 103:
+    return 0
+  return 1
+
+def is_auth_login_post(req: ptr) raises IO -> int
+  requires true
+  ensures result == 0 or result == 1
+  decreases 0
+=
+  if is_post(req) != 1:
+    return 0
+  if net_byte_at_i(req, 5) != 47:
+    return 0
+  if net_byte_at_i(req, 6) != 111:
+    return 0
+  if net_byte_at_i(req, 10) != 118:
+    return 0
+  return 1
+
+def route_id(req: ptr) raises IO -> int
+  requires true
+  ensures 0 <= result
+  ensures result <= 4
+  decreases 0
+=
+  if is_health_get(req) == 1:
+    return 1
+  if is_setup_post(req) == 1:
+    return 2
+  if is_auth_login_post(req) == 1:
+    return 3
+  return 0

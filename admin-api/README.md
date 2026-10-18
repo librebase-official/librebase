@@ -2,7 +2,9 @@
 
 Self-host operator metadata HTTP (orgs, members, projects, instances, entitlements).
 
-Interim Python `ThreadingHTTPServer` + SQLite until li-httpd + lic seam + lidb land.
+Interim Python `ThreadingHTTPServer` + SQLite until the pure-Li control plane in
+`admin-api/li/` (li-httpd/tcp + `src/seam.li` + lidb) is production-ready.
+See `admin-api/li/README.md` for the Li port checklist.
 
 ## Run
 

@@ -1,0 +1,16 @@
+[package]
+name = "librebase-admin"
+version = "0.1.0"
+edition = "2026"
+license = "GPL-3.0-or-later"
+description = "Librebase Admin API — pure Li control plane (li-httpd/tcp + lidb)"
+
+[dependencies]
+
+[package.metadata.li]
+github_repo = "librebase"
+gitlab_repo = "librebase"
+import_name = "librebase_admin"
+min_lic = "0.1.0"
+maintainer = "librebase-official"
+pkg_id = "PKG-librebase-admin"

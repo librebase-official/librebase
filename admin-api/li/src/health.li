@@ -1,0 +1,72 @@
+# GET /health body: {"ok":true,"service":"librebase-admin","runtime":"li"}
+
+import seam
+
+def health_body_len() -> int
+  requires true
+  ensures result == 58
+  decreases 0
+=
+  return 58
+
+def fill_health_body(buf: ptr) raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  li_rt_vec_i32_set(buf, 0, 123)
+  li_rt_vec_i32_set(buf, 1, 34)
+  li_rt_vec_i32_set(buf, 2, 111)
+  li_rt_vec_i32_set(buf, 3, 107)
+  li_rt_vec_i32_set(buf, 4, 34)
+  li_rt_vec_i32_set(buf, 5, 58)
+  li_rt_vec_i32_set(buf, 6, 116)
+  li_rt_vec_i32_set(buf, 7, 114)
+  li_rt_vec_i32_set(buf, 8, 117)
+  li_rt_vec_i32_set(buf, 9, 101)
+  li_rt_vec_i32_set(buf, 10, 44)
+  li_rt_vec_i32_set(buf, 11, 34)
+  li_rt_vec_i32_set(buf, 12, 115)
+  li_rt_vec_i32_set(buf, 13, 101)
+  li_rt_vec_i32_set(buf, 14, 114)
+  li_rt_vec_i32_set(buf, 15, 118)
+  li_rt_vec_i32_set(buf, 16, 105)
+  li_rt_vec_i32_set(buf, 17, 99)
+  li_rt_vec_i32_set(buf, 18, 101)
+  li_rt_vec_i32_set(buf, 19, 34)
+  li_rt_vec_i32_set(buf, 20, 58)
+  li_rt_vec_i32_set(buf, 21, 34)
+  li_rt_vec_i32_set(buf, 22, 108)
+  li_rt_vec_i32_set(buf, 23, 105)
+  li_rt_vec_i32_set(buf, 24, 98)
+  li_rt_vec_i32_set(buf, 25, 114)
+  li_rt_vec_i32_set(buf, 26, 101)
+  li_rt_vec_i32_set(buf, 27, 98)
+  li_rt_vec_i32_set(buf, 28, 97)
+  li_rt_vec_i32_set(buf, 29, 115)
+  li_rt_vec_i32_set(buf, 30, 101)
+  li_rt_vec_i32_set(buf, 31, 45)
+  li_rt_vec_i32_set(buf, 32, 97)
+  li_rt_vec_i32_set(buf, 33, 100)
+  li_rt_vec_i32_set(buf, 34, 109)
+  li_rt_vec_i32_set(buf, 35, 105)
+  li_rt_vec_i32_set(buf, 36, 110)
+  li_rt_vec_i32_set(buf, 37, 34)
+  li_rt_vec_i32_set(buf, 38, 44)
+  li_rt_vec_i32_set(buf, 39, 34)
+  li_rt_vec_i32_set(buf, 40, 114)
+  li_rt_vec_i32_set(buf, 41, 117)
+  li_rt_vec_i32_set(buf, 42, 110)
+  li_rt_vec_i32_set(buf, 43, 116)
+  li_rt_vec_i32_set(buf, 44, 105)
+  li_rt_vec_i32_set(buf, 45, 109)
+  li_rt_vec_i32_set(buf, 46, 101)
+  li_rt_vec_i32_set(buf, 47, 34)
+  li_rt_vec_i32_set(buf, 48, 58)
+  li_rt_vec_i32_set(buf, 49, 34)
+  li_rt_vec_i32_set(buf, 50, 108)
+  li_rt_vec_i32_set(buf, 51, 105)
+  li_rt_vec_i32_set(buf, 52, 34)
+  li_rt_vec_i32_set(buf, 53, 125)
+  li_rt_vec_i32_set(buf, 54, 0)
+  return 0

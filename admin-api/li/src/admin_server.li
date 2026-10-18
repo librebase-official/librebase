@@ -1,0 +1,84 @@
+# Librebase Admin HTTP server — pure Li.
+# Port 54330. GET /health implemented; other routes 501 until handlers land.
+# Drop-in path parity with admin-api/scripts/admin_server.py.
+
+import seam
+import routes
+import health
+
+def not_impl_body(buf: ptr) raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  # {"ok":false,"error":"not_implemented_li"}
+  li_rt_vec_i32_set(buf, 0, 123)
+  li_rt_vec_i32_set(buf, 1, 34)
+  li_rt_vec_i32_set(buf, 2, 111)
+  li_rt_vec_i32_set(buf, 3, 107)
+  li_rt_vec_i32_set(buf, 4, 34)
+  li_rt_vec_i32_set(buf, 5, 58)
+  li_rt_vec_i32_set(buf, 6, 102)
+  li_rt_vec_i32_set(buf, 7, 97)
+  li_rt_vec_i32_set(buf, 8, 108)
+  li_rt_vec_i32_set(buf, 9, 115)
+  li_rt_vec_i32_set(buf, 10, 101)
+  li_rt_vec_i32_set(buf, 11, 44)
+  li_rt_vec_i32_set(buf, 12, 34)
+  li_rt_vec_i32_set(buf, 13, 101)
+  li_rt_vec_i32_set(buf, 14, 114)
+  li_rt_vec_i32_set(buf, 15, 114)
+  li_rt_vec_i32_set(buf, 16, 111)
+  li_rt_vec_i32_set(buf, 17, 114)
+  li_rt_vec_i32_set(buf, 18, 34)
+  li_rt_vec_i32_set(buf, 19, 58)
+  li_rt_vec_i32_set(buf, 20, 34)
+  li_rt_vec_i32_set(buf, 21, 110)
+  li_rt_vec_i32_set(buf, 22, 111)
+  li_rt_vec_i32_set(buf, 23, 116)
+  li_rt_vec_i32_set(buf, 24, 95)
+  li_rt_vec_i32_set(buf, 25, 105)
+  li_rt_vec_i32_set(buf, 26, 109)
+  li_rt_vec_i32_set(buf, 27, 112)
+  li_rt_vec_i32_set(buf, 28, 108)
+  li_rt_vec_i32_set(buf, 29, 101)
+  li_rt_vec_i32_set(buf, 30, 109)
+  li_rt_vec_i32_set(buf, 31, 101)
+  li_rt_vec_i32_set(buf, 32, 110)
+  li_rt_vec_i32_set(buf, 33, 116)
+  li_rt_vec_i32_set(buf, 34, 101)
+  li_rt_vec_i32_set(buf, 35, 100)
+  li_rt_vec_i32_set(buf, 36, 95)
+  li_rt_vec_i32_set(buf, 37, 108)
+  li_rt_vec_i32_set(buf, 38, 105)
+  li_rt_vec_i32_set(buf, 39, 34)
+  li_rt_vec_i32_set(buf, 40, 125)
+  li_rt_vec_i32_set(buf, 41, 0)
+  return 0
+
+def main() raises Net, Alloc, IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var listen_fd: int = tcp_listen(54330)
+  var okbody: ptr = net_buf_alloc(64)
+  var nibody: ptr = net_buf_alloc(64)
+  var z0: int = fill_health_body(okbody)
+  var z1: int = not_impl_body(nibody)
+  var n: int = 0
+  while n < 64:
+    var conn: int = tcp_accept(listen_fd)
+    var req: ptr = tcp_recv_i(conn, 8192)
+    var rid: int = route_id(req)
+    if rid == 1:
+      tcp_http_write_response(conn, 200, okbody)
+    if rid != 1:
+      if rid == 0:
+        tcp_http_write_response(conn, 404, nibody)
+      if rid != 0:
+        tcp_http_write_response(conn, 501, nibody)
+    tcp_close(conn)
+    n = n + 1
+  tcp_close(listen_fd)
+  return 0
