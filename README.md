@@ -6,6 +6,10 @@
 
 This repository is the canonical product home: platform code, Studio UI, docs, and Cursor agent rules.
 
+## Brand (Figma)
+
+The current **blue bird** identity is maintained in Figma. To sync logo and color tokens into Studio and docs, see [docs/brand/FIGMA.md](docs/brand/FIGMA.md).
+
 ## Paid features
 
 **lidb** and **Librebase Studio** are monetized product surfaces. Billing/entitlement enforcement is planned; launch paths include TODO gates in `project-runtime.ts`. See `.cursor/rules/librebase-product.mdc` for agent guidance.
