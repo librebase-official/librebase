@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { copyText } from "@/lib/clipboard";
+import { BrandWordmark } from "@/components/brand/BrandWordmark";
 
 export default function SetupPage() {
   const router = useRouter();
@@ -47,6 +48,9 @@ export default function SetupPage() {
     return (
       <div className="auth-page">
         <div className="auth-card">
+          <div className="brand-wordmark-wrap">
+            <BrandWordmark href="/landing" size="md" />
+          </div>
           <h1>Organization created</h1>
           <p className="muted">
             Save your MCP key now — it is shown only once.
@@ -81,7 +85,10 @@ export default function SetupPage() {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <h1>Librebase Admin setup</h1>
+        <div className="brand-wordmark-wrap">
+          <BrandWordmark href="/landing" size="md" />
+        </div>
+        <h1>Admin setup</h1>
         <p className="muted">
           Create the first operator account. You&apos;ll get an MCP key for AI
           tool access.

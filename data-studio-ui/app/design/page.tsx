@@ -99,7 +99,7 @@ export default function DesignPage() {
         <main className="st-main">
           <PageHeader
             title="Studio design system"
-            description="Librebase chrome — Supabase’s workbench principles, our forest-teal identity. Tokens live in docs/brand/STUDIO.md."
+            description="Librebase chrome — Supabase-style workbench density with Figma blue bird identity (#008FF0). Tokens: docs/brand/FIGMA.md."
             actions={
               <Link href="/projects" className="btn btn-primary">
                 Open console

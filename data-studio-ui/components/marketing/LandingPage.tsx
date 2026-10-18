@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import { BrandWordmark } from "@/components/brand/BrandWordmark";
 import { useEffect, useRef, useState } from "react";
 
 function useReveal() {
@@ -28,10 +28,7 @@ export function LandingPage() {
   return (
     <div className="lb-landing is-ready">
       <header className="lb-nav">
-        <Link href="/landing" className="lb-wordmark" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <Image src="/brand/librebase-mark.svg" alt="" width={28} height={28} priority />
-          Libre<span>base</span>
-        </Link>
+        <BrandWordmark href="/landing" variant="marketing" size="md" />
         <div className="lb-nav-actions">
           <Link className="lb-link-quiet" href="/for-agents">For agents</Link>
           <Link className="lb-link-quiet" href="/design">Design</Link>

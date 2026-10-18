@@ -1,15 +1,15 @@
 :root {
   color-scheme: light;
 
-  --bg: #f7f8f7;
-  --surface: #ffffff;
-  --surface-muted: #eef1ef;
-  --surface-2: #f3f5f3;
-  --border: #e4e8e5;
-  --border-strong: #c9d0cc;
-  --text: #171c1a;
-  --text-secondary: #5c6662;
-  --muted: #7a847f;
+  --bg: #eef6fc;
+  --surface: #fdfdfd;
+  --surface-muted: #e2f1fb;
+  --surface-2: #f5faff;
+  --border: #c5d9eb;
+  --border-strong: #94b8d9;
+  --text: #051114;
+  --text-secondary: #052a43;
+  --muted: #4a6b85;
   --accent: #008ff0;
   --accent-dim: #0078cc;
   --accent-soft: #e2f1fb;
@@ -17,8 +17,8 @@
   --signal: #008ff0;
   --warn: #b45309;
   --danger: #b42318;
-  --success: #008ff0;
-  --success-dim: #0078cc;
+  --success: #059669;
+  --success-dim: #047857;
   --info: #008ff0;
   --ring: rgba(0, 143, 240, 0.28);
   --radius: 6px;
@@ -29,9 +29,9 @@
   --rail-w: 48px;
   --sidebar-w: 244px;
 
-  --shadow-sm: 0 1px 2px rgba(23, 28, 26, 0.04);
-  --shadow-md: 0 8px 24px rgba(23, 28, 26, 0.08);
-  --shadow-lg: 0 16px 48px rgba(23, 28, 26, 0.12);
+  --shadow-sm: 0 1px 2px rgba(5, 17, 20, 0.06);
+  --shadow-md: 0 8px 24px rgba(5, 17, 20, 0.1);
+  --shadow-lg: 0 16px 48px rgba(5, 17, 20, 0.14);
   --transition: 160ms cubic-bezier(0.22, 1, 0.36, 1);
   --focus: 0 0 0 3px var(--ring);
 
@@ -111,8 +111,8 @@ html[data-theme="dark"] {
   --signal: #008ff0;
   --warn: #e8a838;
   --danger: #f07167;
-  --success: #008ff0;
-  --success-dim: #0078cc;
+  --success: #34d399;
+  --success-dim: #10b981;
   --info: #5aa8f7;
   --ring: rgba(0, 143, 240, 0.32);
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
@@ -2363,7 +2363,7 @@ dl dd {
   overflow-x: clip;
 }
 
-/* Exclude .lb-btn — inherit would wash primary (ink) into paper-on-teal. */
+/* Exclude .lb-btn — inherit would wash primary (ink) into paper-on-accent. */
 .lb-landing a:not(.lb-btn) {
   color: inherit;
   text-decoration: none;
@@ -2460,8 +2460,8 @@ dl dd {
 .lb-btn-ghost:hover,
 .lb-landing a.lb-btn-ghost:hover,
 .lb-blog a.lb-btn-ghost:hover {
-  border-color: rgba(231, 242, 236, 0.28);
-  background: rgba(231, 242, 236, 0.04);
+  border-color: rgba(226, 241, 251, 0.28);
+  background: rgba(226, 241, 251, 0.04);
   color: var(--lb-paper);
 }
 
@@ -2481,9 +2481,9 @@ dl dd {
   overflow: hidden;
   isolation: isolate;
   background:
-    radial-gradient(ellipse 90% 70% at 78% 42%, rgba(47, 212, 194, 0.14), transparent 58%),
+    radial-gradient(ellipse 90% 70% at 78% 42%, rgba(0, 143, 240, 0.14), transparent 58%),
     radial-gradient(ellipse 60% 50% at 12% 88%, rgba(232, 168, 56, 0.06), transparent 55%),
-    linear-gradient(165deg, #0a1618 0%, var(--lb-ink) 48%, #050c0e 100%);
+    linear-gradient(165deg, #072033 0%, var(--lb-ink) 48%, #03080a 100%);
 }
 
 .lb-hero::before {
@@ -2493,8 +2493,8 @@ dl dd {
   z-index: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(231, 242, 236, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(231, 242, 236, 0.035) 1px, transparent 1px);
+    linear-gradient(rgba(226, 241, 251, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(226, 241, 251, 0.035) 1px, transparent 1px);
   background-size: 48px 48px;
   mask-image: radial-gradient(ellipse 75% 70% at 70% 45%, #000 20%, transparent 75%);
 }
@@ -2574,7 +2574,7 @@ dl dd {
   position: absolute;
   inset: 12% 8% 18% 18%;
   border-radius: 40%;
-  background: radial-gradient(circle at 55% 45%, rgba(47, 212, 194, 0.28), transparent 68%);
+  background: radial-gradient(circle at 55% 45%, rgba(0, 143, 240, 0.28), transparent 68%);
   filter: blur(28px);
   pointer-events: none;
 }
@@ -2595,12 +2595,12 @@ dl dd {
 
 .lb-panel-b {
   fill: #122226;
-  stroke: rgba(47, 212, 194, 0.35);
+  stroke: rgba(0, 143, 240, 0.35);
   stroke-width: 1.5;
 }
 
 .lb-row {
-  fill: rgba(231, 242, 236, 0.1);
+  fill: rgba(226, 241, 251, 0.1);
 }
 
 .lb-sql {
@@ -2626,7 +2626,7 @@ dl dd {
 .lb-proof {
   padding: var(--space-5) clamp(var(--space-5), 4vw, var(--space-9));
   border-block: 1px solid var(--lb-line);
-  background: rgba(14, 26, 28, 0.65);
+  background: rgba(5, 42, 67, 0.65);
 }
 
 .lb-proof p {
@@ -2690,15 +2690,15 @@ dl dd {
     radial-gradient(60% 45% at 18% 8%, rgba(0, 143, 240, 0.18), transparent 60%),
     radial-gradient(50% 40% at 96% 4%, rgba(0, 143, 240, 0.1), transparent 55%),
     radial-gradient(70% 60% at 50% 110%, rgba(0, 143, 240, 0.08), transparent 60%),
-    linear-gradient(170deg, #0a1618 0%, var(--lb-ink) 46%, #04090b 100%);
+    linear-gradient(170deg, #072033 0%, var(--lb-ink) 46%, #03080a 100%);
 }
 .lb-cin-hero::after {
   content: "";
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(231, 242, 236, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(231, 242, 236, 0.035) 1px, transparent 1px);
+    linear-gradient(rgba(226, 241, 251, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(226, 241, 251, 0.035) 1px, transparent 1px);
   background-size: 88px 88px;
   -webkit-mask-image: radial-gradient(1200px 900px at 50% 20%, #000 0%, transparent 75%);
   mask-image: radial-gradient(1200px 900px at 50% 20%, #000 0%, transparent 75%);
@@ -2867,7 +2867,7 @@ dl dd {
   padding: var(--space-5) var(--space-6);
   border-radius: var(--radius);
   border: 1px solid var(--lb-line);
-  background: rgba(14, 26, 28, 0.6);
+  background: rgba(5, 42, 67, 0.6);
 }
 .lb-cin-row-label {
   font-size: 16px;
@@ -2878,7 +2878,7 @@ dl dd {
   position: relative;
   height: 14px;
   border-radius: 7px;
-  background: rgba(231, 242, 236, 0.07);
+  background: rgba(226, 241, 251, 0.07);
   overflow: hidden;
 }
 .lb-cin-fill {
@@ -2892,7 +2892,7 @@ dl dd {
   transform: scaleX(var(--fill, 1));
 }
 .lb-cin-fill-os {
-  background: #2a3a3c;
+  background: #1a3a52;
 }
 .lb-cin-fill-os.lb-cin-fill-lb {
   background: linear-gradient(90deg, var(--lb-signal-dim), var(--lb-signal));
@@ -2936,7 +2936,7 @@ dl dd {
 .lb-cmp-card {
   border: 1px solid var(--lb-line);
   border-radius: var(--radius);
-  background: rgba(14, 26, 28, 0.65);
+  background: rgba(5, 42, 67, 0.65);
   padding: 1.1rem 1.2rem;
 }
 .lb-cmp-kicker {
@@ -3012,7 +3012,7 @@ dl dd {
   display: grid;
   place-items: center;
   border-radius: 999px;
-  border: 1px solid rgba(47, 212, 194, 0.35);
+  border: 1px solid rgba(0, 143, 240, 0.35);
   color: var(--lb-signal);
   font-size: 0.85rem;
   font-weight: 600;
@@ -3102,7 +3102,7 @@ dl dd {
   border: 1px solid var(--lb-line);
   border-radius: 12px;
   background:
-    radial-gradient(ellipse 80% 120% at 100% 0%, rgba(47, 212, 194, 0.12), transparent 55%),
+    radial-gradient(ellipse 80% 120% at 100% 0%, rgba(0, 143, 240, 0.12), transparent 55%),
     var(--lb-panel);
   max-width: 920px;
 }
@@ -3303,7 +3303,7 @@ dl dd {
   color: var(--lb-paper);
   background:
     radial-gradient(ellipse 80% 50% at 20% -10%, rgba(122, 168, 116, 0.18), transparent 55%),
-    linear-gradient(180deg, #0b1416 0%, #0e1a1c 40%, #0b1416 100%);
+    linear-gradient(180deg, #051114 0%, #052a43 40%, #051114 100%);
   font-family: var(--font-body), system-ui, sans-serif;
 }
 .lb-blog-header {
@@ -3374,6 +3374,77 @@ dl dd {
 .lb-waitlist-msg { margin:var(--space-3) 0 0; color:var(--lb-signal); font-size:0.92rem; }
 .lb-waitlist-msg.is-err { color:var(--lb-warn); }
 
+/* Marketing docs (/for-agents, etc.) */
+.lb-doc .lb-doc-main {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: clamp(2rem, 6vh, 4rem) clamp(1.25rem, 4vw, 2.5rem) 4rem;
+}
+.lb-doc-title {
+  margin: 0.5rem 0 0.75rem;
+  font-family: var(--font-display), "Orbitron", sans-serif;
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  font-weight: 700;
+  color: var(--lb-paper);
+}
+.lb-doc-lead {
+  margin: 0 0 2rem;
+  font-size: 1.05rem;
+  line-height: 1.55;
+  color: var(--lb-fog);
+}
+.lb-doc-section {
+  margin-top: 2rem;
+}
+.lb-doc-h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--lb-paper);
+}
+.lb-doc-section p {
+  margin: 0 0 0.75rem;
+  line-height: 1.6;
+  color: var(--lb-fog);
+}
+.lb-doc-pre {
+  margin: 0.75rem 0;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--lb-line);
+  background: rgba(5, 42, 67, 0.85);
+  color: var(--lb-paper);
+}
+.lb-doc-code {
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.88em;
+  background: rgba(0, 143, 240, 0.12);
+  border: 1px solid rgba(0, 143, 240, 0.28);
+  color: #b8e4ff;
+}
+.lb-doc-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  line-height: 1.65;
+  color: var(--lb-fog);
+}
+.lb-doc-muted {
+  font-size: 0.9rem;
+  color: var(--lb-muted, #7a9bb5);
+}
+.lb-doc-link {
+  color: var(--lb-signal);
+}
+.lb-doc-foot {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--lb-line);
+}
+
 /* ===== Auth (login / setup) ===== */
 .auth-page {
   min-height: 100vh;
@@ -3381,7 +3452,10 @@ dl dd {
   align-items: center;
   justify-content: center;
   padding: 2rem 1rem;
-  background: var(--bg);
+  background:
+    radial-gradient(ellipse 80% 60% at 10% 0%, rgba(0, 143, 240, 0.12), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 100% 100%, rgba(5, 42, 67, 0.08), transparent 50%),
+    var(--bg);
 }
 .auth-card {
   width: 100%;
@@ -3391,6 +3465,15 @@ dl dd {
   border-radius: var(--radius-lg);
   padding: 2rem 1.75rem;
   box-shadow: var(--shadow-lg);
+}
+.auth-card .brand-wordmark-wrap {
+  margin-bottom: 1.25rem;
+}
+html[data-theme="dark"] .auth-page {
+  background:
+    radial-gradient(ellipse 80% 60% at 10% 0%, rgba(0, 143, 240, 0.16), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 100% 100%, rgba(0, 143, 240, 0.08), transparent 50%),
+    var(--bg);
 }
 .auth-card h1 {
   margin: 0 0 0.35rem;
@@ -3468,8 +3551,8 @@ dl dd {
 .fb-page {
   min-height: 100vh;
   background:
-    radial-gradient(ellipse 90% 70% at 78% 12%, rgba(47, 212, 194, 0.12), transparent 55%),
-    linear-gradient(168deg, #0a1618 0%, #071014 46%, #050c0e 100%);
+    radial-gradient(ellipse 90% 70% at 78% 12%, rgba(0, 143, 240, 0.12), transparent 55%),
+    linear-gradient(168deg, #072033 0%, var(--lb-ink) 46%, #03080a 100%);
   color: #e7f2ec;
   font-family: var(--font-body), system-ui, sans-serif;
 }
@@ -3479,7 +3562,7 @@ dl dd {
   justify-content: space-between;
   gap: 1rem;
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid rgba(231, 242, 236, 0.12);
+  border-bottom: 1px solid rgba(226, 241, 251, 0.12);
 }
 .fb-wordmark {
   color: #e7f2ec;
@@ -3488,9 +3571,9 @@ dl dd {
   font-weight: 700;
 }
 .fb-wordmark span { color: #008ff0; }
-.fb-wordmark em { font-style: normal; font-weight: 500; color: #9bb0aa; }
+.fb-wordmark em { font-style: normal; font-weight: 500; color: #9bb8cc; }
 .fb-bar-right { display: flex; align-items: center; gap: 0.75rem; }
-.fb-who { font-family: var(--font-mono), monospace; font-size: 0.75rem; color: #9bb0aa; }
+.fb-who { font-family: var(--font-mono), monospace; font-size: 0.75rem; color: #9bb8cc; }
 .fb-main { max-width: 640px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
 .fb-kicker {
   margin: 0 0 0.4rem;
@@ -3501,10 +3584,10 @@ dl dd {
   color: #008ff0;
 }
 .fb-main h1 { margin: 0 0 0.4rem; font-size: 1.8rem; }
-.fb-sub { color: #9bb0aa; margin: 0 0 1.4rem; }
+.fb-sub { color: #9bb8cc; margin: 0 0 1.4rem; }
 .fb-card {
-  background: rgba(14, 26, 28, 0.9);
-  border: 1px solid rgba(231, 242, 236, 0.12);
+  background: rgba(5, 42, 67, 0.9);
+  border: 1px solid rgba(226, 241, 251, 0.12);
   border-radius: 14px;
   padding: 1.2rem;
   margin-bottom: 1.5rem;
@@ -3518,7 +3601,7 @@ dl dd {
   padding: 0.25rem;
   margin-bottom: 1rem;
   background: rgba(7, 16, 20, 0.6);
-  border: 1px solid rgba(231, 242, 236, 0.12);
+  border: 1px solid rgba(226, 241, 251, 0.12);
   border-radius: 10px;
 }
 .fb-tabs button {
@@ -3532,8 +3615,8 @@ dl dd {
   cursor: pointer;
 }
 .fb-tabs button.active {
-  background: rgba(47, 212, 194, 0.12);
-  border-color: rgba(47, 212, 194, 0.28);
+  background: rgba(0, 143, 240, 0.12);
+  border-color: rgba(0, 143, 240, 0.28);
   color: #008ff0;
 }
 .fb-auth-form label { margin-top: 0.65rem; }
@@ -3542,7 +3625,7 @@ dl dd {
   margin-bottom: 0.15rem;
   padding: 0.62rem 0.8rem;
   border-radius: 8px;
-  border: 1px solid rgba(231, 242, 236, 0.18);
+  border: 1px solid rgba(226, 241, 251, 0.18);
   background: rgba(7, 16, 20, 0.7);
   color: #e7f2ec;
   font: inherit;
@@ -3563,7 +3646,7 @@ dl dd {
   content: "";
   flex: 1;
   height: 1px;
-  background: rgba(231, 242, 236, 0.12);
+  background: rgba(226, 241, 251, 0.12);
 }
 .fb-btn {
   display: inline-flex;
@@ -3572,7 +3655,7 @@ dl dd {
   gap: 0.4rem;
   padding: 0.6rem 0.9rem;
   border-radius: 8px;
-  border: 1px solid rgba(231, 242, 236, 0.18);
+  border: 1px solid rgba(226, 241, 251, 0.18);
   background: transparent;
   color: #e7f2ec;
   text-decoration: none;
@@ -3582,7 +3665,7 @@ dl dd {
 .fb-btn.primary { background: #008ff0; border-color: #008ff0; }
 .fb-btn.ghost { font-size: 0.85rem; }
 .fb-hint { margin: 0.9rem 0 0; color: #9bb0aa; font-size: 0.85rem; }
-.fb-hint a { color: #2fd4c2; }
+.fb-hint a { color: #008ff0; }
 .fb-error { color: #fca5a5; margin: 0 0 1rem; }
 .fb-card label { display: block; font-size: 0.8rem; color: #9bb0aa; margin-bottom: 0.35rem; }
 .fb-card textarea {
@@ -3590,14 +3673,14 @@ dl dd {
   margin-bottom: 0.75rem;
   padding: 0.7rem;
   border-radius: 8px;
-  border: 1px solid rgba(231, 242, 236, 0.18);
+  border: 1px solid rgba(226, 241, 251, 0.18);
   background: rgba(7, 16, 20, 0.7);
   color: #e7f2ec;
   font: inherit;
 }
 .fb-list h2 { font-size: 1rem; margin: 0 0 0.75rem; }
 .fb-note {
-  border-top: 1px solid rgba(231, 242, 236, 0.12);
+  border-top: 1px solid rgba(226, 241, 251, 0.12);
   padding: 0.9rem 0;
 }
 .fb-note p { margin: 0 0 0.35rem; }

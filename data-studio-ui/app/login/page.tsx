@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { BrandWordmark } from "@/components/brand/BrandWordmark";
 import { useRouter } from "next/navigation";
 import { useState, useTransition, useCallback } from "react";
 
@@ -139,9 +140,9 @@ export default function LoginPage() {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <p className="st-wordmark" style={{ border: 0, padding: 0, height: "auto", marginBottom: 16 }}>
-          Libre<em>base</em>
-        </p>
+        <div className="brand-wordmark-wrap">
+          <BrandWordmark href="/landing" size="md" />
+        </div>
         <h1>Operator login</h1>
         <p className="muted">Sign in to the console. Status inside stays honest.</p>
 

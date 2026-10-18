@@ -15,5 +15,5 @@ export default async function RootPage({
   if (err) {
     redirect(`${FEEDBACK_ORIGIN}/?oauth_error=${encodeURIComponent(err)}`);
   }
-  redirect("/login");
+  redirect("/landing");
 }

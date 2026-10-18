@@ -1,12 +1,13 @@
 import Link from "next/link";
+import { BrandWordmark } from "@/components/brand/BrandWordmark";
 
 export default function NotFound() {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <p className="st-wordmark" style={{ border: 0, padding: 0, height: "auto", marginBottom: 16 }}>
-          Libre<em>base</em>
-        </p>
+        <div className="brand-wordmark-wrap">
+          <BrandWordmark href="/landing" size="md" />
+        </div>
         <p className="notfound-code">404</p>
         <h1>Page not found</h1>
         <p className="muted">
