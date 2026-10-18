@@ -1,0 +1,18 @@
+# Librebase product seam — lidb embed for Admin / Studio control plane.
+# Referenced by admin-api (Python interim docstring + Li admin).
+# Re-exports the same lidb_* surface as admin-api/li/src/seam.li.
+
+extern def lidb_open_i(path: ptr) raises IO, Alloc -> int
+  requires true
+  ensures true
+  decreases 0
+
+extern def lidb_exec_json_i(db: int, sql: ptr, out: ptr, cap: int) raises IO, Alloc -> int
+  requires 0 < cap
+  ensures true
+  decreases 0
+
+extern def lidb_close_i(db: int) raises IO -> int
+  requires true
+  ensures true
+  decreases 0

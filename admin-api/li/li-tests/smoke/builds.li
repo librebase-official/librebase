@@ -1,0 +1,14 @@
+# Compile/smoke: route_id + health body helpers resolve.
+
+import routes
+import health
+
+def main() raises IO, Alloc -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var n: int = health_body_len()
+  if n != 58:
+    return 1
+  return 0
