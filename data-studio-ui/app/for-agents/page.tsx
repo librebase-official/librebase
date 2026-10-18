@@ -99,12 +99,26 @@ export default function ForAgentsPage() {
           </ol>
         </Section>
 
-        <Section title="3. What the agent can do">
+        <Section title="3. Hosted MCP tools (22)">
+          <p className="lb-doc-muted" style={{ marginBottom: "0.75rem" }}>
+            Source of truth: <Code>POST /api/mcp</Code> → <Code>tools/list</Code>. Full audit:{" "}
+            <Code>docs/mcp/AUDIT.md</Code> in the repo.
+          </p>
           <ul className="lb-doc-list">
-            <li><Code>project_list</Code> / <Code>project_create</Code> / <Code>migration_apply</Code> / <Code>sql_execute</Code></li>
-            <li><Code>key_list</Code> / <Code>key_create</Code> — values redacted from the model</li>
-            <li><Code>auth_provider_upsert</Code> — OAuth providers; client secrets KMS-sealed</li>
-            <li><Code>instance_list</Code> / <Code>instance_create</Code> / <Code>instance_launch</Code></li>
+            <li>
+              <Code>org_whoami</Code>, <Code>project_list</Code>, <Code>project_create</Code>,{" "}
+              <Code>auth_provider_list</Code>, <Code>auth_provider_upsert</Code>
+            </li>
+            <li>
+              <Code>instance_*</Code>, <Code>member_*</Code>, <Code>host_list</Code>, <Code>host_create</Code>
+            </li>
+            <li>
+              <Code>auth_start</Code> / <Code>auth_poll</Code> — browser device flow (no key required)
+            </li>
+            <li>
+              <Code>key_list</Code> … <Code>key_delete</Code> — KMS secrets; use{" "}
+              <Code>key_decrypt</Code> only inside the agent process, never in chat
+            </li>
           </ul>
         </Section>
 

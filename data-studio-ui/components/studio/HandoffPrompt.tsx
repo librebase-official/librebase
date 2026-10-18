@@ -58,8 +58,8 @@ export function HandoffPrompt({
   lines.push(`1. Start the runtime: POST /api/projects/${projectId}/launch`);
   lines.push(`2. (Optional) Provision a real VM if local isn't enough:`);
   lines.push(`   POST /api/hosts { "name":"app-vm", "provider":"hetzner", "region":"nbg1", "memMb":1024 }`);
-  lines.push(`3. Apply schema with MCP \`migration_apply\` (name + SQL) — do not paste DB keys; the admin API forwards SQL to the instance.`);
-  lines.push(`   Verify with \`table_list\` / \`migration_list\`. Ad-hoc reads: \`sql_execute\`.`);
+  lines.push(`3. Apply schema via Studio SQL editor or project API — hosted MCP does not expose migration_apply/sql_execute yet.`);
+  lines.push(`   Use MCP for org setup: \`instance_launch\`, \`project_create\`, \`auth_provider_upsert\`, and KMS \`key_*\` as needed.`);
   lines.push(`4. Configure GitHub/Google for *project users* at /projects/${projectId}/auth/providers (not Studio login).`);
   lines.push(`   Save client ID/secret there. Users start at /api/projects/${projectId}/auth/oauth/start?provider=github|google&redirect_to=<app-url>`);
   lines.push(`5. Verify health: GET /api/projects/${projectId}/connect -> probe.reachable`);

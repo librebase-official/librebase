@@ -1,10 +1,9 @@
 {
   "mcpServers": {
     "librebase": {
-      "type": "mcp",
       "url": "https://app.librebase.xyz/api/mcp",
       "headers": {
-        "Authorization": "Bearer <your-mcp-key>"
+        "Authorization": "Bearer ${env:LIBREBASE_MCP_KEY}"
       }
     }
   }

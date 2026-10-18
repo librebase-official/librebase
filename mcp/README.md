@@ -1,7 +1,10 @@
-# Librebase MCP server
+# Librebase MCP server (Python stdio)
 
-Stdio MCP server that lets AI tools (Cursor, Claude, etc.) maintain a
-Librebase org's **users, instances, and projects** through the admin API.
+Stdio MCP server for **local / air-gapped** use with a console MCP key.
+
+**Production agents** should use **hosted** Streamable HTTP MCP at `{SITE}/api/mcp`
+(see `docs/mcp/AUDIT.md` and `GET /.well-known/mcp.json`). The hosted server exposes
+**22 tools** (device auth + KMS keys); this Python package implements the **11** org/project/instance tools only.
 
 ## Setup
 

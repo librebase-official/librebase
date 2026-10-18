@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { BrandWordmark } from "@/components/brand/BrandWordmark";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { Button } from "@/components/ui";
 import type { McpDeviceView } from "@/lib/librebase-admin-client";
@@ -107,9 +108,16 @@ export function AuthorizeAgent({ userCode }: { userCode: string }) {
     });
   }
 
+  const brand = (
+    <div className="brand-wordmark-wrap">
+      <BrandWordmark href="/landing" size="md" />
+    </div>
+  );
+
   if (unauthenticated) {
     return (
       <div className="auth-card">
+        {brand}
         <h1>Authorize agent</h1>
         <p className="muted">Sign in to approve this agent’s access to your org.</p>
         <p className="mcp-user-code" aria-label="Device code">
@@ -125,6 +133,7 @@ export function AuthorizeAgent({ userCode }: { userCode: string }) {
   if (done === "approved") {
     return (
       <div className="auth-card">
+        {brand}
         <h1>Agent approved</h1>
         <p className="muted">
           You can close this tab. The agent stored the credential in the OS
@@ -176,6 +185,7 @@ export function AuthorizeAgent({ userCode }: { userCode: string }) {
 
   return (
     <div className="auth-card">
+      {brand}
       <h1>Authorize agent</h1>
       <p className="muted">
         <strong>{device.clientName}</strong> wants to manage this Librebase org
