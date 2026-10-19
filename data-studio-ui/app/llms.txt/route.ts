@@ -5,7 +5,7 @@ export const dynamic = "force-static";
 
 // Keep this file honest: describe only what the live server answers today.
 // Re-check against `POST /api/mcp` -> `tools/list` after every MCP deploy (LIB-149).
-function llmsBody(): string {
+export function llmsBody(): string {
   const base = SITE_URL;
   return `# Librebase
 
