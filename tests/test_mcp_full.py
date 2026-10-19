@@ -14,6 +14,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import sys
 import tempfile
 import unittest
 import urllib.error
@@ -24,11 +25,15 @@ from threading import Thread
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "admin-api" / "scripts"
-MCP_MODULE = ROOT / "mcp" / "librebase_mcp" / "__main__.py"
+MCP_ROOT = ROOT / "mcp"
+MCP_MODULE = MCP_ROOT / "librebase_mcp" / "__main__.py"
 
 
 def load_module(path: Path):
-    spec = importlib.util.spec_from_file_location("lb_mcp", path)
+    mcp_root = str(MCP_ROOT)
+    if mcp_root not in sys.path:
+        sys.path.insert(0, mcp_root)
+    spec = importlib.util.spec_from_file_location("lb_mcp_bridge", path)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -85,8 +90,12 @@ class _McpTestBase(unittest.TestCase):
             cls.setup_token = resp["token"]
         cls.mcp_key = cls.server_mod.issue_mcp_key(cls.admin_db, cls.org_id)
 
+        from tests.fixtures.hosted_mcp_shim import start_hosted_mcp_shim
+
         os.environ["LIBREBASE_ADMIN_URL"] = f"http://127.0.0.1:{cls.admin_port}"
-        os.environ["LIBREBASE_MCP_KEY"] = cls.mcp_key
+        cls.mcp_shim = start_hosted_mcp_shim()
+        os.environ["LIBREBASE_MCP_URL"] = cls.mcp_shim.url
+        os.environ["LIBREBASE_MCP_TOKEN"] = cls.mcp_key
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -96,8 +105,15 @@ class _McpTestBase(unittest.TestCase):
         cls.kms.server_close()
         cls.admin_db.close()
         cls.kms_db.close()
-        for k in ("LIBREBASE_KMS_URL", "LIBREBASE_KMS_SERVICE_ROLE", "LIBREBASE_ADMIN_URL", "LIBREBASE_MCP_KEY"):
+        for k in (
+            "LIBREBASE_KMS_URL",
+            "LIBREBASE_KMS_SERVICE_ROLE",
+            "LIBREBASE_ADMIN_URL",
+            "LIBREBASE_MCP_URL",
+            "LIBREBASE_MCP_TOKEN",
+        ):
             os.environ.pop(k, None)
+        cls.mcp_shim.shutdown()
         cls._tmp.cleanup()
 
     def _call(self, mcp: object, name: str, args: dict | None = None, msg_id: int = 1) -> dict:
