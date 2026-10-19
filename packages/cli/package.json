@@ -1,7 +1,7 @@
 {
   "name": "@librebase/cli",
-  "version": "0.1.30",
-  "description": "Librebase CLI — init, start Admin API, Studio helper",
+  "version": "0.1.32",
+  "description": "Librebase CLI \u2014 init, start Admin API, Studio helper",
   "type": "module",
   "bin": {
     "librebase": "./src/index.js"

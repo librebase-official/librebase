@@ -3,7 +3,7 @@
 Stdio MCP **bridge** to hosted Librebase MCP — same contract as `@librebase/mcp` on npm.
 
 - **URL:** `LIBREBASE_MCP_URL` (default `https://app.librebase.xyz/api/mcp`)
-- **Auth:** `auth_start` / `auth_poll` on the hosted server, or `LIBREBASE_MCP_TOKEN`
+- **Auth:** `auth_start` / `auth_poll` on the hosted server, or `LIBREBASE_MCP_TOKEN` (`lb_mcp_*` / `lb_agt_*`)
 
 > Packaging: `pip install librebase-mcp` / `uvx librebase-mcp` (prep — not published yet, LIB-150).
 
@@ -49,6 +49,12 @@ With token:
   }
 }
 ```
+
+## MCP token (optional)
+
+Console keys work as `LIBREBASE_MCP_TOKEN` for stdio when you skip device flow. Issue in Studio: `/admin` → **MCP key** → **Generate new key**, or `POST /org/v1/orgs/{orgId}/mcp-keys/rotate` with an admin session JWT. Never commit tokens.
+
+Production agents can also use hosted OAuth MCP directly (`docs/mcp/AUDIT.md`).
 
 ## Claude Desktop
 

@@ -1,6 +1,6 @@
 {
   "name": "@librebase/mcp",
-  "version": "0.1.30",
+  "version": "0.1.32",
   "description": "Stdio MCP bridge to hosted Librebase MCP (device flow or LIBREBASE_MCP_TOKEN)",
   "type": "module",
   "bin": {
