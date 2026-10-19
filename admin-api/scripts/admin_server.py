@@ -1293,6 +1293,52 @@ def row_host(row: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def row_bot(row: Mapping[str, Any]) -> dict[str, Any]:
+    """Office/Dots-style agent bot (Librebase Agents)."""
+    return {
+        "id": row["id"],
+        "orgId": row["org_id"],
+        "name": row["name"],
+        "instructions": row["instructions"] if "instructions" in row.keys() else "",
+        "profile": row["profile"] if "profile" in row.keys() else "office",
+        "harness": row["harness"] if "harness" in row.keys() else "pi",
+        "hostId": row["host_id"] if "host_id" in row.keys() else None,
+        "status": row["status"],
+        "avatar": row["avatar"] if "avatar" in row.keys() else None,
+        "createdAt": row["created_at"],
+        "updatedAt": row["updated_at"],
+    }
+
+
+def approval_payload_hash(payload: Mapping[str, Any]) -> str:
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode()).hexdigest()
+
+
+def row_approval(row: Mapping[str, Any]) -> dict[str, Any]:
+    payload: dict[str, Any] = {}
+    raw = row["payload_json"] if "payload_json" in row.keys() else ""
+    if raw:
+        try:
+            parsed = json.loads(raw)
+            if isinstance(parsed, dict):
+                payload = parsed
+        except json.JSONDecodeError:
+            payload = {}
+    return {
+        "id": row["id"],
+        "orgId": row["org_id"],
+        "botId": row["bot_id"],
+        "toolName": row["tool_name"],
+        "payload": payload,
+        "payloadHash": row["payload_hash"] if "payload_hash" in row.keys() else None,
+        "state": row["state"],
+        "createdAt": row["created_at"],
+        "resolvedAt": row["resolved_at"] if "resolved_at" in row.keys() else None,
+        "resolvedBy": row["resolved_by"] if "resolved_by" in row.keys() else None,
+    }
+
+
 def _row_int(row: Mapping[str, Any], col: str) -> int | None:
     if col not in row.keys():
         return None
@@ -2052,6 +2098,80 @@ class LiorgHandler(BaseHTTPRequestHandler):
             self.send_json(200, self.check_entitlement(org_id, feature_key))
             return
 
+        bots_match = re.fullmatch(r"/org/v1/orgs/([^/]+)/bots", path)
+        if bots_match:
+            org_id = bots_match.group(1)
+            if not self.require_org_member(org_id):
+                return
+            rows = self.db.fetchall(
+                "SELECT * FROM bots WHERE org_id = ? ORDER BY created_at",
+                (org_id,),
+            )
+            self.send_json(200, [row_bot(r) for r in rows])
+            return
+
+        bot_approval_one = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/bots/([^/]+)/approvals/([^/]+)", path
+        )
+        if bot_approval_one:
+            org_id, bot_id, approval_id = bot_approval_one.groups()
+            if not self.require_org_member(org_id):
+                return
+            row = self.db.fetchone(
+                "SELECT * FROM approvals WHERE org_id = ? AND bot_id = ? AND id = ?",
+                (org_id, bot_id, approval_id),
+            )
+            if not row:
+                self.send_json(404, {"error": "approval not found"})
+                return
+            self.send_json(200, row_approval(row))
+            return
+
+        bot_approvals = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/bots/([^/]+)/approvals", path
+        )
+        if bot_approvals:
+            org_id, bot_id = bot_approvals.groups()
+            if not self.require_org_member(org_id):
+                return
+            bot_row = self.db.fetchone(
+                "SELECT id FROM bots WHERE org_id = ? AND id = ?",
+                (org_id, bot_id),
+            )
+            if not bot_row:
+                self.send_json(404, {"error": "bot not found"})
+                return
+            q = parse_qs(parsed.query)
+            state_filter = (q.get("state", [""])[0]).strip()
+            if state_filter:
+                rows = self.db.fetchall(
+                    "SELECT * FROM approvals WHERE org_id = ? AND bot_id = ? AND state = ? "
+                    "ORDER BY created_at",
+                    (org_id, bot_id, state_filter),
+                )
+            else:
+                rows = self.db.fetchall(
+                    "SELECT * FROM approvals WHERE org_id = ? AND bot_id = ? ORDER BY created_at",
+                    (org_id, bot_id),
+                )
+            self.send_json(200, [row_approval(r) for r in rows])
+            return
+
+        bot_one = re.fullmatch(r"/org/v1/orgs/([^/]+)/bots/([^/]+)", path)
+        if bot_one:
+            org_id, bot_id = bot_one.groups()
+            if not self.require_org_member(org_id):
+                return
+            row = self.db.fetchone(
+                "SELECT * FROM bots WHERE org_id = ? AND id = ?",
+                (org_id, bot_id),
+            )
+            if not row:
+                self.send_json(404, {"error": "bot not found"})
+                return
+            self.send_json(200, row_bot(row))
+            return
+
         hosts_match = re.fullmatch(r"/org/v1/orgs/([^/]+)/hosts", path)
         if hosts_match:
             org_id = hosts_match.group(1)
@@ -2665,6 +2785,191 @@ class LiorgHandler(BaseHTTPRequestHandler):
             self.send_json(200, row_provider(row))
             return
 
+        org_bots = re.fullmatch(r"/org/v1/orgs/([^/]+)/bots", path)
+        if org_bots:
+            org_id = org_bots.group(1)
+            if not self.require_org_role(org_id, "member"):
+                return
+            # Agents require a paid/self-host plan (same gate family as instances).
+            gate = self.check_entitlement(org_id, "instance.launch")
+            if gate["code"] == 0:
+                self.send_json(403, {"error": "entitlement denied", "entitlement": gate})
+                return
+            name = str(body.get("name", "")).strip()
+            if not name:
+                self.send_json(400, {"error": "name required"})
+                return
+            profile = str(body.get("profile", "office")).strip() or "office"
+            if profile == "coding":
+                self.send_json(400, {"error": "coding profile deferred; use office"})
+                return
+            harness = str(body.get("harness", "pi")).strip() or "pi"
+            if harness not in ("pi", "hermes_stripped"):
+                self.send_json(400, {"error": "harness must be pi or hermes_stripped"})
+                return
+            host_id = body.get("hostId") or body.get("host_id")
+            if host_id:
+                host_row = self.db.fetchone(
+                    "SELECT id FROM hosts WHERE org_id = ? AND id = ?",
+                    (org_id, str(host_id)),
+                )
+                if not host_row:
+                    self.send_json(400, {"error": "host not found in org"})
+                    return
+            instructions = str(body.get("instructions", "")).strip()
+            now = utc_now()
+            bot_id = new_id("bot")
+            self.db.execute(
+                "INSERT INTO bots "
+                "(id, org_id, name, instructions, profile, harness, host_id, status, "
+                "avatar, created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    bot_id,
+                    org_id,
+                    name,
+                    instructions,
+                    profile,
+                    harness,
+                    str(host_id) if host_id else None,
+                    "stopped",
+                    body.get("avatar"),
+                    now,
+                    now,
+                ),
+            )
+            ws_id = new_id("bws")
+            self.db.execute(
+                "INSERT INTO bot_workspaces "
+                "(id, bot_id, org_id, host_id, container_id, volume_path, status, "
+                "created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, NULL, NULL, ?, ?, ?)",
+                (
+                    ws_id,
+                    bot_id,
+                    org_id,
+                    str(host_id) if host_id else None,
+                    "stopped",
+                    now,
+                    now,
+                ),
+            )
+            row = self.db.fetchone("SELECT * FROM bots WHERE id = ?", (bot_id,))
+            self.send_json(201, row_bot(row))
+            return
+
+        bot_approval_approve = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/bots/([^/]+)/approvals/([^/]+)/approve", path
+        )
+        if bot_approval_approve:
+            org_id, bot_id, approval_id = bot_approval_approve.groups()
+            if not self.require_org_role(org_id, "member"):
+                return
+            row = self.db.fetchone(
+                "SELECT * FROM approvals WHERE org_id = ? AND bot_id = ? AND id = ?",
+                (org_id, bot_id, approval_id),
+            )
+            if not row:
+                self.send_json(404, {"error": "approval not found"})
+                return
+            if row["state"] != "pending":
+                self.send_json(409, {"error": "approval already resolved", "state": row["state"]})
+                return
+            claims = self.bearer_claims()
+            if not claims:
+                self.send_json(401, {"error": "unauthorized"})
+                return
+            now = utc_now()
+            self.db.execute(
+                "UPDATE approvals SET state = ?, resolved_at = ?, resolved_by = ? WHERE id = ?",
+                ("approved", now, claims["sub"], approval_id),
+            )
+            updated = self.db.fetchone("SELECT * FROM approvals WHERE id = ?", (approval_id,))
+            self.send_json(200, row_approval(updated))
+            return
+
+        bot_approval_reject = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/bots/([^/]+)/approvals/([^/]+)/reject", path
+        )
+        if bot_approval_reject:
+            org_id, bot_id, approval_id = bot_approval_reject.groups()
+            if not self.require_org_role(org_id, "member"):
+                return
+            row = self.db.fetchone(
+                "SELECT * FROM approvals WHERE org_id = ? AND bot_id = ? AND id = ?",
+                (org_id, bot_id, approval_id),
+            )
+            if not row:
+                self.send_json(404, {"error": "approval not found"})
+                return
+            if row["state"] != "pending":
+                self.send_json(409, {"error": "approval already resolved", "state": row["state"]})
+                return
+            claims = self.bearer_claims()
+            if not claims:
+                self.send_json(401, {"error": "unauthorized"})
+                return
+            now = utc_now()
+            self.db.execute(
+                "UPDATE approvals SET state = ?, resolved_at = ?, resolved_by = ? WHERE id = ?",
+                ("rejected", now, claims["sub"], approval_id),
+            )
+            updated = self.db.fetchone("SELECT * FROM approvals WHERE id = ?", (approval_id,))
+            self.send_json(200, row_approval(updated))
+            return
+
+        bot_approvals_create = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/bots/([^/]+)/approvals", path
+        )
+        if bot_approvals_create:
+            org_id, bot_id = bot_approvals_create.groups()
+            if not self.require_org_role(org_id, "member"):
+                return
+            bot_row = self.db.fetchone(
+                "SELECT id FROM bots WHERE org_id = ? AND id = ?",
+                (org_id, bot_id),
+            )
+            if not bot_row:
+                self.send_json(404, {"error": "bot not found"})
+                return
+            tool_name = str(body.get("toolName", body.get("tool_name", ""))).strip()
+            if not tool_name:
+                self.send_json(400, {"error": "toolName required"})
+                return
+            payload = body.get("payload")
+            if payload is None:
+                payload = {}
+            if not isinstance(payload, dict):
+                self.send_json(400, {"error": "payload must be an object"})
+                return
+            payload_json = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+            phash = body.get("payloadHash") or body.get("payload_hash")
+            if phash:
+                phash = str(phash).strip()
+            else:
+                phash = approval_payload_hash(payload)
+            now = utc_now()
+            approval_id = new_id("apr")
+            self.db.execute(
+                "INSERT INTO approvals "
+                "(id, org_id, bot_id, tool_name, payload_json, payload_hash, state, "
+                "created_at, resolved_at, resolved_by) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)",
+                (
+                    approval_id,
+                    org_id,
+                    bot_id,
+                    tool_name,
+                    payload_json,
+                    phash,
+                    "pending",
+                    now,
+                ),
+            )
+            row = self.db.fetchone("SELECT * FROM approvals WHERE id = ?", (approval_id,))
+            self.send_json(201, row_approval(row))
+            return
+
         org_hosts = re.fullmatch(r"/org/v1/orgs/([^/]+)/hosts", path)
         if org_hosts:
             org_id = org_hosts.group(1)
@@ -3127,6 +3432,24 @@ class LiorgHandler(BaseHTTPRequestHandler):
             self.send_json(200, {"ok": True})
             return
 
+        bot_del = re.fullmatch(r"/org/v1/orgs/([^/]+)/bots/([^/]+)", path)
+        if bot_del:
+            org_id, bot_id = bot_del.groups()
+            if not self.require_org_role(org_id, "member"):
+                return
+            row = self.db.fetchone(
+                "SELECT * FROM bots WHERE org_id = ? AND id = ?",
+                (org_id, bot_id),
+            )
+            if not row:
+                self.send_json(404, {"error": "bot not found"})
+                return
+            self.db.execute("DELETE FROM approvals WHERE org_id = ? AND bot_id = ?", (org_id, bot_id))
+            self.db.execute("DELETE FROM bot_workspaces WHERE org_id = ? AND bot_id = ?", (org_id, bot_id))
+            self.db.execute("DELETE FROM bots WHERE org_id = ? AND id = ?", (org_id, bot_id))
+            self.send_json(200, {"ok": True})
+            return
+
         host_del = re.fullmatch(r"/org/v1/orgs/([^/]+)/hosts/([^/]+)", path)
         if host_del:
             org_id, host_id = host_del.groups()
@@ -3212,6 +3535,87 @@ class LiorgHandler(BaseHTTPRequestHandler):
                 (role, row["org_id"], row["user_id"]),
             )
             self.send_json(200, {"userId": row["user_id"], "role": role})
+            return
+
+        bot_patch = re.fullmatch(r"/org/v1/orgs/([^/]+)/bots/([^/]+)", path)
+        if bot_patch:
+            org_id, bot_id = bot_patch.groups()
+            if not self.require_org_role(org_id, "member"):
+                return
+            row = self.db.fetchone(
+                "SELECT * FROM bots WHERE org_id = ? AND id = ?",
+                (org_id, bot_id),
+            )
+            if not row:
+                self.send_json(404, {"error": "bot not found"})
+                return
+            fields: list[str] = []
+            values: list[Any] = []
+            if "name" in body:
+                name = str(body["name"]).strip()
+                if not name:
+                    self.send_json(400, {"error": "name required"})
+                    return
+                fields.append("name = ?")
+                values.append(name)
+            if "instructions" in body:
+                fields.append("instructions = ?")
+                values.append(str(body["instructions"]).strip())
+            if "profile" in body:
+                profile = str(body["profile"]).strip() or "office"
+                if profile == "coding":
+                    self.send_json(400, {"error": "coding profile deferred; use office"})
+                    return
+                fields.append("profile = ?")
+                values.append(profile)
+            if "harness" in body:
+                harness = str(body["harness"]).strip() or "pi"
+                if harness not in ("pi", "hermes_stripped"):
+                    self.send_json(400, {"error": "harness must be pi or hermes_stripped"})
+                    return
+                fields.append("harness = ?")
+                values.append(harness)
+            if "hostId" in body or "host_id" in body:
+                host_id = body.get("hostId", body.get("host_id"))
+                if host_id:
+                    host_row = self.db.fetchone(
+                        "SELECT id FROM hosts WHERE org_id = ? AND id = ?",
+                        (org_id, str(host_id)),
+                    )
+                    if not host_row:
+                        self.send_json(400, {"error": "host not found in org"})
+                        return
+                    fields.append("host_id = ?")
+                    values.append(str(host_id))
+                else:
+                    fields.append("host_id = ?")
+                    values.append(None)
+            if "avatar" in body:
+                fields.append("avatar = ?")
+                values.append(body.get("avatar"))
+            if "status" in body:
+                status = str(body["status"]).strip()
+                if status not in ("stopped", "running", "error"):
+                    self.send_json(400, {"error": "status must be stopped, running, or error"})
+                    return
+                fields.append("status = ?")
+                values.append(status)
+            if not fields:
+                self.send_json(400, {"error": "no updatable fields"})
+                return
+            now = utc_now()
+            fields.append("updated_at = ?")
+            values.append(now)
+            values.extend([org_id, bot_id])
+            self.db.execute(
+                f"UPDATE bots SET {', '.join(fields)} WHERE org_id = ? AND id = ?",
+                tuple(values),
+            )
+            updated = self.db.fetchone(
+                "SELECT * FROM bots WHERE org_id = ? AND id = ?",
+                (org_id, bot_id),
+            )
+            self.send_json(200, row_bot(updated))
             return
 
         project_link = re.fullmatch(r"/org/v1/orgs/([^/]+)/projects/([^/]+)", path)
