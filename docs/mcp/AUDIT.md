@@ -74,6 +74,14 @@ Cursor opens a browser card; you **Continue with Google** (or GitHub) on `/mcp/a
 
 `LIBREBASE_MCP_KEY` / console keys remain for **CI and local stdio only**.
 
+### Issuing or rotating a console MCP key
+
+1. **Studio (recommended):** org admin → `/admin` → **MCP key** → **Generate new key** (revokes the previous active key).
+2. **API:** `POST /org/v1/orgs/{orgId}/mcp-keys/rotate` with `Authorization: Bearer <session JWT>` (caller must have admin role on that org). Response: `{ "mcpKey": "lb_mcp_…" }` (shown once).
+3. **New org:** `POST /org/v1/setup` includes an initial `mcpKey` in the JSON body.
+
+Store the key in `LIBREBASE_MCP_KEY` (or Cursor env for stdio). Do not commit keys to the repo.
+
 ## Branding / UX
 
 - `/mcp/authorize` uses auth shell; should show bird wordmark (same as login).
