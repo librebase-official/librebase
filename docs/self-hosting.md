@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Self-hosting Librebase (OSS)
 
 Run **Librebase Studio**, the **Admin API**, and **KMS** on your own machine or VM. This path uses `deploy/compose/docker-compose.yml` — no Hetzner, Stripe, or other SaaS-only provisioning is required for a working control plane.
@@ -115,3 +116,127 @@ Point agents at your Studio origin:
 - [kms/README.md](../kms/README.md) — KMS service
 - [architecture-instances.md](architecture-instances.md) — dedicated vs shared instances
 - [cli-db.md](cli-db.md) — local lidb / `lis` workflows
+=======
+# Self-hosting Librebase (Docker Compose)
+
+Run **Librebase Studio**, the **Librebase Admin API**, and **KMS** on your own machine with the OSS stack in `deploy/compose/docker-compose.yml`. No managed cloud services are required for the default compose file.
+
+## Prerequisites
+
+- Docker Engine with Compose v2
+- Ports available on the host: `3005` (Studio), `54330` (Admin, loopback-only publish)
+
+## Quick start
+
+From the repository root:
+
+```bash
+cd deploy/compose
+cp .env.example .env
+# Edit .env: set LIBREBASE_ADMIN_JWT_SECRET and LIBREBASE_KMS_SERVICE_ROLE to long random strings.
+
+docker compose --env-file compose.env build
+docker compose --env-file compose.env up -d
+```
+
+Open Studio at `http://127.0.0.1:3005`. The first human visit can use the `/setup` UI, or use **headless onboarding** below.
+
+### Networking
+
+- **Studio** uses `LIBREBASE_ADMIN_URL=http://librebase-admin:54330` on the internal compose network.
+- **Admin** must bind `0.0.0.0` inside its container (set in compose). Do not set `LIBREBASE_ADMIN_BIND=127.0.0.1` in `.env` for Docker — other containers cannot reach a loopback-only listener.
+
+## Headless onboarding (API + MCP)
+
+Use this when you are automating install (no browser) or issuing keys for agents.
+
+### 1. First-run setup
+
+`POST /org/v1/setup` is allowed only while the database has no organization.
+
+```bash
+ADMIN=http://127.0.0.1:54330
+
+curl -sS -X POST "$ADMIN/org/v1/setup" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "name": "My Org",
+    "ownerEmail": "owner@example.com",
+    "password": "REPLACE_WITH_STRONG_PASSWORD"
+  }'
+```
+
+Example response fields (save secrets locally; never commit them):
+
+- `orgId` — organization id
+- `token` — short-lived session JWT for the owner
+- `mcpKey` — initial `lb_mcp_…` key (shown once)
+- `refreshToken` — session refresh token
+
+### 2. Rotate or issue a new MCP key (optional)
+
+To mint a fresh MCP key with an owner/admin session JWT:
+
+```bash
+ORG_ID=org_REPLACE_ME
+SESSION_JWT=REPLACE_WITH_TOKEN_FROM_SETUP
+
+curl -sS -X POST "$ADMIN/org/v1/orgs/$ORG_ID/mcp-keys/rotate" \
+  -H "Authorization: Bearer $SESSION_JWT" \
+  -H 'Content-Type: application/json'
+```
+
+Response: `{ "mcpKey": "lb_mcp_…" }` (shown once).
+
+### 3. Call hosted MCP through Studio
+
+Point agents at your Studio origin. MCP is JSON-RPC over HTTP:
+
+```bash
+STUDIO=http://127.0.0.1:3005
+MCP_KEY=lb_mcp_REPLACE_ME
+
+curl -sS -X POST "$STUDIO/api/mcp" \
+  -H "Authorization: Bearer $MCP_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "org_whoami",
+      "arguments": {}
+    }
+  }'
+```
+
+Public device-flow tools (`auth_start`, `auth_poll`, `initialize`, `tools/list`) work without a Bearer token; all other tools require `Authorization: Bearer <lb_mcp_…>`.
+
+### 4. Health checks
+
+```bash
+curl -sS "$ADMIN/health"
+curl -sS "$STUDIO/api/mcp" -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```
+
+## Environment reference (OSS compose)
+
+| Variable | Purpose |
+|----------|---------|
+| `LIBREBASE_ADMIN_JWT_SECRET` | Signs console session JWTs (set in `.env`) |
+| `LIBREBASE_KMS_SERVICE_ROLE` | Bearer token for Admin → KMS calls |
+| `NEXT_PUBLIC_SITE_URL` | Public Studio URL (default `http://127.0.0.1:3005`) |
+| `LIBREBASE_VERSION` | Passed into Studio build via `compose.env` |
+
+## Upgrades
+
+```bash
+cd deploy/compose
+docker compose --env-file compose.env pull   # when using published images
+docker compose --env-file compose.env build  # when building from source
+docker compose --env-file compose.env up -d
+```
+
+Admin data persists in the `librebase-admin-data` volume; KMS data in `librebase-kms-data`.
+>>>>>>> 37362ea (fix(compose): LIB-168 LIB-169 LIB-170 OSS Docker self-host)

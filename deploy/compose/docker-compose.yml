@@ -10,8 +10,14 @@ services:
     env_file:
       - .env
     environment:
+      # Must listen on all interfaces — Studio reaches admin via the compose network.
+      LIBREBASE_ADMIN_BIND: 0.0.0.0
+      LIBREBASE_ADMIN_PORT: 54330
       LIBREBASE_ADMIN_DB_PATH: /data/admin.db
       LIBREBASE_KMS_URL: http://kms:54340
+    depends_on:
+      kms:
+        condition: service_started
     volumes:
       - librebase-admin-data:/data
     healthcheck:
@@ -32,6 +38,17 @@ services:
       LIBREBASE_KMS_BIND: 0.0.0.0
       LIBREBASE_KMS_PORT: 54340
       LIBREBASE_KMS_DB_PATH: /data/kms.db
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python3",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:54340/health')",
+        ]
+      interval: 30s
+      timeout: 3s
+      retries: 3
     volumes:
       - librebase-kms-data:/data
     networks:

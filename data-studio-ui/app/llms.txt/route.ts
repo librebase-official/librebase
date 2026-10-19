@@ -50,6 +50,12 @@ Today the token has to be pasted into the client's header config (or held by the
 ## Local stdio server (repo checkout only)
 \`python3 -m librebase_mcp\` works only from a checkout of the Librebase repository; it is not published on PyPI or npm. It exposes a subset of the hosted tools (no \`auth_*\`, no \`key_*\`). Set \`LIBREBASE_MCP_URL\` (default ${base}/api/mcp) and optional \`LIBREBASE_MCP_TOKEN\` (\`lb_mcp_*\` / \`lb_agt_*\` from device flow or Studio). Prefer the hosted endpoint.
 
+## Self-host (Docker Compose, headless onboarding)
+- Full guide in the Librebase repo: \`docs/self-hosting.md\` (OSS \`deploy/compose/docker-compose.yml\`: Studio + Admin + KMS).
+- First org (no browser): \`POST /org/v1/setup\` on the Admin API with JSON \`name\`, \`ownerEmail\`, \`password\` — returns \`orgId\`, session \`token\`, and an initial \`mcpKey\` (\`lb_mcp_…\`, shown once).
+- New MCP key: \`POST /org/v1/orgs/{orgId}/mcp-keys/rotate\` with \`Authorization: Bearer <session JWT>\` from setup/login.
+- Agents use the same hosted MCP shape as cloud: \`POST {your Studio origin}/api/mcp\` with \`Authorization: Bearer <lb_mcp_…>\` for \`org_whoami\`, \`project_list\`, etc. Admin must listen on \`0.0.0.0\` inside Docker; Studio uses \`LIBREBASE_ADMIN_URL=http://librebase-admin:54330\` on the compose network.
+
 ## Tools (live hosted tools/list, 24)
 - \`org_whoami\` -- resolve the token's org (id, name, edition)
 - \`project_list\`, \`project_create\` (requires an existing instanceId)
