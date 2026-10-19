@@ -36,7 +36,7 @@ jobs:
             -X POST "${SHIPHOOK_URL}?format=json" \
             -H "X-Shiphook-Secret: $SHIPHOOK_SECRET" \
             -H "Content-Type: application/json" \
-            -d "$(jq -cn --arg ref \"$DEPLOY_REF\" --arg repository \"$GITHUB_REPOSITORY\" \
+            -d "$(jq -cn --arg ref "$DEPLOY_REF" --arg repository "$GITHUB_REPOSITORY" \
               '{ref: $ref, repository: $repository, event: "github_actions"}')"
 
       - name: Publish deployment summary
@@ -44,7 +44,7 @@ jobs:
         run: |
           {
             echo "## Shiphook deployment"
-            echo "- Repository: \\`$GITHUB_REPOSITORY\\`"
-            echo "- Commit: \\`$GITHUB_SHA\\`"
+            echo "- Repository: \`$GITHUB_REPOSITORY\`"
+            echo "- Commit: \`$GITHUB_SHA\`"
             echo "- Workflow: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           } >> "$GITHUB_STEP_SUMMARY"

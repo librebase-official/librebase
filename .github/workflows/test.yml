@@ -29,7 +29,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Python deps (KMS: cryptography)
+      - name: "Install Python deps (KMS: cryptography)"
         working-directory: ${{ github.workspace }}
         run: pip install cryptography
 
