@@ -52,11 +52,7 @@ def install_script() -> str:
     The control-plane URL baked here is a placeholder — cloud-init overwrites
     /etc/librebase/host-agent.env at provisioning time (hcloud.render_cloudinit).
     """
-    agent_url = (
-        os.environ.get("LIBREBASE_AGENT_URL", "").strip().rstrip("/")
-        or os.environ.get("LIBREBASE_CONSOLE_URL", "").strip().rstrip("/")
-        or "https://app.librebase.xyz"
-    )
+    agent_url = hcloud.agent_control_plane_url()
     return (
         "set -e\n"
         "apt-get update\n"

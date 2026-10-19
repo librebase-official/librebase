@@ -142,6 +142,23 @@ class TestHcloud(unittest.TestCase):
         self.assertIn("librebase-host-agent", cfg)
         self.assertIn("#cloud-config", cfg)
 
+    def test_cloudinit_uses_admin_proxy_when_console_unset(self) -> None:
+        for key in ("LIBREBASE_AGENT_URL", "LIBREBASE_CONSOLE_URL"):
+            os.environ.pop(key, None)
+        cfg = self.mod.render_cloudinit("host_abc", "tok-123")
+        self.assertIn(
+            "LIBREBASE_AGENT_URL=https://app.librebase.xyz/api/admin-proxy",
+            cfg,
+        )
+
+    def test_agent_control_plane_url_honors_console_origin(self) -> None:
+        os.environ["LIBREBASE_CONSOLE_URL"] = "https://studio.example.com"
+        os.environ.pop("LIBREBASE_AGENT_URL", None)
+        self.assertEqual(
+            self.mod.agent_control_plane_url(),
+            "https://studio.example.com/api/admin-proxy",
+        )
+
     def test_bad_credentials_raise_hcloud_error(self) -> None:
         os.environ["LIBREBASE_HETZNER_API_TOKEN"] = "wrong"
         with self.assertRaises(self.mod.HcloudError):

@@ -1,6 +1,6 @@
 {
   "name": "@librebase/cli",
-  "version": "0.1.35",
+  "version": "0.1.36",
   "description": "Librebase CLI \u2014 init, start Admin API, Studio helper",
   "type": "module",
   "bin": {
