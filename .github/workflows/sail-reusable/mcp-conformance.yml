@@ -1,0 +1,23 @@
+name: sail / mcp-conformance
+on:
+  workflow_call:
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mcp-conformance:
+    name: sail / mcp-conformance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: "STUB — MCP conformance (STANDARD v2)"
+        run: |
+          echo "::warning title=MCP conformance stub::No STANDARD v2 MCP conformance runner found in org repos. Wire to org standard when published."
+          if [ -f package.json ] && grep -qi mcp package.json; then
+            echo "MCP-related package detected — replace this step with STANDARD v2 suite"
+          fi
+          exit 0

@@ -1,0 +1,41 @@
+name: sail-ci-gates
+on:
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+concurrency:
+  group: sail-ci-gates-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: read
+jobs:
+  lint-typecheck:
+    uses: ./.github/workflows/sail-reusable/lint-typecheck.yml
+  unit-tests:
+    needs: [lint-typecheck]
+    uses: ./.github/workflows/sail-reusable/unit-tests.yml
+    with:
+      coverage-floor: 60
+  build:
+    needs: [lint-typecheck]
+    uses: ./.github/workflows/sail-reusable/build.yml
+  gitleaks:
+    uses: ./.github/workflows/sail-reusable/gitleaks.yml
+  dependency-audit:
+    uses: ./.github/workflows/sail-reusable/dependency-audit.yml
+  codeql:
+    needs: [lint-typecheck]
+    uses: ./.github/workflows/sail-reusable/codeql.yml
+  license-check:
+    needs: [lint-typecheck]
+    uses: ./.github/workflows/sail-reusable/license-check.yml
+
+  mcp-conformance:
+    needs: [lint-typecheck]
+    uses: ./.github/workflows/sail-reusable/mcp-conformance.yml
+  hermes-ai-suite:
+    needs: [lint-typecheck]
+    uses: ./.github/workflows/sail-reusable/hermes-ai-suite.yml

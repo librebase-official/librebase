@@ -1,0 +1,9 @@
+# CODEOWNERS template — place at .github/CODEOWNERS
+# Human review required for sensitive areas
+
+/.github/workflows/ @sailblack/security
+**/auth/** @sailblack/security
+**/*kms*/** @sailblack/security
+**/migrations/** @sailblack/security
+**/infra/** @sailblack/security
+**/*secret* @sailblack/security
