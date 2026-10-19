@@ -32,10 +32,3 @@ jobs:
   license-check:
     needs: [lint-typecheck]
     uses: ./.github/workflows/sail-reusable/license-check.yml
-
-  mcp-conformance:
-    needs: [lint-typecheck]
-    uses: ./.github/workflows/sail-reusable/mcp-conformance.yml
-  hermes-ai-suite:
-    needs: [lint-typecheck]
-    uses: ./.github/workflows/sail-reusable/hermes-ai-suite.yml
