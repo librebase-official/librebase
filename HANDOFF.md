@@ -101,7 +101,7 @@ seems stale, use `docker compose build --no-cache`.
 | Google OAuth client ID/secret | VPS `/opt/librebase-admin/docker-compose.yml` (+ GCP project `commanding-iris-505518-d0`) |
 | GitHub OAuth client ID/secret | same VPS compose |
 | admin-api JWT secret | VPS compose (`LIBREBASE_ADMIN_JWT_SECRET`) |
-| MCP key (test acct) | `lb_mcp_RLIiShwG6MdXL2_050H2YHDKYMXaTNbi-l6Z6dZxb5U` (in `/admin` console, rotatable) |
+| MCP key (test acct) | `$LIBREBASE_MCP_KEY` — issue in Studio `/admin` → **MCP key** (see `mcp/README.md`; never commit) |
 | IONOS DNS API | `reeldemo.io/.env.local` |
 | gcloud auth | `~/.config/gcloud` (account `julian.m.kleber@gmail.com`) |
 
