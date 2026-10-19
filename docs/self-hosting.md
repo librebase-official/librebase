@@ -57,7 +57,7 @@ See [`deploy/compose/.env.example`](../deploy/compose/.env.example) for the full
 | `LIBREBASE_KMS_SERVICE_ROLE` | yes | Bearer token Studio/Admin use to call KMS |
 | `NEXT_PUBLIC_SITE_URL` | yes (build) | Public origin for Studio (OAuth redirects, MCP discovery) |
 | `LIBREBASE_CONSOLE_URL` | recommended | Admin API email/links; should match Studio origin |
-| `LIBREBASE_VERSION` | synced | Image label; `scripts/sync-version.py` keeps `compose.env` in sync |
+| `LIBREBASE_VERSION` | yes (build) | Set in `deploy/compose/.env`; Compose reads `${LIBREBASE_VERSION}` from that file only. `scripts/sync-version.py` updates `deploy/compose/compose.env` as a repo reference — copy the value into `.env` when upgrading. |
 
 Optional (only if you enable those features):
 
@@ -74,13 +74,13 @@ Do **not** commit real secrets. `.env` is gitignored; use `.env.example` as the 
 3. Studio reaches Admin API via `LIBREBASE_ADMIN_URL=http://librebase-admin:54330` (set in compose; do not expose Admin API publicly).
 4. Create a project and launch a **local** runtime instance, or attach Kubernetes/licontainer per [kubernetes.md](kubernetes.md).
 
-Smoke test Admin API without Studio:
+Optional: smoke test the Admin API process directly (not a check of the Compose stack):
 
 ```bash
 python admin-api/scripts/smoke_admin.py
 ```
 
-(Requires a local Python env; see [admin-api/README.md](../admin-api/README.md).)
+`smoke_admin.py` is a standalone Admin API smoke test against a running `admin_server.py` (local Python env); it does not validate Studio, KMS, or `docker compose` wiring. See [admin-api/README.md](../admin-api/README.md).
 
 ## Migrations
 
@@ -91,7 +91,7 @@ If you restore an older volume backup onto a newer image, start the stack once a
 ## Upgrades
 
 1. Back up Docker volumes (`librebase-admin-data`, `librebase-kms-data`).
-2. Pull or rebuild images with the new `LIBREBASE_VERSION` (update `deploy/compose/compose.env` or run `python3 scripts/sync-version.py` from repo root).
+2. Bump `LIBREBASE_VERSION` in `deploy/compose/.env` (after pulling the new release). If you use `python3 scripts/sync-version.py` from the repo root, copy the version from `deploy/compose/compose.env` into `.env` — Compose does not load `compose.env` automatically.
 3. `docker compose up -d --build` from `deploy/compose/`.
 4. Verify `/health` on Admin API and sign-in to Studio.
 
