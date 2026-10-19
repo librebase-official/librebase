@@ -45,6 +45,12 @@ DOCKERFILES = [
     "saas-admin-api/Dockerfile",
 ]
 
+# Docker Compose env files (LIBREBASE_VERSION for build args)
+COMPOSE_ENV_FILES = [
+    "data-studio-ui/compose.env",
+    "deploy/compose/compose.env",
+]
+
 # Python MCP serverInfo version
 MCP_PY = "mcp/librebase_mcp/__main__.py"
 # JS MCP server version
@@ -181,6 +187,24 @@ def patch_dockerfile(path: Path, version: str) -> bool:
     return True
 
 
+def patch_compose_env(path: Path, version: str) -> bool:
+    """Keep compose.env LIBREBASE_VERSION in sync with VERSION."""
+    if not path.exists():
+        return False
+    content = path.read_text()
+    new_content = re.sub(
+        r"(^LIBREBASE_VERSION=)\S+",
+        f"LIBREBASE_VERSION={version}",
+        content,
+        count=1,
+        flags=re.MULTILINE,
+    )
+    if new_content == content:
+        return False
+    path.write_text(new_content)
+    return True
+
+
 def patch_layout_version(path: Path, version: str) -> bool:
     """Update the hardcoded LIBREBASE_VERSION const in layout.tsx."""
     if not path.exists():
@@ -240,6 +264,11 @@ def main() -> int:
 
     for rel in DOCKERFILES:
         if patch_dockerfile(repo / rel, version):
+            print(f"  patched {rel}")
+            patched += 1
+
+    for rel in COMPOSE_ENV_FILES:
+        if patch_compose_env(repo / rel, version):
             print(f"  patched {rel}")
             patched += 1
 
