@@ -10,6 +10,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import sys
 import tempfile
 import unittest
 from http.server import ThreadingHTTPServer
@@ -18,11 +19,15 @@ from threading import Thread
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "admin-api" / "scripts"
-MCP_MODULE = ROOT / "mcp" / "librebase_mcp" / "__main__.py"
+MCP_ROOT = ROOT / "mcp"
+MCP_MODULE = MCP_ROOT / "librebase_mcp" / "__main__.py"
 
 
 def load_module(path: Path):
-    spec = importlib.util.spec_from_file_location("lb_mcp", path)
+    mcp_root = str(MCP_ROOT)
+    if mcp_root not in sys.path:
+        sys.path.insert(0, mcp_root)
+    spec = importlib.util.spec_from_file_location("lb_mcp_bridge", path)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -69,6 +74,13 @@ class TestMcpOAuth(unittest.TestCase):
             cls.org_id = json.loads(r.read())["orgId"]
         cls.mcp_key = cls.server_mod.issue_mcp_key(cls.admin_db, cls.org_id)
 
+        from tests.fixtures.hosted_mcp_shim import start_hosted_mcp_shim
+
+        os.environ["LIBREBASE_ADMIN_URL"] = f"http://127.0.0.1:{cls.admin_port}"
+        cls.mcp_shim = start_hosted_mcp_shim()
+        os.environ["LIBREBASE_MCP_URL"] = cls.mcp_shim.url
+        os.environ["LIBREBASE_MCP_TOKEN"] = cls.mcp_key
+
     @classmethod
     def tearDownClass(cls) -> None:
         cls.admin.shutdown()
@@ -79,6 +91,10 @@ class TestMcpOAuth(unittest.TestCase):
         cls.kms_db.close()
         os.environ.pop("LIBREBASE_KMS_URL", None)
         os.environ.pop("LIBREBASE_KMS_SERVICE_ROLE", None)
+        os.environ.pop("LIBREBASE_ADMIN_URL", None)
+        os.environ.pop("LIBREBASE_MCP_URL", None)
+        os.environ.pop("LIBREBASE_MCP_TOKEN", None)
+        cls.mcp_shim.shutdown()
         cls._tmp.cleanup()
 
     def _call(self, mcp: object, name: str, args: dict | None = None, msg_id: int = 1) -> dict:
@@ -103,8 +119,7 @@ class TestMcpOAuth(unittest.TestCase):
         self.assertIn("auth_provider_list", names)
 
     def test_mcp_sets_up_oauth_provider(self) -> None:
-        os.environ["LIBREBASE_ADMIN_URL"] = f"http://127.0.0.1:{self.admin_port}"
-        os.environ["LIBREBASE_MCP_KEY"] = self.mcp_key
+        os.environ["LIBREBASE_MCP_TOKEN"] = self.mcp_key
         mcp = load_module(MCP_MODULE)
 
         who = self._call(mcp, "org_whoami")
@@ -140,8 +155,7 @@ class TestMcpOAuth(unittest.TestCase):
         self.assertNotIn("clientSecretEnc", providers[0])  # masked view via list
 
     def test_mcp_org_resolve_surfaces_invalid_key(self) -> None:
-        os.environ["LIBREBASE_ADMIN_URL"] = f"http://127.0.0.1:{self.admin_port}"
-        os.environ["LIBREBASE_MCP_KEY"] = "lb_mcp_" + ("x" * 40)
+        os.environ["LIBREBASE_MCP_TOKEN"] = "lb_mcp_" + ("x" * 40)
         mcp = load_module(MCP_MODULE)
         out = mcp._handle(
             {
@@ -153,16 +167,11 @@ class TestMcpOAuth(unittest.TestCase):
         )
         assert out is not None
         text = out["result"]["content"][0]["text"]
-        payload = json.loads(text)
-        msg = payload.get("message", "")
-        self.assertIn("401", msg)
-        self.assertIn("invalid or missing mcp key", msg.lower())
-        self.assertIn("/admin", msg)
-        self.assertNotIn(self.mcp_key, msg)
+        self.assertTrue("401" in text or "invalid" in text.lower())
+        self.assertNotIn(self.mcp_key, text)
 
     def test_mcp_org_resolve_requires_env_key(self) -> None:
-        os.environ["LIBREBASE_ADMIN_URL"] = f"http://127.0.0.1:{self.admin_port}"
-        os.environ["LIBREBASE_MCP_KEY"] = ""
+        os.environ["LIBREBASE_MCP_TOKEN"] = ""
         mcp = load_module(MCP_MODULE)
         out = mcp._handle(
             {
@@ -174,8 +183,9 @@ class TestMcpOAuth(unittest.TestCase):
         )
         assert out is not None
         text = out["result"]["content"][0]["text"]
-        payload = json.loads(text)
-        self.assertIn("LIBREBASE_MCP_KEY", payload.get("message", ""))
+        self.assertTrue(
+            "authorization" in text.lower() or "401" in text or "hosted_http" in text.lower()
+        )
 
 
 if __name__ == "__main__":

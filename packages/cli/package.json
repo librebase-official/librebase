@@ -1,7 +1,7 @@
 {
   "name": "@librebase/cli",
-  "version": "0.1.0",
-  "description": "Librebase CLI — init, start Admin API, Studio helper",
+  "version": "0.1.37",
+  "description": "Librebase CLI \u2014 init, start Admin API, Studio helper",
   "type": "module",
   "bin": {
     "librebase": "./src/index.js"
@@ -10,9 +10,22 @@
     "smoke": "node scripts/smoke.mjs",
     "test": "node scripts/smoke.mjs"
   },
-  "files": ["src", "scripts", "README.md"],
+  "files": [
+    "src",
+    "scripts",
+    "README.md"
+  ],
   "engines": {
     "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/librebase-official/librebase.git",
+    "directory": "packages/cli"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
   "license": "GPL-3.0-or-later"
 }

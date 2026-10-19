@@ -18,6 +18,15 @@
   "engines": {
     "node": ">=20"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/librebase-official/librebase.git",
+    "directory": "packages/sdk"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "license": "GPL-3.0-or-later",
   "keywords": [
     "librebase",

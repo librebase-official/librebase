@@ -22,6 +22,7 @@ PACKAGE_JSONS = [
     "data-studio-ui/package.json",
     "data-saas-admin/package.json",
     "packages/mcp/package.json",
+    "packages/cli/package.json",
     "packages/sdk/package.json",
     "apps/todo-app/package.json",
     "apps/todo-app-supabase/package.json",
@@ -53,6 +54,7 @@ COMPOSE_ENV_FILES = [
 
 # Python MCP serverInfo version
 MCP_PY = "mcp/librebase_mcp/__main__.py"
+MCP_PY_VERSION = "mcp/VERSION"
 # JS MCP server version
 MCP_JS = "packages/mcp/src/server.js"
 
@@ -134,6 +136,14 @@ def patch_helm_chart(path: Path, version: str) -> bool:
     if new_content == content:
         return False
     path.write_text(new_content)
+    return True
+
+
+def patch_mcp_version_file(path: Path, version: str) -> bool:
+    if path.exists() and path.read_text().strip() == version:
+        return False
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(version + "\n")
     return True
 
 
@@ -252,6 +262,10 @@ def main() -> int:
 
     if patch_helm_chart(repo / HELM_CHART, version):
         print(f"  patched {HELM_CHART}")
+        patched += 1
+
+    if patch_mcp_version_file(repo / MCP_PY_VERSION, version):
+        print(f"  patched {MCP_PY_VERSION}")
         patched += 1
 
     if patch_mcp_python(repo / MCP_PY, version):
