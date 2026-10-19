@@ -16,6 +16,7 @@ Thumbs.db
 .env
 .env.*
 !deploy/compose/.env.staging.example
+!deploy/compose/.env.example
 
 # Rust / licontainer
 licontainer/target/
