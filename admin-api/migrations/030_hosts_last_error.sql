@@ -1,2 +1,3 @@
 -- Optional operator-facing detail when a host VM fails provisioning sync.
-ALTER TABLE hosts ADD COLUMN IF NOT EXISTS last_error TEXT;
+-- Idempotent: migrate() ignores duplicate-column errors (SQLite + Postgres).
+ALTER TABLE hosts ADD COLUMN last_error TEXT;
