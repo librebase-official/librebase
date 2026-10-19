@@ -2171,6 +2171,35 @@ class LiorgHandler(BaseHTTPRequestHandler):
             self.send_json(200, [row_approval(r) for r in rows])
             return
 
+        mail_oauth_clients = re.fullmatch(r"/org/v1/orgs/([^/]+)/mail/oauth-clients", path)
+        if mail_oauth_clients:
+            org_id = mail_oauth_clients.group(1)
+            if not self.require_org_role(org_id, "admin"):
+                return
+            self.send_json(200, mail_api.list_mail_oauth_clients(self.db, org_id))
+            return
+
+        mail_oauth_one = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/mail/oauth-clients/([^/]+)", path
+        )
+        if mail_oauth_one:
+            org_id, provider = mail_oauth_one.groups()
+            if not self.require_org_role(org_id, "admin"):
+                return
+            status, payload = mail_api.get_mail_oauth_client_admin(
+                self.db, org_id, provider.strip().lower()
+            )
+            self.send_json(status, payload)
+            return
+
+        mail_defaults = re.fullmatch(r"/org/v1/orgs/([^/]+)/mail/defaults", path)
+        if mail_defaults:
+            org_id = mail_defaults.group(1)
+            if not self.require_org_role(org_id, "admin"):
+                return
+            self.send_json(200, mail_api.list_mail_provider_defaults(self.db, org_id))
+            return
+
         mail_accounts = re.fullmatch(r"/org/v1/orgs/([^/]+)/mail/accounts", path)
         if mail_accounts:
             org_id = mail_accounts.group(1)
@@ -3043,6 +3072,36 @@ class LiorgHandler(BaseHTTPRequestHandler):
             )
             row = self.db.fetchone("SELECT * FROM approvals WHERE id = ?", (approval_id,))
             self.send_json(201, row_approval(row))
+            return
+
+        mail_oauth_upsert = re.fullmatch(r"/org/v1/orgs/([^/]+)/mail/oauth-clients", path)
+        if mail_oauth_upsert:
+            org_id = mail_oauth_upsert.group(1)
+            if not self.require_org_role(org_id, "admin"):
+                return
+            status, payload = mail_api.upsert_mail_oauth_client(
+                self.db,
+                org_id,
+                body,
+                utc_now,
+                new_id,
+                kms_configured,
+                kms_seal,
+            )
+            self.send_json(status, payload)
+            return
+
+        mail_default_set = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/mail/defaults/([^/]+)", path
+        )
+        if mail_default_set:
+            org_id, provider = mail_default_set.groups()
+            if not self.require_org_role(org_id, "admin"):
+                return
+            status, payload = mail_api.set_mail_provider_default(
+                self.db, org_id, provider.strip().lower(), body, utc_now
+            )
+            self.send_json(status, payload)
             return
 
         mail_accounts_create = re.fullmatch(r"/org/v1/orgs/([^/]+)/mail/accounts", path)

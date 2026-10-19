@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import importlib.util
 import json
 import os
@@ -73,6 +74,30 @@ class TestMailPack(unittest.TestCase):
         )
         cls.bot_id = bot_req[1]["id"]
 
+        now = cls.mod.utc_now()
+        cls.member_user_id = cls.mod.new_id("user")
+        cls.db.execute(
+            "INSERT INTO users (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)",
+            (
+                cls.member_user_id,
+                "member@t.c",
+                cls.mod.hash_password("hunter2hunter2"),
+                now,
+            ),
+        )
+        cls.db.execute(
+            "INSERT INTO members (org_id, user_id, role, created_at) VALUES (?, ?, ?, ?)",
+            (cls.org_id, cls.member_user_id, "member", now),
+        )
+        login_req = urllib.request.Request(
+            f"http://127.0.0.1:{cls.port}/org/v1/auth/login",
+            data=json.dumps({"email": "member@t.c", "password": "hunter2hunter2"}).encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(login_req) as r:
+            cls.member_token = json.loads(r.read())["token"]
+
     @classmethod
     def tearDownClass(cls) -> None:
         cls.mod.mail_pack.set_http_json(None)
@@ -107,6 +132,24 @@ class TestMailPack(unittest.TestCase):
     def _http(self, method: str, path: str, body: dict | None = None, token: str | None = None):
         return self._request(method, path, body, token or self.owner_token)
 
+    def _att(self, filename: str, content: bytes) -> dict:
+        return {
+            "filename": filename,
+            "contentBase64": base64.b64encode(content).decode("ascii"),
+        }
+
+    def _register_gmail_oauth(self) -> None:
+        st, body = self._http(
+            "POST",
+            f"/org/v1/orgs/{self.org_id}/mail/oauth-clients",
+            {
+                "provider": "gmail_oauth",
+                "clientId": "cid",
+                "clientSecret": "csec",
+            },
+        )
+        self.assertEqual(st, 200, body)
+
     def test_klaut_draft_approve_send_idempotent(self) -> None:
         base = f"/org/v1/orgs/{self.org_id}/bots/{self.bot_id}/mail"
         st, draft = self._http(
@@ -130,10 +173,13 @@ class TestMailPack(unittest.TestCase):
         )
         self.assertEqual(st, 200, approved)
 
-        st, sent = self._http("POST", f"{base}/send", {"draftId": draft["id"]})
+        st, sent = self._http(
+            "POST", f"{base}/send", {"draftId": draft["id"]}, token=self.member_token
+        )
         self.assertEqual(st, 200, sent)
         self.assertFalse(sent.get("idempotent"))
         self.assertTrue(sent["providerMessageId"].startswith("klaut-"))
+        self.assertEqual(sent["sentBy"], self.member_user_id)
 
         st, again = self._http("POST", f"{base}/send", {"draftId": draft["id"]})
         self.assertEqual(st, 200, again)
@@ -152,6 +198,7 @@ class TestMailPack(unittest.TestCase):
             raise AssertionError(f"unexpected url {url}")
 
         self.mod.mail_pack.set_http_json(fake_http)
+        self._register_gmail_oauth()
 
         st, acct = self._http(
             "POST",
@@ -159,11 +206,7 @@ class TestMailPack(unittest.TestCase):
             {
                 "provider": "gmail_oauth",
                 "fromAddress": "bot@example.com",
-                "oauthTokens": {
-                    "refresh_token": "rt",
-                    "client_id": "cid",
-                    "client_secret": "csec",
-                },
+                "oauthTokens": {"refresh_token": "rt"},
             },
         )
         self.assertEqual(st, 201, acct)
@@ -174,7 +217,6 @@ class TestMailPack(unittest.TestCase):
             f"{base}/drafts",
             {
                 "provider": "gmail_oauth",
-                "accountId": acct["id"],
                 "to": ["user@example.com"],
                 "subject": "Gmail",
                 "bodyText": "Hi",
@@ -283,6 +325,116 @@ class TestMailPack(unittest.TestCase):
         )
         self.assertEqual(st, 403)
         self.assertIn("own", body.get("error", "").lower())
+
+    def test_multiple_accounts_require_account_or_default(self) -> None:
+        self._register_gmail_oauth()
+        for addr in ("a@x.com", "b@x.com"):
+            st, _ = self._http(
+                "POST",
+                f"/org/v1/orgs/{self.org_id}/mail/accounts",
+                {
+                    "provider": "gmail_oauth",
+                    "fromAddress": addr,
+                    "oauthTokens": {"refresh_token": f"rt-{addr}"},
+                },
+            )
+            self.assertEqual(st, 201)
+        base = f"/org/v1/orgs/{self.org_id}/bots/{self.bot_id}/mail"
+        st, err = self._http(
+            "POST",
+            f"{base}/drafts",
+            {
+                "provider": "gmail_oauth",
+                "to": ["user@example.com"],
+                "subject": "Pick account",
+                "bodyText": "x",
+            },
+        )
+        self.assertEqual(st, 400)
+        self.assertIn("accountId", err.get("error", ""))
+
+    def test_provider_default_selects_account(self) -> None:
+        self._register_gmail_oauth()
+        ids = []
+        for addr in ("a@x.com", "b@x.com"):
+            st, acct = self._http(
+                "POST",
+                f"/org/v1/orgs/{self.org_id}/mail/accounts",
+                {
+                    "provider": "gmail_oauth",
+                    "fromAddress": addr,
+                    "oauthTokens": {"refresh_token": f"rt-{addr}"},
+                },
+            )
+            self.assertEqual(st, 201)
+            ids.append(acct["id"])
+        st, default = self._http(
+            "POST",
+            f"/org/v1/orgs/{self.org_id}/mail/defaults/gmail_oauth",
+            {"accountId": ids[1]},
+        )
+        self.assertEqual(st, 200, default)
+        self.assertEqual(default["accountId"], ids[1])
+        base = f"/org/v1/orgs/{self.org_id}/bots/{self.bot_id}/mail"
+        st, draft = self._http(
+            "POST",
+            f"{base}/drafts",
+            {
+                "provider": "gmail_oauth",
+                "to": ["user@example.com"],
+                "subject": "Default",
+                "bodyText": "x",
+            },
+        )
+        self.assertEqual(st, 201, draft)
+        self.assertEqual(draft["accountId"], ids[1])
+
+    def test_attachment_in_approval_hash(self) -> None:
+        base = f"/org/v1/orgs/{self.org_id}/bots/{self.bot_id}/mail"
+        att = self._att("note.txt", b"hello")
+        st, draft = self._http(
+            "POST",
+            f"{base}/drafts",
+            {
+                "provider": "klaut",
+                "to": ["a@b.c"],
+                "subject": "Att",
+                "bodyText": "body",
+                "attachments": [att],
+            },
+        )
+        self.assertEqual(st, 201, draft)
+        self.assertEqual(len(draft["attachments"]), 1)
+        apr = self.db.fetchone(
+            "SELECT payload_json FROM approvals WHERE id = ?",
+            (draft["approvalId"],),
+        )
+        payload = json.loads(apr["payload_json"])
+        self.assertEqual(payload["attachments"][0]["filename"], "note.txt")
+        self._http(
+            "POST",
+            f"/org/v1/orgs/{self.org_id}/bots/{self.bot_id}/approvals/{draft['approvalId']}/approve",
+            token=self.mcp_key,
+        )
+        st, patched = self._http(
+            "PATCH",
+            f"{base}/drafts/{draft['id']}",
+            {"attachments": [self._att("note.txt", b"changed")]},
+        )
+        self.assertEqual(st, 200, patched)
+        self.assertEqual(patched["approvalState"], "pending")
+
+    def test_mail_oauth_client_separate_table(self) -> None:
+        self._register_gmail_oauth()
+        st, listed = self._http("GET", f"/org/v1/orgs/{self.org_id}/mail/oauth-clients")
+        self.assertEqual(st, 200)
+        self.assertEqual(listed[0]["provider"], "gmail_oauth")
+        self.assertIn("gmail.send", listed[0]["scopes"][0])
+        row = self.db.fetchone(
+            "SELECT COUNT(*) AS n FROM auth_providers WHERE project_id = ?",
+            (self.org_id,),
+        )
+        self.assertEqual(row["n"], 0)
 
 
 if __name__ == "__main__":

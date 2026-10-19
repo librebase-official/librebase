@@ -5,12 +5,18 @@ Providers: gmail_oauth, msgraph (stub), klaut (stub). HTTP is injectable for tes
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import re
 from email.message import EmailMessage
 from typing import Any, Callable, Mapping, Protocol
 
 MAIL_PROVIDERS = frozenset({"gmail_oauth", "msgraph", "klaut"})
+
+MAIL_OAUTH_SCOPES: dict[str, list[str]] = {
+    "gmail_oauth": ["https://www.googleapis.com/auth/gmail.send"],
+    "msgraph": ["Mail.Send"],
+}
 
 HttpJsonFn = Callable[[str, str, dict[str, str], bytes | None], dict[str, Any]]
 HttpJson = HttpJsonFn | None
@@ -50,16 +56,89 @@ def set_http_json(fn: HttpJsonFn | None) -> None:
     _http_json = fn or _default_http_json
 
 
+def attachment_content_hash(content: bytes) -> str:
+    return hashlib.sha256(content).hexdigest()
+
+
+def normalize_attachments(raw: Any) -> list[dict[str, str]]:
+    """Return stored attachment records with filename, contentHash, contentBase64."""
+    if raw is None:
+        return []
+    items = raw
+    if isinstance(raw, str):
+        try:
+            items = json.loads(raw)
+        except json.JSONDecodeError:
+            raise MailSendError("attachments must be a JSON array", status=400)
+    if not isinstance(items, list):
+        raise MailSendError("attachments must be an array", status=400)
+    out: list[dict[str, str]] = []
+    for item in items:
+        if not isinstance(item, dict):
+            raise MailSendError("each attachment must be an object", status=400)
+        filename = str(item.get("filename", "")).strip()
+        if not filename:
+            raise MailSendError("attachment filename required", status=400)
+        content_b64 = item.get("contentBase64") or item.get("content_base64")
+        if content_b64 is None:
+            raise MailSendError(f"attachment {filename!r} requires contentBase64", status=400)
+        try:
+            content = base64.b64decode(str(content_b64), validate=True)
+        except (ValueError, TypeError):
+            raise MailSendError(f"attachment {filename!r} has invalid base64", status=400)
+        provided_hash = item.get("contentHash") or item.get("content_hash")
+        chash = str(provided_hash).strip() if provided_hash else attachment_content_hash(content)
+        if chash != attachment_content_hash(content):
+            raise MailSendError(f"attachment {filename!r} contentHash mismatch", status=400)
+        out.append(
+            {
+                "filename": filename,
+                "contentHash": chash,
+                "contentBase64": base64.b64encode(content).decode("ascii"),
+            }
+        )
+    out.sort(key=lambda a: a["filename"])
+    return out
+
+
+def attachments_for_approval(stored: Any) -> list[dict[str, str]]:
+    if stored is None or stored == "" or stored == "[]":
+        return []
+    parsed: Any = stored
+    if isinstance(stored, str):
+        try:
+            parsed = json.loads(stored)
+        except json.JSONDecodeError:
+            return []
+    if not isinstance(parsed, list):
+        return []
+    out: list[dict[str, str]] = []
+    for item in parsed:
+        if not isinstance(item, dict):
+            continue
+        filename = item.get("filename")
+        chash = item.get("contentHash") or item.get("content_hash")
+        if filename and chash:
+            out.append({"filename": str(filename), "contentHash": str(chash)})
+    out.sort(key=lambda a: a["filename"])
+    return out
+
+
 def draft_approval_payload(draft: Mapping[str, Any]) -> dict[str, Any]:
     """Canonical payload whose hash is stored on the linked approval row."""
+    raw_att = draft.get("attachments_json")
+    if raw_att is None and "attachments" in draft:
+        raw_att = draft.get("attachments")
     return {
+        "accountId": draft.get("account_id"),
+        "fromAddress": draft.get("from_address"),
         "to": _json_list(draft, "to_json"),
         "cc": _json_list(draft, "cc_json"),
         "bcc": _json_list(draft, "bcc_json"),
         "subject": draft.get("subject") or "",
         "bodyText": draft.get("body_text") or "",
         "bodyHtml": draft.get("body_html"),
-        "provider": draft.get("provider") or "",
+        "attachments": attachments_for_approval(raw_att if raw_att is not None else "[]"),
     }
 
 
@@ -68,6 +147,23 @@ def draft_content_hash(payload: Mapping[str, Any]) -> str:
 
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode()).hexdigest()
+
+
+def _attachments_api_view(row: Mapping[str, Any]) -> list[dict[str, str]]:
+    raw = row.get("attachments_json") if "attachments_json" in row.keys() else "[]"
+    if not raw:
+        return []
+    try:
+        parsed = json.loads(str(raw))
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(parsed, list):
+        return []
+    return [
+        {"filename": a.get("filename", ""), "contentHash": a.get("contentHash", "")}
+        for a in parsed
+        if isinstance(a, dict)
+    ]
 
 
 def _json_list(row: Mapping[str, Any], col: str) -> list[str]:
@@ -105,6 +201,43 @@ def row_mail_account_admin(row: Mapping[str, Any]) -> dict[str, Any]:
     return out
 
 
+def row_mail_oauth_client(row: Mapping[str, Any]) -> dict[str, Any]:
+    scopes: list[str] = []
+    raw = row["scopes_json"] if "scopes_json" in row.keys() else "[]"
+    if raw:
+        try:
+            parsed = json.loads(raw)
+            if isinstance(parsed, list):
+                scopes = [str(s) for s in parsed]
+        except json.JSONDecodeError:
+            pass
+    return {
+        "id": row["id"],
+        "orgId": row["org_id"],
+        "provider": row["provider"],
+        "clientId": row["client_id"],
+        "scopes": scopes,
+        "createdAt": row["created_at"],
+        "updatedAt": row["updated_at"],
+    }
+
+
+def row_mail_oauth_client_admin(row: Mapping[str, Any]) -> dict[str, Any]:
+    out = row_mail_oauth_client(row)
+    out["clientSecretEnc"] = row["client_secret_enc"]
+    out["kmsKeyId"] = row["kms_key_id"]
+    return out
+
+
+def row_mail_provider_default(row: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "orgId": row["org_id"],
+        "provider": row["provider"],
+        "accountId": row["account_id"],
+        "updatedAt": row["updated_at"],
+    }
+
+
 def row_mail_draft(row: Mapping[str, Any], approval: Mapping[str, Any] | None = None) -> dict[str, Any]:
     payload = {
         "id": row["id"],
@@ -118,6 +251,7 @@ def row_mail_draft(row: Mapping[str, Any], approval: Mapping[str, Any] | None = 
         "subject": row["subject"],
         "bodyText": row["body_text"],
         "bodyHtml": row["body_html"] if "body_html" in row.keys() else None,
+        "attachments": _attachments_api_view(row),
         "contentHash": row["content_hash"],
         "approvalId": row["approval_id"],
         "status": row["status"],
@@ -239,6 +373,14 @@ class GmailAdapter:
             msg.add_alternative(body_html, subtype="html")
         else:
             msg.set_content(body_text)
+        att_raw = draft.get("attachments_json") if "attachments_json" in draft.keys() else "[]"
+        for att in normalize_attachments(att_raw or "[]"):
+            msg.add_attachment(
+                base64.b64decode(att["contentBase64"]),
+                maintype="application",
+                subtype="octet-stream",
+                filename=att["filename"],
+            )
         raw = base64.urlsafe_b64encode(msg.as_bytes()).decode("ascii").rstrip("=")
         resp = _http_json(
             "POST",
@@ -329,6 +471,7 @@ def parse_draft_body(body: dict[str, Any]) -> dict[str, Any]:
     account_id = body.get("accountId") or body.get("account_id")
     if account_id:
         account_id = str(account_id).strip()
+    attachments = normalize_attachments(body.get("attachments"))
     return {
         "provider": provider,
         "to": to_list,
@@ -338,4 +481,5 @@ def parse_draft_body(body: dict[str, Any]) -> dict[str, Any]:
         "body_text": body_text,
         "body_html": body_html,
         "account_id": account_id,
+        "attachments": attachments,
     }
