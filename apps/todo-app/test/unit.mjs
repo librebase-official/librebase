@@ -52,15 +52,17 @@ function handlersFor() {
     [(u, m) => u.includes("/rest/v1/todos") && m === "GET", async () => {
       return { status: 200, data: stores.todos };
     }],
-    [(u, m) => u.includes("/rest/v1/todos/") && m === "PATCH", async ({ url: u }) => {
-      const id = u.split("/rest/v1/todos/")[1];
+    [(u, m) => u.includes("/rest/v1/todos") && m === "PATCH", async ({ url: u, body }) => {
+      const idMatch = u.match(/[?&]id=eq\.([^&]+)/);
+      const id = idMatch ? decodeURIComponent(idMatch[1]) : null;
       const row = stores.todos.find((t) => t.id === id);
       if (!row) return { status: 404, data: { message: "not found" } };
-      row.done = true;
-      return { status: 200, data: row };
+      Object.assign(row, body ?? {});
+      return { status: 200, data: [row] };
     }],
-    [(u, m) => u.includes("/rest/v1/todos/") && m === "DELETE", async ({ url: u }) => {
-      const id = u.split("/rest/v1/todos/")[1];
+    [(u, m) => u.includes("/rest/v1/todos") && m === "DELETE", async ({ url: u }) => {
+      const idMatch = u.match(/[?&]id=eq\.([^&]+)/);
+      const id = idMatch ? decodeURIComponent(idMatch[1]) : null;
       stores.todos = stores.todos.filter((t) => t.id !== id);
       return { status: 200, data: { deleted: true } };
     }],

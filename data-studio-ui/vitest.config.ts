@@ -6,7 +6,8 @@ export default defineConfig({
     environment: "node",
     include: ["__tests__/**/*.test.ts"],
     env: {
-      LIBREBASE_ALLOW_LOCAL: "1",
+      // OSS harness: k8s-provisioner tests expect kubectl paths, not SaaS Hetzner gate.
+      LIBREBASE_HARNESS: "oss",
     },
     coverage: {
       provider: "v8",
