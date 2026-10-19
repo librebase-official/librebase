@@ -109,7 +109,7 @@ async function adminFetch(pathname, init) {
 }
 
 const server = new Server(
-  { name: "librebase", version: "0.1.35" },
+  { name: "librebase", version: "0.1.36" },
   { capabilities: { tools: {} } },
 );
 
