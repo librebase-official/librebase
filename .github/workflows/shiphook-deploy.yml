@@ -29,8 +29,16 @@ jobs:
           DEPLOY_REF: ${{ inputs.ref || github.ref_name }}
         run: |
           set -euo pipefail
-          test -n "$SHIPHOOK_URL" || { echo "Missing SHIPHOOK_DEPLOY_URL" >&2; exit 1; }
-          test -n "$SHIPHOOK_SECRET" || { echo "Missing SHIPHOOK_DEPLOY_TOKEN" >&2; exit 1; }
+          if [ -z "${SHIPHOOK_URL:-}" ]; then
+            echo "::error::SHIPHOOK_DEPLOY_URL is not configured. Add the Shiphook deploy URL repository secret before running production deploys."
+            echo "Shiphook deploy skipped: SHIPHOOK_DEPLOY_URL secret is empty (Julian configures deploy secrets)." >&2
+            exit 1
+          fi
+          if [ -z "${SHIPHOOK_SECRET:-}" ]; then
+            echo "::error::SHIPHOOK_DEPLOY_TOKEN is not configured. Add the Shiphook deploy token repository secret before running production deploys."
+            echo "Shiphook deploy skipped: SHIPHOOK_DEPLOY_TOKEN secret is empty (Julian configures deploy secrets)." >&2
+            exit 1
+          fi
           curl --fail-with-body --silent --show-error --location \
             --max-time 30 \
             -X POST "${SHIPHOOK_URL}?format=json" \
