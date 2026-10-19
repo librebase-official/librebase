@@ -26,9 +26,18 @@ jobs:
           python -m build mcp
           twine check mcp/dist/*
 
+      - name: Python MCP bridge tests
+        run: |
+          pip install -e mcp
+          python -m unittest discover -s mcp/tests -v
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      - name: npm MCP bridge tests
+        working-directory: packages/mcp
+        run: npm install --no-audit --no-fund && npm test
 
       - name: Verify npm pack layouts (@librebase/*)
         run: |

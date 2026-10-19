@@ -44,8 +44,12 @@ jobs:
         working-directory: ${{ github.workspace }}/packages/sdk
         run: npm test
 
-      - name: MCP unit + smoke tests
+      - name: MCP bridge tests
         working-directory: ${{ github.workspace }}/packages/mcp
+        run: npm install --no-audit --no-fund && npm test
+
+      - name: MCP dev harness tests
+        working-directory: ${{ github.workspace }}/packages/mcp-dev-harness
         run: npm install --no-audit --no-fund && npm test
 
       - name: Todo app unit + E2E tests

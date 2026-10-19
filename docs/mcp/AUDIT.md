@@ -5,8 +5,9 @@
 | Surface | Transport | Audience | Tool count (approx.) |
 | --- | --- | --- | --- |
 | **Hosted** `data-studio-ui/app/api/mcp/route.ts` | Streamable HTTP `POST /api/mcp` | Production agents (Cursor remote MCP) | **22** |
-| **Python stdio** `mcp/librebase_mcp/__main__.py` | `python3 -m librebase_mcp` | Local / air-gapped with `LIBREBASE_MCP_KEY` | **11** |
-| **Node dev harness** `packages/mcp/src/server.js` | stdio | Local dev, parity matrix, Supabase-shaped stubs | **30+** (different names) |
+| **Python stdio bridge** `mcp/librebase_mcp` | `uvx librebase-mcp` / `python -m librebase_mcp` | Proxies hosted `tools/list` + `tools/call` | **same as hosted** |
+| **Node stdio bridge** `packages/mcp` | `npx @librebase/mcp` | Proxies hosted MCP | **same as hosted** |
+| **Node dev harness** `packages/mcp-dev-harness` (private) | stdio | Local dev, parity matrix, Supabase-shaped stubs | **30+** (different names) |
 
 **Canonical product API for agents:** hosted HTTP at `{SITE_URL}/api/mcp`, discovered via `GET /.well-known/mcp.json`.
 
@@ -32,9 +33,9 @@ KMS secrets (org-scoped key; values must not be echoed to the model):
 
 **Not implemented on hosted MCP today:** `migration_apply`, `sql_execute`, `table_list`, `migration_list` (these appeared in marketing/handoff copy but are not in `route.ts`).
 
-## Python stdio gap
+## Stdio bridges
 
-Python mirrors the **first 11** hosted tools only. It does **not** implement device auth or KMS key tools. After org bootstrap via console key, stdio is enough for instances/projects/members/hosts; agents needing browser login or secrets should use **hosted** MCP.
+`@librebase/mcp` and `librebase-mcp` are thin proxies — no local tool catalog. Auth: `LIBREBASE_MCP_TOKEN` or device flow (`auth_start` / `auth_poll`) via the hosted server.
 
 ## Auth & security (hosted)
 

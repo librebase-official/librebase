@@ -1,7 +1,7 @@
 {
   "name": "@librebase/mcp",
   "version": "0.1.30",
-  "description": "MCP server \u2014 control Librebase Admin API + Studio probes for agents",
+  "description": "Stdio MCP bridge to hosted Librebase MCP (device flow or LIBREBASE_MCP_TOKEN)",
   "type": "module",
   "bin": {
     "librebase-mcp": "./src/server.js"
@@ -11,8 +11,8 @@
     "README.md"
   ],
   "scripts": {
-    "test": "node test/session.unit.mjs && node test/smoke.mjs && node test/e2e.mjs",
-    "smoke": "node test/smoke.mjs"
+    "test": "node test/bridge.unit.mjs",
+    "smoke": "node test/bridge.unit.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1"

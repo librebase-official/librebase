@@ -22,6 +22,7 @@ PACKAGE_JSONS = [
     "data-studio-ui/package.json",
     "data-saas-admin/package.json",
     "packages/mcp/package.json",
+    "packages/cli/package.json",
     "packages/sdk/package.json",
     "apps/todo-app/package.json",
     "apps/todo-app-supabase/package.json",

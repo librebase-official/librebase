@@ -1,51 +1,79 @@
-# Librebase MCP server (Python stdio)
+# librebase-mcp (Python stdio bridge)
 
-Stdio MCP server for **local / air-gapped** use with a console MCP key.
+Stdio MCP **bridge** to hosted Librebase MCP — same contract as `@librebase/mcp` on npm.
 
-> **Packaging (prep):** `mcp/pyproject.toml` targets PyPI name `librebase-mcp` (`pip install librebase-mcp`, `python -m librebase_mcp`, console script `librebase-mcp`). Not published yet — see LIB-150.
+- **URL:** `LIBREBASE_MCP_URL` (default `https://app.librebase.xyz/api/mcp`)
+- **Auth:** `auth_start` / `auth_poll` on the hosted server, or `LIBREBASE_MCP_TOKEN`
 
-**Production agents** should use **hosted** Streamable HTTP MCP at `{SITE}/api/mcp`
-(see `docs/mcp/AUDIT.md` and `GET /.well-known/mcp.json`). The hosted server exposes
-**22 tools** (device auth + KMS keys); this Python package implements the **11** org/project/instance tools only.
+> Packaging: `pip install librebase-mcp` / `uvx librebase-mcp` (prep — not published yet, LIB-150).
 
-## Setup
+## Cursor
 
 ```json
 {
   "mcpServers": {
     "librebase": {
-      "command": "python3",
-      "args": ["-m", "librebase_mcp"],
-      "cwd": "/path/to/librebase/mcp",
+      "command": "uvx",
+      "args": ["librebase-mcp"]
+    }
+  }
+}
+```
+
+With token:
+
+```json
+{
+  "mcpServers": {
+    "librebase": {
+      "command": "uvx",
+      "args": ["librebase-mcp"],
       "env": {
-        "PYTHONPATH": "/path/to/librebase/mcp",
-        "LIBREBASE_ADMIN_URL": "https://app.librebase.xyz/api/admin-proxy",
-        "LIBREBASE_MCP_KEY": "lb_mcp_..."
+        "LIBREBASE_MCP_TOKEN": "lb_mcp_…"
       }
     }
   }
 }
 ```
 
-`LIBREBASE_ADMIN_URL` is the admin API base URL. `LIBREBASE_MCP_KEY` is the
-MCP key generated in the console (`/admin`); it scopes every call to one org.
+## VS Code
 
-## Tools
+```json
+{
+  "servers": {
+    "librebase": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["librebase-mcp"]
+    }
+  }
+}
+```
 
-- `org_whoami` — resolve the key's org
-- `project_list` / `project_create`
-- `auth_provider_list` / `auth_provider_upsert` — OAuth sign-in (github/google) per project; client secret is KMS-sealed, never returned
-- `instance_list` / `instance_get` / `instance_create` / `instance_launch` / `instance_stop`
-- `member_list` / `member_invite` / `member_update_role`
-- `host_list` / `host_create`
+## Claude Desktop
 
-## Test locally
+```json
+{
+  "mcpServers": {
+    "librebase": {
+      "command": "uvx",
+      "args": ["librebase-mcp"]
+    }
+  }
+}
+```
+
+## Local checkout
 
 ```bash
 cd mcp
-LIBREBASE_ADMIN_URL=https://... LIBREBASE_MCP_KEY=lb_mcp_... \
-  python3 -m librebase_mcp < <(printf '%s\n' \
-    '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' \
-    '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' \
-    '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"org_whoami","arguments":{}}}')
+LIBREBASE_MCP_URL=https://app.librebase.xyz/api/mcp \
+  python3 -m librebase_mcp
+```
+
+## Test
+
+```bash
+pip install -e mcp
+python3 -m unittest discover -s mcp/tests -v
 ```
