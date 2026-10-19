@@ -2088,16 +2088,16 @@ class LiorgHandler(BaseHTTPRequestHandler):
             self.send_json(200, [row_mcp_key(r) for r in rows])
             return
 
-        bot_mcp_tokens = re.fullmatch(
-            r"/org/v1/orgs/([^/]+)/bots/([^/]+)/mcp-tokens", path
-        )
-        if bot_mcp_tokens:
-            org_id, bot_id = bot_mcp_tokens.groups()
+        org_mcp_tokens = re.fullmatch(r"/org/v1/orgs/([^/]+)/mcp-tokens", path)
+        if org_mcp_tokens:
+            org_id = org_mcp_tokens.group(1)
             if not self.require_org_role(org_id, "admin"):
                 return
+            q = parse_qs(parsed.query)
+            bot_filter = (q.get("botId", [""])[0] or "").strip() or None
             self.send_json(
                 200,
-                mcp_tokens_mod.list_agent_mcp_tokens(self.db, org_id, bot_id),
+                mcp_tokens_mod.list_mcp_tokens(self.db, org_id, bot_id=bot_filter),
             )
             return
 
@@ -2518,15 +2518,55 @@ class LiorgHandler(BaseHTTPRequestHandler):
             self.send_json(200, {"ok": True, "revoked": count})
             return
 
-        bot_mcp_rotate = re.fullmatch(
-            r"/org/v1/orgs/([^/]+)/bots/([^/]+)/mcp-tokens/rotate", path
+        org_mcp_rotate = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/mcp-tokens/([^/]+)/rotate", path
         )
-        if bot_mcp_rotate:
-            org_id, bot_id = bot_mcp_rotate.groups()
+        if org_mcp_rotate:
+            org_id, token_id = org_mcp_rotate.groups()
             if not self.require_org_role(org_id, "admin"):
                 return
             try:
-                token_plain = mcp_tokens_mod.issue_agent_mcp_token(
+                token_plain, new_token_id = mcp_tokens_mod.rotate_mcp_token(
+                    self.db,
+                    org_id,
+                    token_id,
+                    new_id=new_id,
+                    hash_token=hash_token,
+                    utc_now=utc_now,
+                )
+            except ValueError as exc:
+                self.send_json(404, {"error": str(exc)})
+                return
+            self.send_json(
+                200,
+                {"accessToken": token_plain, "tokenId": new_token_id},
+            )
+            return
+
+        org_mcp_revoke = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/mcp-tokens/([^/]+)/revoke", path
+        )
+        if org_mcp_revoke:
+            org_id, token_id = org_mcp_revoke.groups()
+            if not self.require_org_role(org_id, "admin"):
+                return
+            if not mcp_tokens_mod.revoke_mcp_token(
+                self.db, org_id, token_id, utc_now=utc_now
+            ):
+                self.send_json(404, {"error": "token not found"})
+                return
+            self.send_json(200, {"ok": True})
+            return
+
+        bot_mcp_mint = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/bots/([^/]+)/mcp-tokens", path
+        )
+        if bot_mcp_mint:
+            org_id, bot_id = bot_mcp_mint.groups()
+            if not self.require_org_role(org_id, "admin"):
+                return
+            try:
+                token_plain, token_id = mcp_tokens_mod.issue_bot_mcp_token(
                     self.db,
                     org_id,
                     bot_id,
@@ -2537,25 +2577,10 @@ class LiorgHandler(BaseHTTPRequestHandler):
             except ValueError as exc:
                 self.send_json(404, {"error": str(exc)})
                 return
-            self.send_json(200, {"accessToken": token_plain, "botId": bot_id})
-            return
-
-        bot_mcp_revoke = re.fullmatch(
-            r"/org/v1/orgs/([^/]+)/bots/([^/]+)/mcp-tokens/([^/]+)/revoke", path
-        )
-        if bot_mcp_revoke:
-            org_id, bot_id, key_id = bot_mcp_revoke.groups()
-            if not self.require_org_role(org_id, "admin"):
-                return
-            row = self.db.fetchone(
-                "SELECT id FROM mcp_keys WHERE id = ? AND org_id = ? AND bot_id = ?",
-                (key_id, org_id, bot_id),
+            self.send_json(
+                200,
+                {"accessToken": token_plain, "tokenId": token_id, "botId": bot_id},
             )
-            if not row:
-                self.send_json(404, {"error": "token not found"})
-                return
-            mcp_tokens_mod.revoke_mcp_key_id(self.db, org_id, key_id, utc_now=utc_now)
-            self.send_json(200, {"ok": True})
             return
 
         if path == "/org/v1/mcp/device/start":

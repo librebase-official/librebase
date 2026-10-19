@@ -247,35 +247,31 @@ export const HOSTED_MCP_TOOLS: HostedMcpTool[] = [
     },
   },
   {
-    name: "mcp_agent_token_list",
+    name: "mcp_token_list",
     description:
-      "List MCP bearer tokens issued for one org agent (bot). Metadata only; includes lastUsedAt.",
+      "List MCP bearer tokens for the org (optional botId filter). Metadata only; includes lastUsedAt, botId, deviceCodeId.",
     inputSchema: {
       type: "object",
-      required: ["botId"],
-      properties: { botId: { type: "string" } },
+      properties: { botId: { type: "string", description: "Filter to one WP-02 bot" } },
     },
   },
   {
-    name: "mcp_agent_token_rotate",
+    name: "mcp_token_rotate",
     description:
-      "Rotate the active MCP token for one agent (bot). Revokes only that bot's prior token.",
+      "Rotate one MCP token by id. Revokes only that token and mints a successor with the same botId/deviceCodeId bindings.",
     inputSchema: {
       type: "object",
-      required: ["botId"],
-      properties: { botId: { type: "string" } },
+      required: ["tokenId"],
+      properties: { tokenId: { type: "string" } },
     },
   },
   {
-    name: "mcp_agent_token_revoke",
-    description: "Revoke one MCP token row by id for an agent (bot).",
+    name: "mcp_token_revoke",
+    description: "Revoke one MCP token by id.",
     inputSchema: {
       type: "object",
-      required: ["botId", "tokenId"],
-      properties: {
-        botId: { type: "string" },
-        tokenId: { type: "string" },
-      },
+      required: ["tokenId"],
+      properties: { tokenId: { type: "string" } },
     },
   },
 ];

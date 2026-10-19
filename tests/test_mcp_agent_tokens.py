@@ -1,10 +1,9 @@
-"""LIB-162: per-agent MCP tokens — rotation isolation, auth causes, revoke-all."""
+"""LIB-162 / saas PR #134: per-token MCP rotation, auth causes, revoke-all."""
 
 from __future__ import annotations
 
 import importlib.util
 import json
-import os
 import tempfile
 import unittest
 import urllib.error
@@ -55,6 +54,30 @@ def http_json(
         return exc.code, payload
 
 
+def mint_bot_token(port: int, org_id: str, bot_id: str, jwt: str) -> tuple[str, str]:
+    status, body = http_json(
+        port,
+        "POST",
+        f"/org/v1/orgs/{org_id}/bots/{bot_id}/mcp-tokens",
+        {},
+        token=jwt,
+    )
+    assert status == 200, body
+    return body["accessToken"], body["tokenId"]
+
+
+def rotate_token(port: int, org_id: str, token_id: str, jwt: str) -> tuple[str, str]:
+    status, body = http_json(
+        port,
+        "POST",
+        f"/org/v1/orgs/{org_id}/mcp-tokens/{token_id}/rotate",
+        {},
+        token=jwt,
+    )
+    assert status == 200, body
+    return body["accessToken"], body["tokenId"]
+
+
 class McpAgentTokenTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -100,34 +123,13 @@ class McpAgentTokenTests(unittest.TestCase):
         cls._tmp.cleanup()
 
     def test_rotate_agent_a_leaves_agent_b_token_valid(self) -> None:
-        _, rot_a = http_json(
-            self.port,
-            "POST",
-            f"/org/v1/orgs/{self.org_id}/bots/{self.bot_a}/mcp-tokens/rotate",
-            {},
-            token=self.owner_jwt,
-        )
-        _, rot_b = http_json(
-            self.port,
-            "POST",
-            f"/org/v1/orgs/{self.org_id}/bots/{self.bot_b}/mcp-tokens/rotate",
-            {},
-            token=self.owner_jwt,
-        )
-        token_a = rot_a["accessToken"]
-        token_b = rot_b["accessToken"]
+        token_a, id_a = mint_bot_token(self.port, self.org_id, self.bot_a, self.owner_jwt)
+        token_b, _id_b = mint_bot_token(self.port, self.org_id, self.bot_b, self.owner_jwt)
 
         status, _ = http_json(self.port, "GET", "/org/v1/mcp/org", token=token_b)
         self.assertEqual(status, 200)
 
-        _, rot_a2 = http_json(
-            self.port,
-            "POST",
-            f"/org/v1/orgs/{self.org_id}/bots/{self.bot_a}/mcp-tokens/rotate",
-            {},
-            token=self.owner_jwt,
-        )
-        new_a = rot_a2["accessToken"]
+        new_a, _new_id = rotate_token(self.port, self.org_id, id_a, self.owner_jwt)
 
         status_old, body_old = http_json(self.port, "GET", "/org/v1/mcp/org", token=token_a)
         self.assertEqual(status_old, 401)
@@ -147,43 +149,22 @@ class McpAgentTokenTests(unittest.TestCase):
             token="lb_mcp_" + ("x" * 40),
         )
         self.assertEqual(status, 401)
-        self.assertEqual(body.get("cause"), "unknown_token")
+        self.assertEqual(body.get("cause"), "unknown")
 
-        _, rot = http_json(
-            self.port,
-            "POST",
-            f"/org/v1/orgs/{self.org_id}/bots/{self.bot_a}/mcp-tokens/rotate",
-            {},
-            token=self.owner_jwt,
-        )
-        revoked = rot["accessToken"]
-        _, tokens = http_json(
-            self.port,
-            "GET",
-            f"/org/v1/orgs/{self.org_id}/bots/{self.bot_a}/mcp-tokens",
-            token=self.owner_jwt,
-        )
-        active = next(t for t in tokens if not t.get("revoked"))
+        token, token_id = mint_bot_token(self.port, self.org_id, self.bot_a, self.owner_jwt)
         http_json(
             self.port,
             "POST",
-            f"/org/v1/orgs/{self.org_id}/bots/{self.bot_a}/mcp-tokens/{active['id']}/revoke",
+            f"/org/v1/orgs/{self.org_id}/mcp-tokens/{token_id}/revoke",
             {},
             token=self.owner_jwt,
         )
-        status, body = http_json(self.port, "GET", "/org/v1/mcp/org", token=revoked)
+        status, body = http_json(self.port, "GET", "/org/v1/mcp/org", token=token)
         self.assertEqual(status, 401)
         self.assertEqual(body.get("cause"), "revoked")
 
     def test_revoke_all_invalidates_org_and_agent_tokens(self) -> None:
-        _, rot = http_json(
-            self.port,
-            "POST",
-            f"/org/v1/orgs/{self.org_id}/bots/{self.bot_b}/mcp-tokens/rotate",
-            {},
-            token=self.owner_jwt,
-        )
-        agent_tok = rot["accessToken"]
+        agent_tok, _ = mint_bot_token(self.port, self.org_id, self.bot_b, self.owner_jwt)
         org_key = self.mod.issue_mcp_key(self.db, self.org_id)
 
         status, payload = http_json(
@@ -202,14 +183,7 @@ class McpAgentTokenTests(unittest.TestCase):
             self.assertEqual(body.get("cause"), "revoked")
 
     def test_org_key_rotate_does_not_revoke_agent_token(self) -> None:
-        _, rot = http_json(
-            self.port,
-            "POST",
-            f"/org/v1/orgs/{self.org_id}/bots/{self.bot_a}/mcp-tokens/rotate",
-            {},
-            token=self.owner_jwt,
-        )
-        agent_tok = rot["accessToken"]
+        agent_tok, _ = mint_bot_token(self.port, self.org_id, self.bot_a, self.owner_jwt)
         old_org = self.org_key
         status, rotate_body = http_json(
             self.port,
@@ -230,6 +204,42 @@ class McpAgentTokenTests(unittest.TestCase):
 
         st_new_org, _ = http_json(self.port, "GET", "/org/v1/mcp/org", token=new_org)
         self.assertEqual(st_new_org, 200)
+
+    def test_device_flow_token_has_device_code_id(self) -> None:
+        _, start = http_json(
+            self.port,
+            "POST",
+            "/org/v1/mcp/device/start",
+            {"clientName": "test-agent", "botId": self.bot_a},
+        )
+        self.assertIn("deviceCodeId", start)
+        device_code_id = start["deviceCodeId"]
+        user_code = start["userCode"]
+
+        http_json(
+            self.port,
+            "POST",
+            f"/org/v1/mcp/device/{user_code}/approve",
+            {"orgId": self.org_id, "botId": self.bot_a},
+            token=self.owner_jwt,
+        )
+        _, poll = http_json(
+            self.port,
+            "POST",
+            "/org/v1/mcp/device/token",
+            {"deviceCode": start["deviceCode"]},
+        )
+        self.assertIn("accessToken", poll)
+        self.assertEqual(poll.get("deviceCodeId"), device_code_id)
+
+        _, tokens = http_json(
+            self.port,
+            "GET",
+            f"/org/v1/orgs/{self.org_id}/mcp-tokens?botId={self.bot_a}",
+            token=self.owner_jwt,
+        )
+        bound = [t for t in tokens if t.get("deviceCodeId") == device_code_id]
+        self.assertEqual(len(bound), 1)
 
 
 if __name__ == "__main__":

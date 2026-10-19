@@ -91,7 +91,7 @@ export default function ForAgentsPage() {
           </p>
           <p className="lb-doc-muted">
             Auth failures return an explicit <Code>cause</Code> (<Code>revoked</Code>, <Code>expired</Code>,{" "}
-            <Code>unknown_token</Code>, …) instead of a generic org-resolution error.
+            <Code>unknown</Code>, …) instead of a generic org-resolution error.
           </p>
         </Section>
 
@@ -126,8 +126,9 @@ export default function ForAgentsPage() {
               <Code>key_decrypt</Code> returns a stored value; never echo it into chat
             </li>
             <li>
-              <Code>mcp_agent_token_list</Code>, <Code>mcp_agent_token_rotate</Code>,{" "}
-              <Code>mcp_agent_token_revoke</Code> — per-agent MCP tokens (WP-02 bot id)
+              <Code>mcp_token_list</Code>, <Code>mcp_token_rotate</Code>, <Code>mcp_token_revoke</Code>{" "}
+              — MCP tokens by id (bound to WP-02 <Code>botId</Code> and/or device-flow{" "}
+              <Code>deviceCodeId</Code>)
             </li>
           </ul>
           <p className="lb-doc-muted">

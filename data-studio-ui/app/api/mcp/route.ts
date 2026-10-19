@@ -189,23 +189,28 @@ async function callTool(
       return adminFetch("PATCH", `/org/v1/keys/${String(args.keyId)}`, token, clean(args));
     case "key_delete":
       return adminFetch("DELETE", `/org/v1/keys/${String(args.keyId)}`, token);
-    case "mcp_agent_token_list":
+    case "mcp_token_list": {
+      const botId = args.botId ? String(args.botId) : "";
+      const suffix = botId
+        ? `?botId=${encodeURIComponent(botId)}`
+        : "";
       return adminFetch(
         "GET",
-        `/org/v1/orgs/${orgId}/bots/${String(args.botId)}/mcp-tokens`,
+        `/org/v1/orgs/${orgId}/mcp-tokens${suffix}`,
         token,
       );
-    case "mcp_agent_token_rotate":
+    }
+    case "mcp_token_rotate":
       return adminFetch(
         "POST",
-        `/org/v1/orgs/${orgId}/bots/${String(args.botId)}/mcp-tokens/rotate`,
+        `/org/v1/orgs/${orgId}/mcp-tokens/${String(args.tokenId)}/rotate`,
         token,
         {},
       );
-    case "mcp_agent_token_revoke":
+    case "mcp_token_revoke":
       return adminFetch(
         "POST",
-        `/org/v1/orgs/${orgId}/bots/${String(args.botId)}/mcp-tokens/${String(args.tokenId)}/revoke`,
+        `/org/v1/orgs/${orgId}/mcp-tokens/${String(args.tokenId)}/revoke`,
         token,
         {},
       );
@@ -258,7 +263,7 @@ async function handleJsonRpc(
     orgId = String(orgRes.orgId ?? "");
     if (!orgId) {
       const cause =
-        typeof orgRes.cause === "string" ? orgRes.cause : "unknown_token";
+        typeof orgRes.cause === "string" ? orgRes.cause : "unknown";
       return jsonRpc(id, {
         content: [
           {

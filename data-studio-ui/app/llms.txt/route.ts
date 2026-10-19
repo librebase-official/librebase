@@ -28,7 +28,7 @@ export function llmsBody(): string {
 3. Call \`auth_poll\` with the \`deviceCode\` every \`interval\` seconds until it returns \`accessToken\` (\`lb_agt_...\`).
 4. Send that token as \`Authorization: Bearer <accessToken>\` on every other call. Keep it out of chat and out of model-visible output.
 
-Invalid or revoked tokens return an explicit \`cause\` (\`revoked\`, \`expired\`, \`unknown_token\`, etc.) from \`org_whoami\` / protected tools — not a generic org-resolution error.
+Invalid or revoked tokens return an explicit \`cause\` (\`revoked\`, \`expired\`, \`unknown\`) from \`org_whoami\` / protected tools — not a generic org-resolution error.
 
 ## Hosted MCP config
 Clients that let you set headers:
@@ -62,7 +62,7 @@ Today the token has to be pasted into the client's header config (or held by the
 - \`key_create\`, \`key_rotate\` -- the secret value is returned once
 - \`key_decrypt\` -- returns the plaintext to the calling process; never echo it to the model or chat
 - \`key_update\`, \`key_delete\` (soft delete)
-- \`mcp_agent_token_list\`, \`mcp_agent_token_rotate\`, \`mcp_agent_token_revoke\` -- per-agent (bot) MCP bearer tokens
+- \`mcp_token_list\`, \`mcp_token_rotate\`, \`mcp_token_revoke\` -- MCP bearer tokens by token id (botId / deviceCodeId bindings)
 
 Not available on the hosted server today: SQL execution, migrations, table listing, storage, functions, billing and log tools.
 
