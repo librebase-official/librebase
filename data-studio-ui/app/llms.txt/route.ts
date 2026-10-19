@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
+import { formatLlmsHostedMcpToolsSection } from "@/lib/hosted-mcp-tool-docs";
 import { SITE_URL } from "@/lib/site";
 
 export const dynamic = "force-static";
 
-function llmsBody(): string {
+export function llmsBody(): string {
   const base = SITE_URL;
   return `# Librebase
 
@@ -66,12 +67,7 @@ No pre-shared key is needed for interactive use. Remote MCP clients should use t
 4. The connector stores the token; it is never shown to the model.
 
 ## Tools
-- \`auth_start\` / \`auth_poll\` -- browser login + device flow (self-signup)
-- \`org_whoami\`, \`project_list\`, \`project_create\`
-- \`auth_provider_list\` / \`auth_provider_upsert\` -- OAuth (github/google/grok); client secret is KMS-sealed, never returned
-- \`instance_list\` / \`instance_create\` / \`instance_launch\` / \`instance_stop\`
-- \`member_list\` / \`member_invite\` / \`member_update_role\`
-- \`host_list\` / \`host_create\`
+${formatLlmsHostedMcpToolsSection()}
 
 ## Security
 - Secrets are sealed in the KMS. \`key_get\` hands the value to the process only and redacts it in model output.

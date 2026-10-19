@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { BrandWordmark } from "@/components/brand/BrandWordmark";
+import {
+  HOSTED_MCP_TOOL_COUNT,
+  HOSTED_MCP_TOOL_DOC_GROUPS,
+} from "@/lib/hosted-mcp-tool-docs";
 import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -98,26 +102,23 @@ export default function ForAgentsPage() {
           </ol>
         </Section>
 
-        <Section title="3. Hosted MCP tools (22)">
+        <Section title={`3. Hosted MCP tools (${HOSTED_MCP_TOOL_COUNT})`}>
           <p className="lb-doc-muted" style={{ marginBottom: "0.75rem" }}>
             Source of truth: <Code>POST /api/mcp</Code> → <Code>tools/list</Code>. Full audit:{" "}
             <Code>docs/mcp/AUDIT.md</Code> in the repo.
           </p>
           <ul className="lb-doc-list">
-            <li>
-              <Code>org_whoami</Code>, <Code>project_list</Code>, <Code>project_create</Code>,{" "}
-              <Code>auth_provider_list</Code>, <Code>auth_provider_upsert</Code>
-            </li>
-            <li>
-              <Code>instance_*</Code>, <Code>member_*</Code>, <Code>host_list</Code>, <Code>host_create</Code>
-            </li>
-            <li>
-              <Code>auth_start</Code> / <Code>auth_poll</Code> — browser device flow (no key required)
-            </li>
-            <li>
-              <Code>key_list</Code> … <Code>key_delete</Code> — KMS secrets; use{" "}
-              <Code>key_decrypt</Code> only inside the agent process, never in chat
-            </li>
+            {HOSTED_MCP_TOOL_DOC_GROUPS.map((group) => (
+              <li key={group.names.join("-")}>
+                {group.names.map((name, i) => (
+                  <span key={name}>
+                    {i > 0 ? (group.llmsJoin === "/" ? " / " : ", ") : null}
+                    <Code>{name}</Code>
+                  </span>
+                ))}
+                {group.forAgentsNote ? ` — ${group.forAgentsNote}` : null}
+              </li>
+            ))}
           </ul>
         </Section>
 
