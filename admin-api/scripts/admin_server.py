@@ -2312,9 +2312,19 @@ class LiorgHandler(BaseHTTPRequestHandler):
             error_message = str(body.get("error", ""))[:500] if body.get("error") else None
             try:
                 self.db.execute(
-                    "INSERT INTO mcp_usage_log (org_id, tool_name, status, latency_ms, ip_address, user_agent, error_message) "
-                    "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (org_id, tool_name, status, latency_ms, ip_address, user_agent, error_message),
+                    "INSERT INTO mcp_usage_log (id, org_id, tool_name, status, latency_ms, ip_address, user_agent, error_message, created_at) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        new_id("mcpu"),
+                        org_id,
+                        tool_name,
+                        status,
+                        latency_ms,
+                        ip_address,
+                        user_agent,
+                        error_message,
+                        utc_now(),
+                    ),
                 )
                 self.db.commit()
             except Exception:

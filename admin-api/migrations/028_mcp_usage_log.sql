@@ -1,7 +1,7 @@
 -- MCP usage log — tracks every tool call through the hosted MCP endpoint.
 -- Used for analytics dashboards, billing, and abuse detection.
 CREATE TABLE IF NOT EXISTS mcp_usage_log (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id TEXT PRIMARY KEY,
   org_id TEXT NOT NULL,
   mcp_key_id TEXT,
   tool_name TEXT NOT NULL,
@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS mcp_usage_log (
   ip_address TEXT,
   user_agent TEXT,
   error_message TEXT,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TEXT NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_mcp_usage_org ON mcp_usage_log(org_id);
