@@ -79,6 +79,21 @@ def hcloud_server_type() -> str:
     return os.environ.get("LIBREBASE_HETZNER_SERVER_TYPE", "").strip() or "cx23"
 
 
+def agent_control_plane_url() -> str:
+    """Base URL for host-agent → admin API (register, heartbeat, instances).
+
+    Explicit LIBREBASE_AGENT_URL wins. Otherwise use the Studio console origin
+    plus the admin-proxy path so agents on the public internet reach admin-api.
+    """
+    explicit = os.environ.get("LIBREBASE_AGENT_URL", "").strip().rstrip("/")
+    if explicit:
+        return explicit
+    console = os.environ.get("LIBREBASE_CONSOLE_URL", "").strip().rstrip("/")
+    if console:
+        return console + "/api/admin-proxy"
+    return "https://app.librebase.xyz/api/admin-proxy"
+
+
 def _headers() -> dict[str, str]:
     return {
         "Authorization": f"Bearer {hcloud_api_key()}",
@@ -146,13 +161,9 @@ def render_cloudinit(host_id: str, agent_token: str) -> str:
     Ships the host agent + systemd unit inline (base64) and installs Podman if
     the base image lacks it, so provisioning works on any Ubuntu image — no
     golden image required. The agent reaches the control plane via
-    LIBREBASE_AGENT_URL, falling back to LIBREBASE_CONSOLE_URL.
+    LIBREBASE_AGENT_URL, else LIBREBASE_CONSOLE_URL + /api/admin-proxy.
     """
-    agent_url = (
-        os.environ.get("LIBREBASE_AGENT_URL", "").strip().rstrip("/")
-        or os.environ.get("LIBREBASE_CONSOLE_URL", "").strip().rstrip("/")
-        or "https://app.librebase.xyz"
-    )
+    agent_url = agent_control_plane_url()
     agent_b64, unit_b64 = _agent_files_b64()
     return (
         "#cloud-config\n"

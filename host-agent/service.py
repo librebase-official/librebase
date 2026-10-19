@@ -36,6 +36,8 @@ from typing import Any
 
 RECONCILE_INTERVAL = int(os.environ.get("LIBREBASE_AGENT_RECONCILE_SECONDS", "20"))
 HEARTBEAT_INTERVAL = int(os.environ.get("LIBREBASE_AGENT_HEARTBEAT_SECONDS", "30"))
+REGISTER_INITIAL_BACKOFF = float(os.environ.get("LIBREBASE_AGENT_REGISTER_BACKOFF_SECONDS", "5"))
+REGISTER_MAX_BACKOFF = float(os.environ.get("LIBREBASE_AGENT_REGISTER_MAX_BACKOFF_SECONDS", "300"))
 RUNTIME_IMAGE = os.environ.get(
     "LIDB_RUNTIME_IMAGE", "ghcr.io/librebase-official/lidb-runtime:latest"
 )
@@ -52,11 +54,16 @@ def admin_url() -> str:
     accept that or the legacy LIBREBASE_ADMIN_URL so the stack deploys to any
     machine without edits.
     """
-    return (
-        os.environ.get("LIBREBASE_AGENT_URL", "").strip().rstrip("/")
-        or os.environ.get("LIBREBASE_ADMIN_URL", "").strip().rstrip("/")
-        or "https://app.librebase.xyz"
-    )
+    explicit = os.environ.get("LIBREBASE_AGENT_URL", "").strip().rstrip("/")
+    if explicit:
+        return explicit
+    legacy = os.environ.get("LIBREBASE_ADMIN_URL", "").strip().rstrip("/")
+    if legacy:
+        return legacy
+    console = os.environ.get("LIBREBASE_CONSOLE_URL", "").strip().rstrip("/")
+    if console:
+        return console + "/api/admin-proxy"
+    return "https://app.librebase.xyz/api/admin-proxy"
 
 
 def _req(method: str, path: str, body: Any = None) -> tuple[int, Any]:
@@ -202,11 +209,32 @@ def reconcile() -> dict[str, int]:
     return {"started": started, "stopped": stopped, "desired": len(wanted), "running": len(running)}
 
 
+def _registration_tick(state: dict[str, float | bool]) -> None:
+    """Retry register() with exponential backoff until it succeeds."""
+    if state.get("registered"):
+        return
+    now = time.time()
+    if now < float(state.get("next_attempt", 0)):
+        return
+    if register():
+        state["registered"] = True
+        return
+    backoff = float(state.get("backoff", REGISTER_INITIAL_BACKOFF))
+    state["backoff"] = min(backoff * 2, REGISTER_MAX_BACKOFF)
+    state["next_attempt"] = now + backoff
+
+
 def loop(once: bool = False) -> None:
     last_heartbeat = 0.0
     last_reconcile = 0.0
+    reg_state: dict[str, float | bool] = {
+        "registered": False,
+        "backoff": REGISTER_INITIAL_BACKOFF,
+        "next_attempt": 0.0,
+    }
     while True:
         now = time.time()
+        _registration_tick(reg_state)
         if now - last_heartbeat >= HEARTBEAT_INTERVAL:
             heartbeat()
             last_heartbeat = now

@@ -36,6 +36,7 @@ class _FakeHcloud:
 
     configured = True
     last_agent_token: str | None = None
+    server_status = "running"
 
     def hcloud_configured(self) -> bool:
         return self.configured
@@ -51,10 +52,17 @@ class _FakeHcloud:
         return {"server_id": 99, "ip": "203.0.113.9"}
 
     def get_server(self, server_id):
-        return {"status": "running", "ip": "203.0.113.9", "name": "x"}
+        return {
+            "status": self.server_status,
+            "ip": "203.0.113.9",
+            "name": "x",
+        }
 
     def delete_server(self, server_id) -> None:
         pass
+
+    def power_on_server(self, server_id) -> None:
+        self.server_status = "running"
 
 
 class TestHostProvisioning(unittest.TestCase):
@@ -276,6 +284,120 @@ class TestHostProvisioning(unittest.TestCase):
             self.assertEqual(host2["status"], "running")
             self.assertEqual(host2["ip"], "203.0.113.9")
             self.assertEqual(host2["serverId"], 99)
+        finally:
+            self._cleanup(mod, server, db, tmp, old_db, old_jwt, old_hcloud)
+
+    def test_provisioning_off_during_boot_grace_stays_provisioning(self) -> None:
+        mod, tmp, db, base, server, jwt, old_db, old_jwt, old_hcloud, org_id = self._boot(
+            True
+        )
+        token = self._token(mod, db, jwt)
+        try:
+            st, host = self._post(
+                base,
+                "/org/v1/orgs/%s/hosts" % org_id,
+                {"name": "vm-boot", "provider": "hetzner", "region": "nbg1", "memMb": 1024},
+                token=token,
+            )
+            self.assertEqual(st, 201)
+            hid = host["id"]
+            mod._hcloud.server_status = "off"  # type: ignore[attr-defined]
+            st2, host2 = self._get(
+                base, "/org/v1/orgs/%s/hosts/%s" % (org_id, hid), token=token
+            )
+            self.assertEqual(st2, 200)
+            self.assertEqual(host2["status"], "provisioning")
+        finally:
+            self._cleanup(mod, server, db, tmp, old_db, old_jwt, old_hcloud)
+
+    def test_provisioning_off_after_grace_becomes_error(self) -> None:
+        mod, tmp, db, base, server, jwt, old_db, old_jwt, old_hcloud, org_id = self._boot(
+            True
+        )
+        token = self._token(mod, db, jwt)
+        try:
+            st, host = self._post(
+                base,
+                "/org/v1/orgs/%s/hosts" % org_id,
+                {"name": "vm-stale", "provider": "hetzner", "region": "nbg1", "memMb": 1024},
+                token=token,
+            )
+            self.assertEqual(st, 201)
+            hid = host["id"]
+            db.execute(
+                "UPDATE hosts SET updated_at = ? WHERE id = ?",
+                ("2000-01-01T00:00:00Z", hid),
+            )
+            mod._hcloud.server_status = "off"  # type: ignore[attr-defined]
+            st2, host2 = self._get(
+                base, "/org/v1/orgs/%s/hosts/%s" % (org_id, hid), token=token
+            )
+            self.assertEqual(st2, 200)
+            self.assertEqual(host2["status"], "error")
+            self.assertIn("lastError", host2)
+        finally:
+            self._cleanup(mod, server, db, tmp, old_db, old_jwt, old_hcloud)
+
+    def test_heartbeat_recovers_error_host_to_running(self) -> None:
+        mod, tmp, db, base, server, jwt, old_db, old_jwt, old_hcloud, org_id = self._boot(
+            True
+        )
+        token = self._token(mod, db, jwt)
+        try:
+            st, host = self._post(
+                base,
+                "/org/v1/orgs/%s/hosts" % org_id,
+                {"name": "vm-hb", "provider": "hetzner", "region": "nbg1", "memMb": 1024},
+                token=token,
+            )
+            self.assertEqual(st, 201)
+            hid = host["id"]
+            agent_token = _FakeHcloud.last_agent_token
+            db.execute(
+                "UPDATE hosts SET status = 'error', last_error = 'stale' WHERE id = ?",
+                (hid,),
+            )
+            st2, _ = self._post(
+                base,
+                "/org/v1/host-agent/heartbeat",
+                {"hostId": hid},
+                token=agent_token,
+            )
+            self.assertEqual(st2, 200)
+            row = db.fetchone("SELECT status, last_error FROM hosts WHERE id = ?", (hid,))
+            self.assertEqual(row["status"], "running")
+            self.assertIsNone(row["last_error"])
+        finally:
+            self._cleanup(mod, server, db, tmp, old_db, old_jwt, old_hcloud)
+
+    def test_start_then_off_during_grace_stays_provisioning(self) -> None:
+        mod, tmp, db, base, server, jwt, old_db, old_jwt, old_hcloud, org_id = self._boot(
+            True
+        )
+        token = self._token(mod, db, jwt)
+        try:
+            st, host = self._post(
+                base,
+                "/org/v1/orgs/%s/hosts" % org_id,
+                {"name": "vm-start", "provider": "hetzner", "region": "nbg1", "memMb": 1024},
+                token=token,
+            )
+            self.assertEqual(st, 201)
+            hid = host["id"]
+            db.execute("UPDATE hosts SET status = 'stopped' WHERE id = ?", (hid,))
+            mod._hcloud.server_status = "off"  # type: ignore[attr-defined]
+            st2, _ = self._post(
+                base,
+                "/org/v1/orgs/%s/hosts/%s/start" % (org_id, hid),
+                {},
+                token=token,
+            )
+            self.assertEqual(st2, 200)
+            st3, host3 = self._get(
+                base, "/org/v1/orgs/%s/hosts/%s" % (org_id, hid), token=token
+            )
+            self.assertEqual(st3, 200)
+            self.assertEqual(host3["status"], "provisioning")
         finally:
             self._cleanup(mod, server, db, tmp, old_db, old_jwt, old_hcloud)
 
