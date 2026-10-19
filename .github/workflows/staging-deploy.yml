@@ -44,7 +44,8 @@ jobs:
       - name: Build and push admin-api
         uses: docker/build-push-action@v5
         with:
-          context: ./admin-api
+          context: .
+          file: ./admin-api/Dockerfile
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-admin:${{ steps.meta.outputs.tag }}

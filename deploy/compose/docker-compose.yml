@@ -1,8 +1,8 @@
 services:
   librebase-admin:
     build:
-      context: ../../admin-api
-      dockerfile: Dockerfile
+      context: ../..
+      dockerfile: admin-api/Dockerfile
     # Admin is an internal API: never expose it to the internet. The studio
     # reaches it over the compose network; keep this port on loopback only.
     ports:
