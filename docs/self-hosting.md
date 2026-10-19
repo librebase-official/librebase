@@ -37,20 +37,28 @@ For database/runtime workloads (lidb instances on the same host, Kubernetes, or 
 
 6. **Browser alternative:** open Studio at your configured URL (compose publishes `127.0.0.1:3005` by default) and complete `/setup` once, then sign in at `/login`.
 
-### Compose networking
+### Compose networking and exposure
 
-The OSS stack runs **KMS, Admin, and Studio in one shared network namespace** so Studio and Admin talk over `http://127.0.0.1:54330` and Admin reaches KMS at `http://127.0.0.1:54340`. Host port maps (`127.0.0.1:3005`, `127.0.0.1:54330`) are attached to the KMS service container.
+The OSS stack runs **KMS, Admin, and Studio in one shared network namespace** (all attached to the `kms` service via `network_mode: service:kms`). Inside that namespace:
 
-- Do **not** set `LIBREBASE_ADMIN_BIND=127.0.0.1` in `.env` unless you know you need it; compose sets `LIBREBASE_ADMIN_BIND=0.0.0.0` on the admin process.
-- Do not publish Admin API (`54330`) to the public internet.
+- Studio → Admin: `http://127.0.0.1:54330`
+- Admin → KMS: `http://127.0.0.1:54340`
+
+Admin and KMS bind `0.0.0.0` **inside the container netns** so processes in the same namespace can connect; they are **not** published on the Docker host by default.
+
+**Host exposure (default):** only Studio is mapped — `127.0.0.1:3005:3005` on the `kms` service (the netns owner). Admin (`54330`) and KMS (`54340`) have **no** host port mapping. Do not add bare `54330:54330`, `0.0.0.0:54330`, or public binds for Admin/KMS unless you fully understand the risk.
+
+To reach the public internet, put a **reverse proxy** in front of Studio (`127.0.0.1:3005`) — see **Reverse proxy** below. Never expose Admin or KMS on `0.0.0.0`.
+
+- Do **not** set `LIBREBASE_ADMIN_BIND=127.0.0.1` in `.env` unless you know you need it; compose sets `LIBREBASE_ADMIN_BIND=0.0.0.0` on the admin process (in-netns only).
 
 ## Services and ports
 
 | Service | Compose service | Host bind (default) | Role |
 |---------|-----------------|---------------------|------|
 | Studio | `studio` | `127.0.0.1:3005` | Next.js console; MCP at `/api/mcp` |
-| Admin API | `librebase-admin` | `127.0.0.1:54330` | Orgs, projects, instances metadata, MCP keys, auth |
-| KMS | `kms` | (internal `54340`) | Seals project secrets |
+| Admin API | `librebase-admin` | (not published) | Orgs, projects, instances metadata, MCP keys, auth |
+| KMS | `kms` | (not published) | Seals project secrets; owns the shared netns |
 
 Volumes `librebase-admin-data` and `librebase-kms-data` hold SQLite databases. Back them up before upgrades.
 
@@ -80,18 +88,24 @@ Primary path for agents and automation. Placeholders below — replace with your
 
 ### 1. First-run setup
 
-`POST /org/v1/setup` is allowed only while the database has no organization.
+`POST /org/v1/setup` is allowed only while the database has no organization. Admin is not on the host loopback — run setup **inside** the stack (from `deploy/compose/`):
 
 ```bash
-ADMIN=http://127.0.0.1:54330
-
-curl -sS -X POST "$ADMIN/org/v1/setup" \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "name": "My Org",
-    "ownerEmail": "owner@example.com",
-    "password": "REPLACE_WITH_STRONG_PASSWORD"
-  }'
+docker compose exec -T librebase-admin python3 -c "
+import json, urllib.request
+body = json.dumps({
+    'name': 'My Org',
+    'ownerEmail': 'owner@example.com',
+    'password': 'REPLACE_WITH_STRONG_PASSWORD',
+}).encode()
+req = urllib.request.Request(
+    'http://127.0.0.1:54330/org/v1/setup',
+    data=body,
+    method='POST',
+    headers={'Content-Type': 'application/json'},
+)
+print(urllib.request.urlopen(req, timeout=10).read().decode())
+"
 ```
 
 Example response fields (save locally):
@@ -104,12 +118,19 @@ Example response fields (save locally):
 ### 2. Rotate or issue a new MCP key (optional)
 
 ```bash
-ORG_ID=org_REPLACE_ME
-SESSION_JWT=REPLACE_WITH_TOKEN_FROM_SETUP
-
-curl -sS -X POST "$ADMIN/org/v1/orgs/$ORG_ID/mcp-keys/rotate" \
-  -H "Authorization: Bearer $SESSION_JWT" \
-  -H 'Content-Type: application/json'
+docker compose exec -T librebase-admin python3 -c "
+import json, os, urllib.request
+org_id = 'org_REPLACE_ME'
+token = 'REPLACE_WITH_TOKEN_FROM_SETUP'
+body = json.dumps({}).encode()
+req = urllib.request.Request(
+    f'http://127.0.0.1:54330/org/v1/orgs/{org_id}/mcp-keys/rotate',
+    data=body,
+    method='POST',
+    headers={'Content-Type': 'application/json', 'Authorization': f'Bearer {token}'},
+)
+print(urllib.request.urlopen(req, timeout=10).read().decode())
+"
 ```
 
 Response: `{ "mcpKey": "lb_mcp_…" }` (shown once).
@@ -139,8 +160,8 @@ Public device-flow tools (`auth_start`, `auth_poll`, `initialize`, `tools/list`)
 ### 4. Health checks
 
 ```bash
-curl -sS "$ADMIN/health"
-curl -sS "$STUDIO/api/mcp" -H 'Content-Type: application/json' \
+docker compose exec -T librebase-admin wget -qO- http://127.0.0.1:54330/health
+curl -sS "http://127.0.0.1:3005/api/mcp" -H 'Content-Type: application/json' \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 ```
 
@@ -170,11 +191,11 @@ If you restore an older volume backup onto a newer image, start the stack once a
 1. Back up Docker volumes (`librebase-admin-data`, `librebase-kms-data`).
 2. Bump `LIBREBASE_VERSION` in `deploy/compose/.env` after pulling the new release. `scripts/sync-version.py` updates `deploy/compose/compose.env` as a repo reference — copy that value into `.env` when upgrading.
 3. From `deploy/compose/`: `docker compose up -d --build`.
-4. Verify `/health` on Admin API and sign-in to Studio.
+4. Verify Admin health inside the stack (`docker compose exec librebase-admin wget -qO- http://127.0.0.1:54330/health`) and sign-in to Studio.
 
 ## Reverse proxy (recommended for production)
 
-The compose file keeps Studio and Admin API on loopback. Terminate TLS on the host (e.g. `deploy/nginx-librebase.xyz.conf` as a reference) and proxy to `127.0.0.1:3005`. Never publish `54330` to the internet.
+The compose file publishes only Studio on `127.0.0.1:3005`. Terminate TLS on the host (e.g. `deploy/nginx-librebase.xyz.conf` as a reference) and proxy to that address. Do not map Admin (`54330`) or KMS (`54340`) to the host or to `0.0.0.0`.
 
 ## MCP and agents on self-host
 

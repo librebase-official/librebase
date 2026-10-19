@@ -23,9 +23,8 @@ services:
       start_period: 5s
     volumes:
       - librebase-kms-data:/data
-    # Host publishes map into this network namespace (admin + studio share it below).
+    # Only Studio is published on host loopback; Admin (54330) and KMS (54340) stay inside this netns.
     ports:
-      - "127.0.0.1:54330:54330"
       - "127.0.0.1:3005:3005"
 
   librebase-admin:

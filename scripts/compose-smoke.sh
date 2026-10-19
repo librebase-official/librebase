@@ -55,12 +55,36 @@ wait_url() {
   return 1
 }
 
-wait_url "http://127.0.0.1:54330/health"
+wait_admin_health() {
+  local i
+  for i in $(seq 1 90); do
+    if docker_compose exec -T librebase-admin wget -qO- --timeout=2 "http://127.0.0.1:54330/health" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 2
+  done
+  echo "compose-smoke.sh: timeout waiting for admin /health inside netns" >&2
+  return 1
+}
+
+wait_admin_health
 wait_url "http://127.0.0.1:3005/api/mcp"
 
-SETUP_JSON="$(curl -sf --max-time 10 -X POST "http://127.0.0.1:54330/org/v1/setup" \
-  -H 'Content-Type: application/json' \
-  -d '{"name":"Smoke Org","ownerEmail":"smoke@example.com","password":"smoke-test-password-12"}')"
+SETUP_JSON="$(docker_compose exec -T librebase-admin python3 -c "
+import json, urllib.request
+body = json.dumps({
+    'name': 'Smoke Org',
+    'ownerEmail': 'smoke@example.com',
+    'password': 'smoke-test-password-12',
+}).encode()
+req = urllib.request.Request(
+    'http://127.0.0.1:54330/org/v1/setup',
+    data=body,
+    method='POST',
+    headers={'Content-Type': 'application/json'},
+)
+print(urllib.request.urlopen(req, timeout=10).read().decode())
+")"
 MCP_KEY="$(python3 -c "import json,sys; print(json.load(sys.stdin)['mcpKey'])" <<<"$SETUP_JSON")"
 
 docker_compose exec -T studio \
