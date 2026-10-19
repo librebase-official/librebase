@@ -27,6 +27,12 @@ from typing import Any, Mapping
 from urllib.parse import parse_qs, quote, urlencode, urlparse
 
 ROOT = Path(__file__).resolve().parent.parent
+SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+import mail_api  # noqa: E402
+import mail_pack  # noqa: E402
+
 MIGRATIONS = ROOT / "migrations"
 SCRIPTS = Path(__file__).resolve().parent
 
@@ -2165,6 +2171,44 @@ class LiorgHandler(BaseHTTPRequestHandler):
             self.send_json(200, [row_approval(r) for r in rows])
             return
 
+        mail_accounts = re.fullmatch(r"/org/v1/orgs/([^/]+)/mail/accounts", path)
+        if mail_accounts:
+            org_id = mail_accounts.group(1)
+            if not self.require_org_role(org_id, "admin"):
+                return
+            self.send_json(200, mail_api.list_mail_accounts(self.db, org_id))
+            return
+
+        mail_account_one = re.fullmatch(r"/org/v1/orgs/([^/]+)/mail/accounts/([^/]+)", path)
+        if mail_account_one:
+            org_id, account_id = mail_account_one.groups()
+            if not self.require_org_role(org_id, "admin"):
+                return
+            status, payload = mail_api.get_mail_account_admin(self.db, org_id, account_id)
+            self.send_json(status, payload)
+            return
+
+        mail_drafts_list = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/bots/([^/]+)/mail/drafts", path
+        )
+        if mail_drafts_list:
+            org_id, bot_id = mail_drafts_list.groups()
+            if not self.require_org_member(org_id):
+                return
+            self.send_json(200, mail_api.list_mail_drafts(self.db, org_id, bot_id))
+            return
+
+        mail_draft_one = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/bots/([^/]+)/mail/drafts/([^/]+)", path
+        )
+        if mail_draft_one:
+            org_id, bot_id, draft_id = mail_draft_one.groups()
+            if not self.require_org_member(org_id):
+                return
+            status, payload = mail_api.get_mail_draft(self.db, org_id, bot_id, draft_id)
+            self.send_json(status, payload)
+            return
+
         bot_one = re.fullmatch(r"/org/v1/orgs/([^/]+)/bots/([^/]+)", path)
         if bot_one:
             org_id, bot_id = bot_one.groups()
@@ -3001,6 +3045,90 @@ class LiorgHandler(BaseHTTPRequestHandler):
             self.send_json(201, row_approval(row))
             return
 
+        mail_accounts_create = re.fullmatch(r"/org/v1/orgs/([^/]+)/mail/accounts", path)
+        if mail_accounts_create:
+            org_id = mail_accounts_create.group(1)
+            if not self.require_org_role(org_id, "admin"):
+                return
+            status, payload = mail_api.create_mail_account(
+                self.db,
+                org_id,
+                body,
+                utc_now,
+                new_id,
+                kms_configured,
+                kms_seal,
+            )
+            self.send_json(status, payload)
+            return
+
+        mail_drafts_create = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/bots/([^/]+)/mail/drafts", path
+        )
+        if mail_drafts_create:
+            org_id, bot_id = mail_drafts_create.groups()
+            if not self.require_org_role(org_id, "member"):
+                return
+            bot_row = self.db.fetchone(
+                "SELECT id FROM bots WHERE org_id = ? AND id = ?",
+                (org_id, bot_id),
+            )
+            if not bot_row:
+                self.send_json(404, {"error": "bot not found"})
+                return
+            claims = self.bearer_claims() or self.mcp_claims()
+            if not claims or not claims.get("sub"):
+                self.send_json(401, {"error": "unauthorized"})
+                return
+            status, payload = mail_api.create_mail_draft(
+                self.db,
+                org_id,
+                bot_id,
+                body,
+                str(claims["sub"]),
+                utc_now,
+                new_id,
+                approval_payload_hash,
+            )
+            self.send_json(status, payload)
+            return
+
+        mail_send = re.fullmatch(r"/org/v1/orgs/([^/]+)/bots/([^/]+)/mail/send", path)
+        if mail_send:
+            org_id, bot_id = mail_send.groups()
+            if not self.require_org_role(org_id, "member"):
+                return
+            draft_id = str(body.get("draftId", body.get("draft_id", ""))).strip()
+            if not draft_id:
+                self.send_json(400, {"error": "draftId required"})
+                return
+            claims = self.bearer_claims() or self.mcp_claims()
+            if not claims or not claims.get("sub"):
+                self.send_json(401, {"error": "unauthorized"})
+                return
+            if not kms_configured():
+                # klaut-only sends work without KMS; gmail/msgraph need unseal.
+                draft_row = self.db.fetchone(
+                    "SELECT provider FROM mail_drafts WHERE org_id = ? AND bot_id = ? AND id = ?",
+                    (org_id, bot_id, draft_id),
+                )
+                if draft_row and draft_row["provider"] != "klaut":
+                    self.send_json(503, {"error": "KMS not configured (set LIBREBASE_KMS_URL)"})
+                    return
+            status, payload = mail_api.send_mail_draft(
+                self.db,
+                org_id,
+                bot_id,
+                draft_id,
+                str(claims["sub"]),
+                utc_now,
+                new_id,
+                approval_payload_hash,
+                kms_unseal,
+            )
+            self.send_json(status, payload)
+            return
+
         org_hosts = re.fullmatch(r"/org/v1/orgs/([^/]+)/hosts", path)
         if org_hosts:
             org_id = org_hosts.group(1)
@@ -3566,6 +3694,25 @@ class LiorgHandler(BaseHTTPRequestHandler):
                 (role, row["org_id"], row["user_id"]),
             )
             self.send_json(200, {"userId": row["user_id"], "role": role})
+            return
+
+        mail_draft_patch = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/bots/([^/]+)/mail/drafts/([^/]+)", path
+        )
+        if mail_draft_patch:
+            org_id, bot_id, draft_id = mail_draft_patch.groups()
+            if not self.require_org_role(org_id, "member"):
+                return
+            status, payload = mail_api.patch_mail_draft(
+                self.db,
+                org_id,
+                bot_id,
+                draft_id,
+                body,
+                utc_now,
+                approval_payload_hash,
+            )
+            self.send_json(status, payload)
             return
 
         bot_patch = re.fullmatch(r"/org/v1/orgs/([^/]+)/bots/([^/]+)", path)

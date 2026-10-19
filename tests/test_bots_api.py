@@ -47,6 +47,7 @@ class TestBotsApi(unittest.TestCase):
             resp = json.loads(r.read())
             cls.org_id = resp["orgId"]
             cls.owner_token = resp["token"]
+            cls.mcp_key = resp["mcpKey"]
 
         now = cls.mod.utc_now()
         cls.member_user_id = cls.mod.new_id("user")
