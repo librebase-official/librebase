@@ -39,18 +39,19 @@ For database/runtime workloads (lidb instances on the same host, Kubernetes, or 
 
 ### Compose networking and exposure
 
-The OSS stack runs **KMS, Admin, and Studio in one shared network namespace** (all attached to the `kms` service via `network_mode: service:kms`). Inside that namespace:
+Services attach to the **`librebase-deploy-net` bridge**:
 
-- Studio → Admin: `http://127.0.0.1:54330`
-- Admin → KMS: `http://127.0.0.1:54340`
+- Studio → Admin: `http://librebase-admin:54330` (`LIBREBASE_ADMIN_URL` in compose)
+- Admin → KMS: `http://kms:54340`
 
-Admin and KMS bind `0.0.0.0` **inside the container netns** so processes in the same namespace can connect; they are **not** published on the Docker host by default.
+Admin and KMS bind `0.0.0.0` inside their containers so peers on the bridge can connect. They are **not** published on the Docker host.
 
-**Host exposure (default):** only Studio is mapped — `127.0.0.1:3005:3005` on the `kms` service (the netns owner). Admin (`54330`) and KMS (`54340`) have **no** host port mapping. Do not add bare `54330:54330`, `0.0.0.0:54330`, or public binds for Admin/KMS unless you fully understand the risk.
+**Host exposure (default):** only Studio is mapped — `127.0.0.1:3005:3005` on the `studio` service. Admin (`54330`) and KMS (`54340`) have **no** host port mapping. Do not add bare `54330:54330`, `0.0.0.0:54330`, or public binds for Admin/KMS unless you fully understand the risk.
 
-To reach the public internet, put a **reverse proxy** in front of Studio (`127.0.0.1:3005`) — see **Reverse proxy** below. Never expose Admin or KMS on `0.0.0.0`.
+Put a **reverse proxy** in front of Studio (`127.0.0.1:3005`) for TLS/public access — see **Reverse proxy** below.
 
-- Do **not** set `LIBREBASE_ADMIN_BIND=127.0.0.1` in `.env` unless you know you need it; compose sets `LIBREBASE_ADMIN_BIND=0.0.0.0` on the admin process (in-netns only).
+- Do **not** set `LIBREBASE_ADMIN_BIND=127.0.0.1` in `.env`; compose sets `LIBREBASE_ADMIN_BIND=0.0.0.0` for bridge reachability.
+- If container-to-container calls time out on a dev VM, restart Docker (`sudo systemctl restart docker` or restart `dockerd`) and bring the stack up again.
 
 ## Services and ports
 
@@ -58,7 +59,7 @@ To reach the public internet, put a **reverse proxy** in front of Studio (`127.0
 |---------|-----------------|---------------------|------|
 | Studio | `studio` | `127.0.0.1:3005` | Next.js console; MCP at `/api/mcp` |
 | Admin API | `librebase-admin` | (not published) | Orgs, projects, instances metadata, MCP keys, auth |
-| KMS | `kms` | (not published) | Seals project secrets; owns the shared netns |
+| KMS | `kms` | (not published) | Seals project secrets |
 
 Volumes `librebase-admin-data` and `librebase-kms-data` hold SQLite databases. Back them up before upgrades.
 

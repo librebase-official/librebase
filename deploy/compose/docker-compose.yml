@@ -23,22 +23,20 @@ services:
       start_period: 5s
     volumes:
       - librebase-kms-data:/data
-    # Only Studio is published on host loopback; Admin (54330) and KMS (54340) stay inside this netns.
-    ports:
-      - "127.0.0.1:3005:3005"
+    networks:
+      - librebase-deploy-net
 
   librebase-admin:
     build:
       context: ../..
       dockerfile: admin-api/Dockerfile
-    network_mode: "service:kms"
     env_file:
       - .env
     environment:
       LIBREBASE_ADMIN_BIND: 0.0.0.0
       LIBREBASE_ADMIN_PORT: 54330
       LIBREBASE_ADMIN_DB_PATH: /data/admin.db
-      LIBREBASE_KMS_URL: http://127.0.0.1:54340
+      LIBREBASE_KMS_URL: http://kms:54340
       LIBREBASE_KMS_SERVICE_ROLE: ${LIBREBASE_KMS_SERVICE_ROLE}
       LIBREBASE_ADMIN_JWT_SECRET: ${LIBREBASE_ADMIN_JWT_SECRET}
     depends_on:
@@ -52,6 +50,8 @@ services:
       timeout: 3s
       retries: 5
       start_period: 5s
+    networks:
+      - librebase-deploy-net
 
   studio:
     build:
@@ -60,15 +60,33 @@ services:
       args:
         LIBREBASE_VERSION: ${LIBREBASE_VERSION}
         NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://127.0.0.1:3005}
-    network_mode: "service:kms"
+    ports:
+      - "127.0.0.1:3005:3005"
     env_file:
       - .env
     environment:
-      LIBREBASE_ADMIN_URL: http://127.0.0.1:54330
+      LIBREBASE_ADMIN_URL: http://librebase-admin:54330
     depends_on:
       librebase-admin:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3005/api/mcp').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - librebase-deploy-net
 
 volumes:
   librebase-admin-data:
   librebase-kms-data:
+
+networks:
+  librebase-deploy-net:

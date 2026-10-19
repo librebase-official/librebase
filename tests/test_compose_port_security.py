@@ -27,6 +27,14 @@ def _port_mappings(compose_text: str) -> list[tuple[str | None, str, str]]:
 
 
 class TestComposePortSecurity(unittest.TestCase):
+    def test_oss_compose_uses_bridge_network_not_shared_netns(self) -> None:
+        text = OSS_COMPOSE.read_text()
+        self.assertNotIn('network_mode: "service:kms"', text)
+        self.assertNotIn("network_mode: service:kms", text)
+        self.assertIn("librebase-deploy-net", text)
+        self.assertIn("LIBREBASE_ADMIN_URL: http://librebase-admin:54330", text)
+        self.assertIn("LIBREBASE_KMS_URL: http://kms:54340", text)
+
     def test_oss_compose_publishes_only_studio_on_loopback(self) -> None:
         text = OSS_COMPOSE.read_text()
         mappings = _port_mappings(text)
