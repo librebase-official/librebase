@@ -24,6 +24,7 @@ licontainer/target/
 # Python
 __pycache__/
 *.pyc
+*.egg-info/
 
 # Parity harness output
 tests/parity/last-report.json

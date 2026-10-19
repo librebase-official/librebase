@@ -107,6 +107,8 @@ Point agents at your Studio origin:
 - Endpoint: `POST {SITE_URL}/api/mcp`
 - Stdio bridge env: `LIBREBASE_MCP_URL`, `LIBREBASE_MCP_TOKEN` — see [mcp/README.md](../mcp/README.md).
 
+**Migration:** older installs may still set `LIBREBASE_MCP_KEY`. The stdio bridges accept it as a deprecated alias (`LIBREBASE_MCP_TOKEN` wins if both are set). Rename to `LIBREBASE_MCP_TOKEN` when you next rotate credentials.
+
 ## Related docs
 
 - [admin-api/README.md](../admin-api/README.md) — API auth and env reference

@@ -3,6 +3,7 @@
 Env:
   LIBREBASE_MCP_URL   — default https://app.librebase.xyz/api/mcp
   LIBREBASE_MCP_TOKEN — optional lb_mcp_* / lb_agt_* bearer (never logged)
+  LIBREBASE_MCP_KEY   — deprecated alias for LIBREBASE_MCP_TOKEN
 """
 
 from __future__ import annotations
