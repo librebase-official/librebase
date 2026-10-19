@@ -101,7 +101,7 @@ seems stale, use `docker compose build --no-cache`.
 | Google OAuth client ID/secret | VPS `/opt/librebase-admin/docker-compose.yml` (+ GCP project `commanding-iris-505518-d0`) |
 | GitHub OAuth client ID/secret | same VPS compose |
 | admin-api JWT secret | VPS compose (`LIBREBASE_ADMIN_JWT_SECRET`) |
-| MCP key (test acct) | `$LIBREBASE_MCP_KEY` — issue in Studio `/admin` → **MCP key** (see `mcp/README.md`; never commit) |
+| MCP token (test acct) | `$LIBREBASE_MCP_TOKEN` — device flow or Studio `/admin` → **MCP key** (see `mcp/README.md`; never commit) |
 | IONOS DNS API | `reeldemo.io/.env.local` |
 | gcloud auth | `~/.config/gcloud` (account `julian.m.kleber@gmail.com`) |
 
@@ -111,7 +111,7 @@ seems stale, use `docker compose build --no-cache`.
   sessions + refresh, MFA TOTP, roles, rate-limit/lockout, password reset/verify.
 - **OAuth SSO** (GitHub + Google): `/org/v1/auth/oauth/start` + `/callback` (admin-api),
   Studio `/api/admin/oauth/start` + `/oauth/callback`; **sign-up + sign-in** (auto-provisions user + personal org).
-- **MCP server**: `mcp/librebase_mcp/__main__.py` — 15 tools (org/projects/instances/members/hosts + `auth_provider_list`/`auth_provider_upsert`). Stdio JSON-RPC, no SDK. Env: `LIBREBASE_ADMIN_URL`, `LIBREBASE_MCP_KEY`.
+- **MCP bridge**: `mcp/librebase_mcp/__main__.py` — stdio proxy to hosted MCP. Env: `LIBREBASE_MCP_URL`, `LIBREBASE_MCP_TOKEN`.
 - **Billing/entitlement**: `organizations.edition` (feature gates) + `organizations.plan`
   (`suspended`/`starter` 1-inst/$29 /`pro` 3-inst/$69 /`unlimited` /`self-host`). Quota
   enforced in `POST .../instances`. `POST .../discounts/redeem` maps codes

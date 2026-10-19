@@ -73,7 +73,7 @@ Repo `.cursor/mcp.json` points at production with a placeholder bearer. Cursor M
 
 Cursor opens a browser card; you **Continue with Google** (or GitHub) on `/mcp/authorize` and approve. The resulting `lb_agt_*` token is stored by Cursor — not typed into settings.
 
-`LIBREBASE_MCP_KEY` / console keys remain for **CI and local stdio only**.
+Console-issued keys work as `LIBREBASE_MCP_TOKEN` for local stdio when you skip device flow.
 
 ### Issuing or rotating a console MCP key
 
@@ -81,7 +81,7 @@ Cursor opens a browser card; you **Continue with Google** (or GitHub) on `/mcp/a
 2. **API:** `POST /org/v1/orgs/{orgId}/mcp-keys/rotate` with `Authorization: Bearer <session JWT>` (caller must have admin role on that org). Response: `{ "mcpKey": "lb_mcp_…" }` (shown once).
 3. **New org:** `POST /org/v1/setup` includes an initial `mcpKey` in the JSON body.
 
-Store the key in `LIBREBASE_MCP_KEY` (or Cursor env for stdio). Do not commit keys to the repo.
+Store the token in `LIBREBASE_MCP_TOKEN` (or Cursor env for stdio). Do not commit tokens to the repo.
 
 ## Branding / UX
 

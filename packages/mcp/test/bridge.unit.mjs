@@ -4,6 +4,11 @@
 import assert from "node:assert/strict";
 import http from "node:http";
 import { createHostedBridge, DEFAULT_MCP_URL } from "../src/bridge.js";
+import {
+  MCP_KEY_DEPRECATION_LINE,
+  resetMcpEnvDeprecationWarningForTests,
+  resolveMcpSessionToken,
+} from "../src/env.js";
 
 function startMockHosted(handler) {
   return new Promise((resolve) => {
@@ -172,8 +177,65 @@ async function testEndpointOverride() {
   await mock.close();
 }
 
+function withEnv(vars, fn) {
+  const prev = {};
+  for (const key of ["LIBREBASE_MCP_TOKEN", "LIBREBASE_MCP_KEY"]) {
+    prev[key] = process.env[key];
+    delete process.env[key];
+  }
+  Object.assign(process.env, vars);
+  resetMcpEnvDeprecationWarningForTests();
+  try {
+    return fn();
+  } finally {
+    for (const key of ["LIBREBASE_MCP_TOKEN", "LIBREBASE_MCP_KEY"]) {
+      if (prev[key] === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = prev[key];
+      }
+    }
+    resetMcpEnvDeprecationWarningForTests();
+  }
+}
+
+async function testLegacyKeyEnvCompat() {
+  const errors = [];
+  const origError = console.error;
+  console.error = (...args) => {
+    errors.push(args.join(" "));
+  };
+  try {
+    withEnv({ LIBREBASE_MCP_KEY: "lb_mcp_legacy_only" }, () => {
+      assert.equal(resolveMcpSessionToken(), "lb_mcp_legacy_only");
+      assert.equal(resolveMcpSessionToken(), "lb_mcp_legacy_only");
+      const bridge = createHostedBridge({ fetch: globalThis.fetch });
+      assert.equal(bridge.getSessionToken(), "lb_mcp_legacy_only");
+    });
+    assert.deepEqual(errors, [MCP_KEY_DEPRECATION_LINE]);
+    assert.ok(!errors.some((line) => line.includes("lb_mcp_legacy_only")));
+
+    errors.length = 0;
+    withEnv(
+      {
+        LIBREBASE_MCP_KEY: "lb_mcp_old",
+        LIBREBASE_MCP_TOKEN: "lb_mcp_new",
+      },
+      () => {
+        assert.equal(resolveMcpSessionToken(), "lb_mcp_new");
+        const bridge = createHostedBridge({ fetch: globalThis.fetch });
+        assert.equal(bridge.getSessionToken(), "lb_mcp_new");
+      },
+    );
+    assert.deepEqual(errors, []);
+  } finally {
+    console.error = origError;
+  }
+}
+
 await testListAndForward();
 await testDeviceFlowNoBearerOnPublicTools();
 await testEndpointOverride();
+await testLegacyKeyEnvCompat();
 
 console.log("mcp bridge unit ok");

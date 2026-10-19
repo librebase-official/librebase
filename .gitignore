@@ -16,6 +16,7 @@ Thumbs.db
 .env
 .env.*
 !deploy/compose/.env.staging.example
+!deploy/compose/.env.example
 
 # Rust / licontainer
 licontainer/target/
@@ -23,6 +24,7 @@ licontainer/target/
 # Python
 __pycache__/
 *.pyc
+*.egg-info/
 
 # Parity harness output
 tests/parity/last-report.json

@@ -8,6 +8,8 @@ import urllib.error
 import urllib.request
 from typing import Any
 
+from librebase_mcp.env import resolve_mcp_session_token
+
 DEFAULT_MCP_URL = "https://app.librebase.xyz/api/mcp"
 
 _PUBLIC_TOOL_CALLS = frozenset({"auth_start", "auth_poll"})
@@ -23,7 +25,10 @@ class HostedBridge:
         self.mcp_url = (url or os.environ.get("LIBREBASE_MCP_URL") or DEFAULT_MCP_URL).rstrip(
             "/"
         )
-        self._session_token = (token or os.environ.get("LIBREBASE_MCP_TOKEN") or "").strip()
+        if token is not None:
+            self._session_token = (token or "").strip()
+        else:
+            self._session_token = resolve_mcp_session_token()
 
     def set_mcp_url(self, url: str) -> None:
         self.mcp_url = url.rstrip("/")
