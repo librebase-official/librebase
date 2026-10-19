@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS bots (
   profile TEXT NOT NULL DEFAULT 'office',
   harness TEXT NOT NULL DEFAULT 'pi',
   host_id TEXT,
-  status TEXT NOT NULL DEFAULT 'stopped',
+  status TEXT NOT NULL DEFAULT 'active',
   avatar TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS approvals (
   payload_json TEXT NOT NULL DEFAULT '{}',
   payload_hash TEXT,
   state TEXT NOT NULL DEFAULT 'pending',
+  requested_by TEXT,
   created_at TEXT NOT NULL,
   resolved_at TEXT,
   resolved_by TEXT

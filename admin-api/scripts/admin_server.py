@@ -918,6 +918,7 @@ class LiorgDb:
 
 
 ROLE_LEVEL = {"member": 0, "developer": 0, "viewer": 0, "admin": 1, "owner": 2}
+BOT_STATUSES = frozenset({"active", "paused", "disabled"})
 
 
 def role_at_least(role: str, minimum: str) -> bool:
@@ -1311,8 +1312,14 @@ def row_bot(row: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def approval_payload_hash(payload: Mapping[str, Any]) -> str:
+    """SHA-256 hex digest of canonical approval payload JSON for harness dedup.
+
+    Canonicalization: ``json.dumps(payload, sort_keys=True, separators=(',', ':'))``
+    then UTF-8 encode. No insignificant whitespace. The server always stores this
+    digest; clients may send ``payloadHash`` and receive 409 if it does not match.
+    """
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(canonical.encode()).hexdigest()
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def row_approval(row: Mapping[str, Any]) -> dict[str, Any]:
@@ -1336,6 +1343,7 @@ def row_approval(row: Mapping[str, Any]) -> dict[str, Any]:
         "createdAt": row["created_at"],
         "resolvedAt": row["resolved_at"] if "resolved_at" in row.keys() else None,
         "resolvedBy": row["resolved_by"] if "resolved_by" in row.keys() else None,
+        "requestedBy": row["requested_by"] if "requested_by" in row.keys() else None,
     }
 
 
@@ -2832,7 +2840,7 @@ class LiorgHandler(BaseHTTPRequestHandler):
                     profile,
                     harness,
                     str(host_id) if host_id else None,
-                    "stopped",
+                    "active",
                     body.get("avatar"),
                     now,
                     now,
@@ -2849,7 +2857,7 @@ class LiorgHandler(BaseHTTPRequestHandler):
                     bot_id,
                     org_id,
                     str(host_id) if host_id else None,
-                    "stopped",
+                    "active",
                     now,
                     now,
                 ),
@@ -2863,7 +2871,8 @@ class LiorgHandler(BaseHTTPRequestHandler):
         )
         if bot_approval_approve:
             org_id, bot_id, approval_id = bot_approval_approve.groups()
-            if not self.require_org_role(org_id, "member"):
+            claims = self.require_org_role(org_id, "admin")
+            if not claims:
                 return
             row = self.db.fetchone(
                 "SELECT * FROM approvals WHERE org_id = ? AND bot_id = ? AND id = ?",
@@ -2875,9 +2884,9 @@ class LiorgHandler(BaseHTTPRequestHandler):
             if row["state"] != "pending":
                 self.send_json(409, {"error": "approval already resolved", "state": row["state"]})
                 return
-            claims = self.bearer_claims()
-            if not claims:
-                self.send_json(401, {"error": "unauthorized"})
+            requester = row["requested_by"] if "requested_by" in row.keys() else None
+            if requester and requester == claims.get("sub"):
+                self.send_json(403, {"error": "cannot approve or reject your own approval request"})
                 return
             now = utc_now()
             self.db.execute(
@@ -2893,7 +2902,8 @@ class LiorgHandler(BaseHTTPRequestHandler):
         )
         if bot_approval_reject:
             org_id, bot_id, approval_id = bot_approval_reject.groups()
-            if not self.require_org_role(org_id, "member"):
+            claims = self.require_org_role(org_id, "admin")
+            if not claims:
                 return
             row = self.db.fetchone(
                 "SELECT * FROM approvals WHERE org_id = ? AND bot_id = ? AND id = ?",
@@ -2905,9 +2915,9 @@ class LiorgHandler(BaseHTTPRequestHandler):
             if row["state"] != "pending":
                 self.send_json(409, {"error": "approval already resolved", "state": row["state"]})
                 return
-            claims = self.bearer_claims()
-            if not claims:
-                self.send_json(401, {"error": "unauthorized"})
+            requester = row["requested_by"] if "requested_by" in row.keys() else None
+            if requester and requester == claims.get("sub"):
+                self.send_json(403, {"error": "cannot approve or reject your own approval request"})
                 return
             now = utc_now()
             self.db.execute(
@@ -2923,7 +2933,8 @@ class LiorgHandler(BaseHTTPRequestHandler):
         )
         if bot_approvals_create:
             org_id, bot_id = bot_approvals_create.groups()
-            if not self.require_org_role(org_id, "member"):
+            claims = self.require_org_role(org_id, "member")
+            if not claims:
                 return
             bot_row = self.db.fetchone(
                 "SELECT id FROM bots WHERE org_id = ? AND id = ?",
@@ -2943,26 +2954,36 @@ class LiorgHandler(BaseHTTPRequestHandler):
                 self.send_json(400, {"error": "payload must be an object"})
                 return
             payload_json = json.dumps(payload, sort_keys=True, separators=(",", ":"))
-            phash = body.get("payloadHash") or body.get("payload_hash")
-            if phash:
-                phash = str(phash).strip()
-            else:
-                phash = approval_payload_hash(payload)
+            computed_hash = approval_payload_hash(payload)
+            client_hash = body.get("payloadHash") or body.get("payload_hash")
+            if client_hash:
+                client_hash = str(client_hash).strip()
+                if client_hash != computed_hash:
+                    self.send_json(
+                        409,
+                        {
+                            "error": "payloadHash mismatch",
+                            "payloadHash": computed_hash,
+                        },
+                    )
+                    return
+            requester_id = claims.get("sub")
             now = utc_now()
             approval_id = new_id("apr")
             self.db.execute(
                 "INSERT INTO approvals "
                 "(id, org_id, bot_id, tool_name, payload_json, payload_hash, state, "
-                "created_at, resolved_at, resolved_by) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)",
+                "requested_by, created_at, resolved_at, resolved_by) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)",
                 (
                     approval_id,
                     org_id,
                     bot_id,
                     tool_name,
                     payload_json,
-                    phash,
+                    computed_hash,
                     "pending",
+                    requester_id,
                     now,
                 ),
             )
@@ -3435,7 +3456,7 @@ class LiorgHandler(BaseHTTPRequestHandler):
         bot_del = re.fullmatch(r"/org/v1/orgs/([^/]+)/bots/([^/]+)", path)
         if bot_del:
             org_id, bot_id = bot_del.groups()
-            if not self.require_org_role(org_id, "member"):
+            if not self.require_org_role(org_id, "admin"):
                 return
             row = self.db.fetchone(
                 "SELECT * FROM bots WHERE org_id = ? AND id = ?",
@@ -3595,8 +3616,11 @@ class LiorgHandler(BaseHTTPRequestHandler):
                 values.append(body.get("avatar"))
             if "status" in body:
                 status = str(body["status"]).strip()
-                if status not in ("stopped", "running", "error"):
-                    self.send_json(400, {"error": "status must be stopped, running, or error"})
+                if status not in BOT_STATUSES:
+                    self.send_json(
+                        400,
+                        {"error": "status must be one of: active, paused, disabled"},
+                    )
                     return
                 fields.append("status = ?")
                 values.append(status)

@@ -46,7 +46,31 @@ class TestBotsApi(unittest.TestCase):
         with urllib.request.urlopen(req) as r:
             resp = json.loads(r.read())
             cls.org_id = resp["orgId"]
-            cls.token = resp["token"]
+            cls.owner_token = resp["token"]
+
+        now = cls.mod.utc_now()
+        cls.member_user_id = cls.mod.new_id("user")
+        cls.db.execute(
+            "INSERT INTO users (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)",
+            (
+                cls.member_user_id,
+                "member@t.c",
+                cls.mod.hash_password("hunter2hunter2"),
+                now,
+            ),
+        )
+        cls.db.execute(
+            "INSERT INTO members (org_id, user_id, role, created_at) VALUES (?, ?, ?, ?)",
+            (cls.org_id, cls.member_user_id, "member", now),
+        )
+        login_req = urllib.request.Request(
+            f"http://127.0.0.1:{cls.port}/org/v1/auth/login",
+            data=json.dumps({"email": "member@t.c", "password": "hunter2hunter2"}).encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(login_req) as r:
+            cls.member_token = json.loads(r.read())["token"]
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -55,9 +79,9 @@ class TestBotsApi(unittest.TestCase):
         cls.db.close()
         cls._tmp.cleanup()
 
-    def _http(self, method: str, path: str, body: dict | None = None):
+    def _http(self, method: str, path: str, body: dict | None = None, token: str | None = None):
         data = None if body is None else json.dumps(body).encode()
-        headers = {"Authorization": f"Bearer {self.token}"}
+        headers = {"Authorization": f"Bearer {token or self.owner_token}"}
         if body is not None:
             headers["Content-Type"] = "application/json"
         req = urllib.request.Request(
@@ -89,6 +113,7 @@ class TestBotsApi(unittest.TestCase):
         self.assertEqual(bot["name"], "Mail")
         self.assertEqual(bot["profile"], "office")
         self.assertEqual(bot["harness"], "pi")
+        self.assertEqual(bot["status"], "active")
         self.assertTrue(bot["id"].startswith("bot_"))
 
         st, listed = self._http("GET", f"/org/v1/orgs/{self.org_id}/bots")
@@ -110,16 +135,30 @@ class TestBotsApi(unittest.TestCase):
         self.assertEqual(st, 400)
         self.assertIn("coding", body.get("error", "").lower())
 
-    def test_patch_and_delete_bot(self) -> None:
+    def test_patch_status_enum_and_delete_requires_admin(self) -> None:
         bot = self._create_bot("PatchMe")
         st, updated = self._http(
             "PATCH",
             f"/org/v1/orgs/{self.org_id}/bots/{bot['id']}",
-            {"name": "Renamed", "instructions": "New brief."},
+            {"name": "Renamed", "status": "paused"},
         )
         self.assertEqual(st, 200)
         self.assertEqual(updated["name"], "Renamed")
-        self.assertEqual(updated["instructions"], "New brief.")
+        self.assertEqual(updated["status"], "paused")
+
+        st, bad = self._http(
+            "PATCH",
+            f"/org/v1/orgs/{self.org_id}/bots/{bot['id']}",
+            {"status": "running"},
+        )
+        self.assertEqual(st, 400)
+
+        st, _ = self._http(
+            "DELETE",
+            f"/org/v1/orgs/{self.org_id}/bots/{bot['id']}",
+            token=self.member_token,
+        )
+        self.assertEqual(st, 403)
 
         st, body = self._http("DELETE", f"/org/v1/orgs/{self.org_id}/bots/{bot['id']}")
         self.assertEqual(st, 200)
@@ -128,7 +167,7 @@ class TestBotsApi(unittest.TestCase):
         st, one = self._http("GET", f"/org/v1/orgs/{self.org_id}/bots/{bot['id']}")
         self.assertEqual(st, 404)
 
-    def test_approval_create_list_approve(self) -> None:
+    def test_approval_create_list_approve_by_other_admin(self) -> None:
         bot = self._create_bot("Approver")
         base = f"/org/v1/orgs/{self.org_id}/bots/{bot['id']}/approvals"
         payload = {"to": "user@example.com", "subject": "Hello", "body": "Draft text"}
@@ -136,18 +175,25 @@ class TestBotsApi(unittest.TestCase):
             "POST",
             base,
             {"toolName": "email.send", "payload": payload},
+            token=self.member_token,
         )
         self.assertEqual(st, 201, created)
         self.assertEqual(created["toolName"], "email.send")
         self.assertEqual(created["state"], "pending")
         self.assertEqual(created["payload"], payload)
+        self.assertEqual(
+            created["payloadHash"],
+            self.mod.approval_payload_hash(payload),
+        )
         self.assertTrue(created["id"].startswith("apr_"))
-        self.assertTrue(created["payloadHash"])
 
         st, pending = self._http("GET", f"{base}?state=pending")
         self.assertEqual(st, 200)
         self.assertEqual(len(pending), 1)
         self.assertEqual(pending[0]["id"], created["id"])
+
+        st, self_try = self._http("POST", f"{base}/{created['id']}/approve", token=self.member_token)
+        self.assertEqual(st, 403)
 
         st, approved = self._http("POST", f"{base}/{created['id']}/approve")
         self.assertEqual(st, 200)
@@ -165,6 +211,7 @@ class TestBotsApi(unittest.TestCase):
             "POST",
             base,
             {"toolName": "email.send", "payload": {"subject": "x"}},
+            token=self.member_token,
         )
         self.assertEqual(st, 201)
         st, rejected = self._http("POST", f"{base}/{created['id']}/reject")
@@ -174,6 +221,23 @@ class TestBotsApi(unittest.TestCase):
         st, listed = self._http("GET", f"{base}?state=rejected")
         self.assertEqual(st, 200)
         self.assertEqual(len(listed), 1)
+
+    def test_approval_payload_hash_mismatch(self) -> None:
+        bot = self._create_bot("HashBot")
+        base = f"/org/v1/orgs/{self.org_id}/bots/{bot['id']}/approvals"
+        st, body = self._http(
+            "POST",
+            base,
+            {
+                "toolName": "email.send",
+                "payload": {"a": 1},
+                "payloadHash": "deadbeef",
+            },
+            token=self.member_token,
+        )
+        self.assertEqual(st, 409)
+        self.assertIn("mismatch", body.get("error", "").lower())
+        self.assertEqual(body.get("payloadHash"), self.mod.approval_payload_hash({"a": 1}))
 
 
 if __name__ == "__main__":
