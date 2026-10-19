@@ -29,13 +29,23 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Python deps (KMS: cryptography)
+      - name: "Install Python deps (KMS: cryptography; dual-backend: pytest)"
         working-directory: ${{ github.workspace }}
-        run: pip install cryptography
+        run: pip install cryptography pytest psycopg2-binary
 
       - name: Python tests (lidb_engine dev runtime + admin-api + KMS)
         working-directory: ${{ github.workspace }}
-        run: python -m unittest discover -s tests -p "test_*.py"
+        run: |
+          set -euo pipefail
+          unit_files=()
+          for f in tests/test_*.py; do
+            case "$f" in
+              tests/test_dual_backend.py) continue ;;
+            esac
+            unit_files+=("$f")
+          done
+          python -m unittest "${unit_files[@]}"
+          python -m pytest tests/test_dual_backend.py
 
       - name: Unit tests
         run: npm test

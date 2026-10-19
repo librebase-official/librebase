@@ -6,6 +6,7 @@ set -Eeuo pipefail
 cd "$(dirname "$0")/../deploy/compose"
 
 LIBREBASE_VERSION="$(cat ../../VERSION)"
+export LIBREBASE_VERSION
 echo "=== Deploying Librebase staging v${LIBREBASE_VERSION} ==="
 
 # Ensure the staging network exists
