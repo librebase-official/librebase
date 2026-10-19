@@ -69,6 +69,9 @@ LOCKOUT_SECONDS = 15 * 60  # lockout duration (15 min)
 IP_WINDOW_SECONDS = 60  # per-IP login rate-limit window
 IP_MAX_ATTEMPTS = 20  # max login POSTs per IP per window
 
+# After create or /start, Hetzner may briefly report status "off" while booting.
+HCLOUD_BOOT_GRACE_SECONDS = int(os.environ.get("LIBREBASE_HCLOUD_BOOT_GRACE_SECONDS", "300"))
+
 
 def admin_dev_mode() -> bool:
     return os.environ.get("LIBREBASE_ADMIN_DEV", "").strip().lower() in ("1", "true", "yes")
@@ -599,6 +602,21 @@ def session_expiry() -> str:
 def utc_now_offset(seconds: int) -> str:
     dt = datetime.now(timezone.utc).replace(microsecond=0)
     return (dt + timedelta(seconds=seconds)).isoformat().replace("+00:00", "Z")
+
+
+def _parse_utc(ts: str) -> datetime:
+    return datetime.fromisoformat(ts.replace("Z", "+00:00"))
+
+
+def _host_in_boot_grace(row: Mapping[str, Any]) -> bool:
+    updated = row["updated_at"]
+    if not updated:
+        return False
+    try:
+        age = (datetime.now(timezone.utc) - _parse_utc(updated)).total_seconds()
+    except (TypeError, ValueError):
+        return False
+    return age < HCLOUD_BOOT_GRACE_SECONDS
 
 
 def issue_session(
@@ -1283,7 +1301,7 @@ def row_project(row: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def row_host(row: Mapping[str, Any]) -> dict[str, Any]:
-    return {
+    payload: dict[str, Any] = {
         "id": row["id"],
         "orgId": row["org_id"],
         "name": row["name"],
@@ -1298,6 +1316,9 @@ def row_host(row: Mapping[str, Any]) -> dict[str, Any]:
         "createdAt": row["created_at"],
         "updatedAt": row["updated_at"],
     }
+    if "last_error" in row.keys() and row["last_error"]:
+        payload["lastError"] = row["last_error"]
+    return payload
 
 
 def row_bot(row: Mapping[str, Any]) -> dict[str, Any]:
@@ -1630,12 +1651,32 @@ class LiorgHandler(BaseHTTPRequestHandler):
             return None
         return row
 
-    def sync_hcloud_host(self, row: Mapping[str, Any]) -> Mapping[str, Any] | None:
-        """Reconcile a provisioning host's status against Hetzner.
+    def _mark_host_running_from_agent(
+        self, row: Mapping[str, Any], body: Mapping[str, Any]
+    ) -> None:
+        """Registration or heartbeat from a live agent — host is running."""
+        new_ip = body.get("ip")
+        now = utc_now()
+        if new_ip and (not row["ip"] or row["ip"] != new_ip):
+            self.db.execute("UPDATE hosts SET ip = ? WHERE id = ?", (new_ip, row["id"]))
+        if "last_error" in row.keys():
+            self.db.execute(
+                "UPDATE hosts SET status = ?, last_error = NULL, updated_at = ? WHERE id = ?",
+                ("running", now, row["id"]),
+            )
+        else:
+            self.db.execute(
+                "UPDATE hosts SET status = ?, updated_at = ? WHERE id = ?",
+                ("running", now, row["id"]),
+            )
 
-        Called on host reads. Only flips state when Hetzner reports a terminal
-        condition (server gone/error) — the host agent still owns the running
-        flip by calling /register once it's up.
+    def sync_hcloud_host(self, row: Mapping[str, Any]) -> Mapping[str, Any] | None:
+        """Reconcile host status against Hetzner on reads.
+
+        Provisioning hosts flip to error only when Hetzner reports a bad state
+        outside the post-create/start boot grace window (brief ``off`` is OK).
+        Error hosts return to provisioning when Hetzner reports running so the
+        agent can register again.
         """
         if _hcloud is None or not _hcloud.hcloud_configured():
             return row
@@ -1647,18 +1688,50 @@ class LiorgHandler(BaseHTTPRequestHandler):
         except Exception:
             return row
         now = utc_now()
+        host_status = row["status"]
+        hcloud_status = info.get("status")
+
+        if hcloud_status == "running" and host_status == "error":
+            if "last_error" in row.keys():
+                self.db.execute(
+                    "UPDATE hosts SET status = ?, last_error = NULL, updated_at = ? WHERE id = ?",
+                    ("provisioning", now, row["id"]),
+                )
+            else:
+                self.db.execute(
+                    "UPDATE hosts SET status = ?, updated_at = ? WHERE id = ?",
+                    ("provisioning", now, row["id"]),
+                )
+        elif host_status == "provisioning" and hcloud_status in (
+            "off",
+            "error",
+            "unknown",
+            None,
+        ):
+            if hcloud_status == "off" and _host_in_boot_grace(row):
+                pass
+            else:
+                detail = "hetzner server status: %s" % (hcloud_status or "none")
+                if "last_error" in row.keys():
+                    self.db.execute(
+                        "UPDATE hosts SET status = ?, last_error = ?, updated_at = ? WHERE id = ?",
+                        ("error", detail, now, row["id"]),
+                    )
+                else:
+                    self.db.execute(
+                        "UPDATE hosts SET status = ?, updated_at = ? WHERE id = ?",
+                        ("error", now, row["id"]),
+                    )
+
         # Refresh public IP once Hetzner has allocated it.
-        if info.get("ip") and (not row["ip"] or row["ip"] != info["ip"]):
-            self.db.execute(
-                "UPDATE hosts SET ip = ?, updated_at = ? WHERE id = ?",
-                (info["ip"], now, row["id"]),
-            )
-        status = info.get("status")
-        if status in ("off", "error", "unknown", None) and row["status"] == "provisioning":
-            self.db.execute(
-                "UPDATE hosts SET status = ?, updated_at = ? WHERE id = ?",
-                ("error", now, row["id"]),
-            )
+        if info.get("ip"):
+            fresh = self.db.fetchone("SELECT * FROM hosts WHERE id = ?", (row["id"],))
+            ref = fresh or row
+            if not ref["ip"] or ref["ip"] != info["ip"]:
+                self.db.execute(
+                    "UPDATE hosts SET ip = ?, updated_at = ? WHERE id = ?",
+                    (info["ip"], now, row["id"]),
+                )
         self.db.execute("UPDATE hosts SET updated_at = ? WHERE id = ?", (now, row["id"]))
         return self.db.fetchone("SELECT * FROM hosts WHERE id = ?", (row["id"],))
 
@@ -3271,14 +3344,7 @@ class LiorgHandler(BaseHTTPRequestHandler):
             row = self.agent_host()
             if not row:
                 return
-            new_ip = body.get("ip")
-            now = utc_now()
-            if new_ip and (not row["ip"] or row["ip"] != new_ip):
-                self.db.execute("UPDATE hosts SET ip = ? WHERE id = ?", (new_ip, row["id"]))
-            self.db.execute(
-                "UPDATE hosts SET status = ?, updated_at = ? WHERE id = ?",
-                ("running", now, row["id"]),
-            )
+            self._mark_host_running_from_agent(row, body)
             self.send_json(200, {"status": "running"})
             return
 
@@ -3287,7 +3353,12 @@ class LiorgHandler(BaseHTTPRequestHandler):
             row = self.agent_host()
             if not row:
                 return
-            self.db.execute("UPDATE hosts SET updated_at = ? WHERE id = ?", (utc_now(), row["id"]))
+            if row["status"] in ("provisioning", "error"):
+                self._mark_host_running_from_agent(row, body)
+            else:
+                self.db.execute(
+                    "UPDATE hosts SET updated_at = ? WHERE id = ?", (utc_now(), row["id"])
+                )
             self.send_json(200, {"ok": True})
             return
 
