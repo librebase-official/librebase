@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
-# Librebase production deploy (run by Shiphook after `git pull`).
+# Librebase production deploy (run on the production host after `git pull`).
 # Builds the Studio image with the tracked VERSION, recreates the container,
 # then waits (with retries) for each health endpoint instead of failing on a
 # still-booting container.
 #
-# LIB-21: Git tracks this file as 100755. If Shiphook spawn() hits EACCES,
-# invoke via bash (see docs/shiphook-deploy.md) or chmod +x this path — do
-# not rely on a working tree that lost the execute bit (core.fileMode false).
+# Git tracks this file as 100755. If the execute bit is missing, invoke via
+# `bash /opt/librebase/scripts/deploy-production.sh` or chmod +x this path.
 set -Eeuo pipefail
 cd /opt/librebase
 
