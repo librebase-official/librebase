@@ -28,6 +28,22 @@ Stdio MCP server for **local / air-gapped** use with a console MCP key.
 `LIBREBASE_ADMIN_URL` is the admin API base URL. `LIBREBASE_MCP_KEY` is the
 MCP key generated in the console (`/admin`); it scopes every call to one org.
 
+## MCP key (issue / rotate)
+
+Console keys are for **CI and local stdio** (`python3 -m librebase_mcp`). Production
+agents should use hosted OAuth MCP (`docs/mcp/AUDIT.md`).
+
+| Method | Who | Action |
+| --- | --- | --- |
+| **Studio UI** | Org **admin** or **owner** | Sign in → `/admin` → **MCP key** → **Generate new key**. Copy once; prior active keys are revoked. |
+| **Admin API** | Session JWT with **admin** role on the org | `POST /org/v1/orgs/{orgId}/mcp-keys/rotate` → `{ "mcpKey": "lb_mcp_…" }` |
+| **Bootstrap** | First-time setup | `POST /org/v1/setup` returns an initial `mcpKey` for the new org (one-time in the response). |
+
+Set `LIBREBASE_MCP_KEY` to the plaintext value (starts with `lb_mcp_`, ~50 characters).
+Never commit keys to git — use env vars or your secret store.
+
+`GET /org/v1/mcp/org` with `Authorization: Bearer <mcpKey>` resolves the org for stdio startup.
+
 ## Tools
 
 - `org_whoami` — resolve the key's org
