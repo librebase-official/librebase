@@ -13,10 +13,10 @@ cd /opt/librebase
 LIBREBASE_VERSION="$(cat VERSION)"
 echo "Deploying Librebase v${LIBREBASE_VERSION}"
 
-docker compose -f data-studio-ui/docker-compose.yml build --no-cache \
+docker compose -f data-studio-ui/docker-compose.yml --env-file data-studio-ui/compose.env build --no-cache \
   --build-arg "LIBREBASE_VERSION=${LIBREBASE_VERSION}" web
 docker rm -f librebase_web_1 2>/dev/null || true
-docker compose -f data-studio-ui/docker-compose.yml up -d --force-recreate web
+docker compose -f data-studio-ui/docker-compose.yml --env-file data-studio-ui/compose.env up -d --force-recreate web
 
 check_path() {
   local path="$1"

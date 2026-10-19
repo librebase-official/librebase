@@ -139,6 +139,44 @@ class TestMcpOAuth(unittest.TestCase):
         self.assertEqual(providers[0]["provider"], "google")
         self.assertNotIn("clientSecretEnc", providers[0])  # masked view via list
 
+    def test_mcp_org_resolve_surfaces_invalid_key(self) -> None:
+        os.environ["LIBREBASE_ADMIN_URL"] = f"http://127.0.0.1:{self.admin_port}"
+        os.environ["LIBREBASE_MCP_KEY"] = "lb_mcp_" + ("x" * 40)
+        mcp = load_module(MCP_MODULE)
+        out = mcp._handle(
+            {
+                "jsonrpc": "2.0",
+                "id": 9,
+                "method": "tools/call",
+                "params": {"name": "org_whoami", "arguments": {}},
+            }
+        )
+        assert out is not None
+        text = out["result"]["content"][0]["text"]
+        payload = json.loads(text)
+        msg = payload.get("message", "")
+        self.assertIn("401", msg)
+        self.assertIn("invalid or missing mcp key", msg.lower())
+        self.assertIn("/admin", msg)
+        self.assertNotIn(self.mcp_key, msg)
+
+    def test_mcp_org_resolve_requires_env_key(self) -> None:
+        os.environ["LIBREBASE_ADMIN_URL"] = f"http://127.0.0.1:{self.admin_port}"
+        os.environ["LIBREBASE_MCP_KEY"] = ""
+        mcp = load_module(MCP_MODULE)
+        out = mcp._handle(
+            {
+                "jsonrpc": "2.0",
+                "id": 10,
+                "method": "tools/call",
+                "params": {"name": "org_whoami", "arguments": {}},
+            }
+        )
+        assert out is not None
+        text = out["result"]["content"][0]["text"]
+        payload = json.loads(text)
+        self.assertIn("LIBREBASE_MCP_KEY", payload.get("message", ""))
+
 
 if __name__ == "__main__":
     unittest.main()

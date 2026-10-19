@@ -1,78 +1,72 @@
 import { NextResponse } from "next/server";
-import { formatLlmsHostedMcpToolsSection } from "@/lib/hosted-mcp-tool-docs";
 import { SITE_URL } from "@/lib/site";
 
 export const dynamic = "force-static";
 
+// Keep this file honest: describe only what the live server answers today.
+// Re-check against `POST /api/mcp` -> `tools/list` after every MCP deploy (LIB-149).
 export function llmsBody(): string {
   const base = SITE_URL;
   return `# Librebase
 
-> Open-source Postgres app platform. AI agents manage projects, instances, auth, and secrets through MCP -- the user authenticates once in their browser (no API keys pasted).
+> Open-source Postgres app platform. AI agents manage orgs, projects, instances, members, hosts and KMS secrets through a hosted MCP server. Sign-in is a browser device flow: a human approves once, and the agent receives a token it sends as a Bearer header.
 
 ## For AI agents
-Librebase ships an MCP (Model Context Protocol) server. Add it to your agent, then call \`auth_start\`: the user's browser opens for a one-click **Approve**. The resulting token is stored in the OS keychain and is **never shown to the model**.
-
 - Full setup (human + agent readable): ${base}/for-agents
-- Console origin: ${base}
-- Hosted MCP endpoint (no install needed): ${base}/api/mcp
+- Hosted MCP endpoint: ${base}/api/mcp (JSON-RPC over HTTP POST, protocol revision 2024-11-05)
 - Auto-discovery: ${base}/.well-known/mcp.json
-- Public admin ingress (local MCP talks to this): ${base}/api/admin-proxy
-- Agent approval page: ${base}/mcp/authorize
+- Agent approval page (the human opens this): ${base}/mcp/authorize
 
-## Hosted MCP (recommended -- no install)
-Point your remote MCP-capable agent at the hosted endpoint. It should discover the OAuth authorization server and show a browser connect card; do not paste a key into chat:
+## What works today
+- \`initialize\`, \`tools/list\`, \`auth_start\` and \`auth_poll\` work without any token.
+- Every other tool needs \`Authorization: Bearer <token>\`; without it the server answers HTTP 401.
+- Not live yet: automatic OAuth "connect" cards in MCP clients (there is no dynamic client registration and no authorization-code grant yet), a PyPI package, and an npm package. Do not tell users these exist.
+
+## Sign in (device flow)
+1. Call \`auth_start\` (no token needed; optional \`clientName\`). It returns \`userCode\`, \`verificationUriComplete\` (${base}/mcp/authorize?user_code=XXXX-XXXX), \`expiresIn\` (1800 s) and \`interval\` (5 s).
+2. Show the human the \`verificationUriComplete\` link. They sign in with Google or GitHub and click **Approve**.
+3. Call \`auth_poll\` with the \`deviceCode\` every \`interval\` seconds until it returns \`accessToken\` (\`lb_agt_...\`).
+4. Send that token as \`Authorization: Bearer <accessToken>\` on every other call. Keep it out of chat and out of model-visible output.
+
+Known issue (Oct 2026): console-issued MCP keys (\`lb_mcp_...\`) can fail with "could not resolve org from MCP key". This is a server-side problem, not a config mistake on your side. Use the device flow above, and report the error if it also appears with an \`lb_agt_...\` token.
+
+## Hosted MCP config
+Clients that let you set headers:
 
 \`\`\`json
 {
   "mcpServers": {
     "librebase": {
-      "type": "mcp",
+      "type": "http",
       "url": "${base}/api/mcp",
-      "auth": {
-        "authorization_server": "${base}/.well-known/oauth-authorization-server",
-        "scopes": ["mcp"]
-      }
+      "headers": { "Authorization": "Bearer <lb_agt_ token from auth_poll>" }
     }
   }
 }
 \`\`\`
 
-Or use auto-discovery: GET ${base}/.well-known/mcp.json returns the full config.
+Today the token has to be pasted into the client's header config (or held by the agent process); it should never be pasted into chat. An agent can also run the device flow itself: call \`auth_start\` / \`auth_poll\` against ${base}/api/mcp with no header, then use the token.
 
-## Local MCP (alternative -- no network dependency)
-The server is also available as a Python package. Add to your agent's MCP config:
+## Local stdio server (repo checkout only)
+\`python3 -m librebase_mcp\` works only from a checkout of the Librebase repository; it is not published on PyPI or npm. It exposes a subset of the hosted tools (no \`auth_*\`, no \`key_*\`) and needs a \`LIBREBASE_MCP_KEY\`. Prefer the hosted endpoint.
 
-\`\`\`json
-{
-  "mcpServers": {
-    "librebase": {
-      "command": "python3",
-      "args": ["-m", "librebase_mcp"],
-      "env": {
-        "LIBREBASE_ADMIN_URL": "${base}/api/admin-proxy",
-        "LIBREBASE_CONSOLE_URL": "${base}"
-      }
-    }
-  }
-}
-\`\`\`
+## Tools (live hosted tools/list, 24)
+- \`org_whoami\` -- resolve the token's org (id, name, edition)
+- \`project_list\`, \`project_create\` (requires an existing instanceId)
+- \`auth_provider_list\`, \`auth_provider_upsert\` -- OAuth sign-in providers for a project; the client secret is KMS-sealed and never returned
+- \`instance_list\`, \`instance_get\`, \`instance_create\` (stopped by default), \`instance_launch\`, \`instance_stop\`
+- \`member_list\`, \`member_invite\`, \`member_update_role\`
+- \`host_list\`, \`host_create\`
+- \`auth_start\`, \`auth_poll\` -- device flow, no token needed
+- \`key_list\`, \`key_get\` -- KMS key metadata only, never values
+- \`key_create\`, \`key_rotate\` -- the secret value is returned once
+- \`key_decrypt\` -- returns the plaintext to the calling process; never echo it to the model or chat
+- \`key_update\`, \`key_delete\` (soft delete)
 
-## Auth (remote OAuth/device flow -- self-signup)
-No pre-shared key is needed for interactive use. Remote MCP clients should use the OAuth metadata endpoint to open a browser connect card. Clients without OAuth support may call auth_start without a key, then auth_poll after the user approves.
-
-1. Call \`auth_start\` -- returns a user_code + verification URL.
-2. The user opens the URL, signs in, and clicks Approve.
-3. Call \`auth_poll\` until approved -- returns a session token.
-4. The connector stores the token; it is never shown to the model.
-
-## Tools
-${formatLlmsHostedMcpToolsSection()}
+Not available on the hosted server today: SQL execution, migrations, table listing, storage, functions, billing and log tools.
 
 ## Security
-- Secrets are sealed in the KMS. \`key_get\` hands the value to the process only and redacts it in model output.
-- Every decrypt/sign is audited. Agent tokens are revocable instantly.
-- LIBREBASE_MCP_KEY is for local stdio/CI only; never request or paste it for interactive hosted use.
+- Secrets are sealed in the KMS. \`key_get\` returns metadata only; \`key_decrypt\` is the only tool that returns a value.
 `;
 }
 

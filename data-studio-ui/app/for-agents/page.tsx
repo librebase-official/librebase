@@ -2,29 +2,23 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { BrandWordmark } from "@/components/brand/BrandWordmark";
-import {
-  HOSTED_MCP_TOOL_COUNT,
-  HOSTED_MCP_TOOL_DOC_GROUPS,
-} from "@/lib/hosted-mcp-tool-docs";
 import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Librebase for AI agents — connect via MCP",
   description:
-    "Connect an AI agent to Librebase with hosted remote MCP and browser authorization; secrets stay sealed in the KMS and are redacted from the model.",
+    "Connect an AI agent to Librebase's hosted MCP with a browser device-flow sign-in; KMS secret values are only returned by key_decrypt.",
   robots: { index: true, follow: true },
   alternates: { canonical: `${SITE_URL}/for-agents` },
 };
 
+// Keep in sync with the live `POST /api/mcp` -> `tools/list` (LIB-149).
 const mcpConfig = {
   mcpServers: {
     librebase: {
-      command: "python3",
-      args: ["-m", "librebase_mcp"],
-      env: {
-        LIBREBASE_ADMIN_URL: `${SITE_URL}/api/admin-proxy`,
-        LIBREBASE_CONSOLE_URL: SITE_URL,
-      },
+      type: "http",
+      url: `${SITE_URL}/api/mcp`,
+      headers: { Authorization: "Bearer <lb_agt_ token from auth_poll>" },
     },
   },
 };
@@ -34,7 +28,7 @@ const jsonLd = {
   "@type": "SoftwareApplication",
   name: "Librebase",
   description:
-    "Open-source Postgres app platform. AI agents manage projects, instances, auth, and secrets through a local MCP server; the user authenticates once in their browser.",
+    "Open-source Postgres app platform. AI agents manage projects, instances, members, hosts, and KMS secrets through a hosted MCP server; a human approves the agent once in the browser.",
   url: SITE_URL,
   applicationCategory: "DeveloperApplication",
   operatingSystem: "Any",
@@ -59,67 +53,82 @@ export default function ForAgentsPage() {
       </header>
 
       <article className="lb-doc-main">
-        <p className="lb-brand-signal">MCP · device flow · KMS-sealed secrets</p>
+        <p className="lb-brand-signal">Hosted MCP · device flow · KMS-sealed secrets</p>
         <h1 className="lb-doc-title">Librebase for AI agents</h1>
         <p className="lb-doc-lead">
-          Connect an AI agent with hosted remote MCP. The user authenticates once in the browser — no API keys pasted,
-          and secrets stay sealed in the KMS.
+          Connect an AI agent to the hosted MCP server. The agent starts a device flow, a human approves it once in the
+          browser, and the agent sends the resulting token as a Bearer header.
         </p>
 
-        <Section title="1. Connect via hosted MCP (no install)">
-          <p>
-            Point your remote MCP-capable agent at <Code>{SITE_URL}/api/mcp</Code> — no local repo or pasted key needed.
-          </p>
-          <pre className="lb-doc-pre">
-            <code>{`{
-  "mcpServers": {
-    "librebase": {
-      "url": "${SITE_URL}/api/mcp",
-      "auth": {
-        "authorization_server": "${SITE_URL}/.well-known/oauth-authorization-server",
-        "scopes": ["mcp"]
-      }
-    }
-  }
-}`}</code>
-          </pre>
-          <p className="lb-doc-muted">
-            Or use auto-discovery: <Code>GET /.well-known/mcp.json</Code>
-          </p>
-        </Section>
-
-        <Section title="1b. Optional: run locally for CI or air-gapped use">
-          <pre className="lb-doc-pre">
-            <code>{JSON.stringify(mcpConfig, null, 2)}</code>
-          </pre>
-        </Section>
-
-        <Section title="2. Authenticate (device flow)">
+        <Section title="1. Sign in (device flow)">
           <ol className="lb-doc-list">
-            <li>Call <Code>auth_start</Code>, then <Code>auth_poll</Code> until approval completes.</li>
-            <li>Browser opens <Code>{SITE_URL}/mcp/authorize?user_code=XXXX-XXXX</Code>.</li>
-            <li>User approves; token stays in the OS keychain and is never returned to the model.</li>
+            <li>
+              Call <Code>auth_start</Code> on <Code>{SITE_URL}/api/mcp</Code>. No token is needed. It returns a{" "}
+              <Code>userCode</Code> and a link valid for 30 minutes.
+            </li>
+            <li>
+              The human opens <Code>{SITE_URL}/mcp/authorize?user_code=XXXX-XXXX</Code>, signs in with Google or
+              GitHub, and clicks Approve.
+            </li>
+            <li>
+              Call <Code>auth_poll</Code> with the <Code>deviceCode</Code> every 5 seconds until it returns an{" "}
+              <Code>accessToken</Code> (<Code>lb_agt_…</Code>). Keep it out of chat.
+            </li>
           </ol>
         </Section>
 
-        <Section title={`3. Hosted MCP tools (${HOSTED_MCP_TOOL_COUNT})`}>
+        <Section title="2. Call the hosted MCP">
+          <p>
+            Send the token as <Code>Authorization: Bearer …</Code> to <Code>{SITE_URL}/api/mcp</Code>. Without it, every
+            tool except <Code>auth_start</Code> and <Code>auth_poll</Code> answers HTTP 401.
+          </p>
+          <pre className="lb-doc-pre">
+            <code>{JSON.stringify(mcpConfig, null, 2)}</code>
+          </pre>
+          <p className="lb-doc-muted">
+            Not live yet: automatic OAuth connect cards in MCP clients, and PyPI/npm packages. The Python stdio server
+            (<Code>python3 -m librebase_mcp</Code>) runs only from a repo checkout and has a subset of the tools.
+          </p>
+          <p className="lb-doc-muted">
+            Known issue: console-issued MCP keys (<Code>lb_mcp_…</Code>) can fail with “could not resolve org from MCP
+            key”. Use the device flow above.
+          </p>
+        </Section>
+
+        <Section title="3. Hosted MCP tools (24)">
           <p className="lb-doc-muted" style={{ marginBottom: "0.75rem" }}>
-            Source of truth: <Code>POST /api/mcp</Code> → <Code>tools/list</Code>. Full audit:{" "}
-            <Code>docs/mcp/AUDIT.md</Code> in the repo.
+            Source of truth: <Code>POST /api/mcp</Code> → <Code>tools/list</Code>.
           </p>
           <ul className="lb-doc-list">
-            {HOSTED_MCP_TOOL_DOC_GROUPS.map((group) => (
-              <li key={group.names.join("-")}>
-                {group.names.map((name, i) => (
-                  <span key={name}>
-                    {i > 0 ? (group.llmsJoin === "/" ? " / " : ", ") : null}
-                    <Code>{name}</Code>
-                  </span>
-                ))}
-                {group.forAgentsNote ? ` — ${group.forAgentsNote}` : null}
-              </li>
-            ))}
+            <li>
+              <Code>org_whoami</Code>, <Code>project_list</Code>, <Code>project_create</Code>
+            </li>
+            <li>
+              <Code>auth_provider_list</Code>, <Code>auth_provider_upsert</Code> — client secret is KMS-sealed, never
+              returned
+            </li>
+            <li>
+              <Code>instance_list</Code>, <Code>instance_get</Code>, <Code>instance_create</Code>,{" "}
+              <Code>instance_launch</Code>, <Code>instance_stop</Code>
+            </li>
+            <li>
+              <Code>member_list</Code>, <Code>member_invite</Code>, <Code>member_update_role</Code>
+            </li>
+            <li>
+              <Code>host_list</Code>, <Code>host_create</Code>
+            </li>
+            <li>
+              <Code>auth_start</Code>, <Code>auth_poll</Code> — device flow, no token required
+            </li>
+            <li>
+              <Code>key_list</Code>, <Code>key_get</Code>, <Code>key_create</Code>, <Code>key_rotate</Code>,{" "}
+              <Code>key_update</Code>, <Code>key_delete</Code>, <Code>key_decrypt</Code> — only{" "}
+              <Code>key_decrypt</Code> returns a stored value; never echo it into chat
+            </li>
           </ul>
+          <p className="lb-doc-muted">
+            Not on the hosted server today: SQL execution, migrations, storage, functions, billing, and log tools.
+          </p>
         </Section>
 
         <p className="lb-doc-muted lb-doc-foot">

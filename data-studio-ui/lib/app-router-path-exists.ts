@@ -30,7 +30,12 @@ export function extractSitePathsFromLlmsBody(body: string, siteOrigin: string): 
   const re = new RegExp(`${escaped}(/[^\\s)\\]"']*)?`, "g");
   const paths = new Set<string>();
   for (const match of body.matchAll(re)) {
-    paths.add(match[1] && match[1].length > 0 ? match[1] : "/");
+    let p = match[1] && match[1].length > 0 ? match[1] : "/";
+    const q = p.indexOf("?");
+    if (q >= 0) {
+      p = p.slice(0, q);
+    }
+    paths.add(p);
   }
   return [...paths].sort();
 }

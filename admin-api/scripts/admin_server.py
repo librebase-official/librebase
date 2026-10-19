@@ -27,6 +27,12 @@ from typing import Any, Mapping
 from urllib.parse import parse_qs, quote, urlencode, urlparse
 
 ROOT = Path(__file__).resolve().parent.parent
+SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+import mail_api  # noqa: E402
+import mail_pack  # noqa: E402
+
 MIGRATIONS = ROOT / "migrations"
 SCRIPTS = Path(__file__).resolve().parent
 
@@ -62,6 +68,9 @@ MAX_LOGIN_ATTEMPTS = 5  # failed attempts before account lockout
 LOCKOUT_SECONDS = 15 * 60  # lockout duration (15 min)
 IP_WINDOW_SECONDS = 60  # per-IP login rate-limit window
 IP_MAX_ATTEMPTS = 20  # max login POSTs per IP per window
+
+# After create or /start, Hetzner may briefly report status "off" while booting.
+HCLOUD_BOOT_GRACE_SECONDS = int(os.environ.get("LIBREBASE_HCLOUD_BOOT_GRACE_SECONDS", "300"))
 
 
 def admin_dev_mode() -> bool:
@@ -595,6 +604,21 @@ def utc_now_offset(seconds: int) -> str:
     return (dt + timedelta(seconds=seconds)).isoformat().replace("+00:00", "Z")
 
 
+def _parse_utc(ts: str) -> datetime:
+    return datetime.fromisoformat(ts.replace("Z", "+00:00"))
+
+
+def _host_in_boot_grace(row: Mapping[str, Any]) -> bool:
+    updated = row["updated_at"]
+    if not updated:
+        return False
+    try:
+        age = (datetime.now(timezone.utc) - _parse_utc(updated)).total_seconds()
+    except (TypeError, ValueError):
+        return False
+    return age < HCLOUD_BOOT_GRACE_SECONDS
+
+
 def issue_session(
     db: "LiorgDb",
     jwt_secret: str,
@@ -918,6 +942,7 @@ class LiorgDb:
 
 
 ROLE_LEVEL = {"member": 0, "developer": 0, "viewer": 0, "admin": 1, "owner": 2}
+BOT_STATUSES = frozenset({"active", "paused", "disabled"})
 
 
 def role_at_least(role: str, minimum: str) -> bool:
@@ -1276,7 +1301,7 @@ def row_project(row: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def row_host(row: Mapping[str, Any]) -> dict[str, Any]:
-    return {
+    payload: dict[str, Any] = {
         "id": row["id"],
         "orgId": row["org_id"],
         "name": row["name"],
@@ -1290,6 +1315,62 @@ def row_host(row: Mapping[str, Any]) -> dict[str, Any]:
         "imageId": _row_int(row, "image_id"),
         "createdAt": row["created_at"],
         "updatedAt": row["updated_at"],
+    }
+    if "last_error" in row.keys() and row["last_error"]:
+        payload["lastError"] = row["last_error"]
+    return payload
+
+
+def row_bot(row: Mapping[str, Any]) -> dict[str, Any]:
+    """Office/Dots-style agent bot (Librebase Agents)."""
+    return {
+        "id": row["id"],
+        "orgId": row["org_id"],
+        "name": row["name"],
+        "instructions": row["instructions"] if "instructions" in row.keys() else "",
+        "profile": row["profile"] if "profile" in row.keys() else "office",
+        "harness": row["harness"] if "harness" in row.keys() else "pi",
+        "hostId": row["host_id"] if "host_id" in row.keys() else None,
+        "status": row["status"],
+        "avatar": row["avatar"] if "avatar" in row.keys() else None,
+        "createdAt": row["created_at"],
+        "updatedAt": row["updated_at"],
+    }
+
+
+def approval_payload_hash(payload: Mapping[str, Any]) -> str:
+    """SHA-256 hex digest of canonical approval payload JSON for harness dedup.
+
+    Canonicalization: ``json.dumps(payload, sort_keys=True, separators=(',', ':'))``
+    then UTF-8 encode. No insignificant whitespace. The server always stores this
+    digest; clients may send ``payloadHash`` and receive 409 if it does not match.
+    """
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def row_approval(row: Mapping[str, Any]) -> dict[str, Any]:
+    payload: dict[str, Any] = {}
+    raw = row["payload_json"] if "payload_json" in row.keys() else ""
+    if raw:
+        try:
+            parsed = json.loads(raw)
+            if isinstance(parsed, dict):
+                payload = parsed
+        except json.JSONDecodeError:
+            payload = {}
+    return {
+        "id": row["id"],
+        "orgId": row["org_id"],
+        "botId": row["bot_id"],
+        "toolName": row["tool_name"],
+        "payload": payload,
+        "payloadHash": row["payload_hash"] if "payload_hash" in row.keys() else None,
+        "state": row["state"],
+        "createdAt": row["created_at"],
+        "resolvedAt": row["resolved_at"] if "resolved_at" in row.keys() else None,
+        "resolvedBy": row["resolved_by"] if "resolved_by" in row.keys() else None,
+        "requestedBy": row["requested_by"] if "requested_by" in row.keys() else None,
     }
 
 
@@ -1570,12 +1651,32 @@ class LiorgHandler(BaseHTTPRequestHandler):
             return None
         return row
 
-    def sync_hcloud_host(self, row: Mapping[str, Any]) -> Mapping[str, Any] | None:
-        """Reconcile a provisioning host's status against Hetzner.
+    def _mark_host_running_from_agent(
+        self, row: Mapping[str, Any], body: Mapping[str, Any]
+    ) -> None:
+        """Registration or heartbeat from a live agent — host is running."""
+        new_ip = body.get("ip")
+        now = utc_now()
+        if new_ip and (not row["ip"] or row["ip"] != new_ip):
+            self.db.execute("UPDATE hosts SET ip = ? WHERE id = ?", (new_ip, row["id"]))
+        if "last_error" in row.keys():
+            self.db.execute(
+                "UPDATE hosts SET status = ?, last_error = NULL, updated_at = ? WHERE id = ?",
+                ("running", now, row["id"]),
+            )
+        else:
+            self.db.execute(
+                "UPDATE hosts SET status = ?, updated_at = ? WHERE id = ?",
+                ("running", now, row["id"]),
+            )
 
-        Called on host reads. Only flips state when Hetzner reports a terminal
-        condition (server gone/error) — the host agent still owns the running
-        flip by calling /register once it's up.
+    def sync_hcloud_host(self, row: Mapping[str, Any]) -> Mapping[str, Any] | None:
+        """Reconcile host status against Hetzner on reads.
+
+        Provisioning hosts flip to error only when Hetzner reports a bad state
+        outside the post-create/start boot grace window (brief ``off`` is OK).
+        Error hosts return to provisioning when Hetzner reports running so the
+        agent can register again.
         """
         if _hcloud is None or not _hcloud.hcloud_configured():
             return row
@@ -1587,18 +1688,50 @@ class LiorgHandler(BaseHTTPRequestHandler):
         except Exception:
             return row
         now = utc_now()
+        host_status = row["status"]
+        hcloud_status = info.get("status")
+
+        if hcloud_status == "running" and host_status == "error":
+            if "last_error" in row.keys():
+                self.db.execute(
+                    "UPDATE hosts SET status = ?, last_error = NULL, updated_at = ? WHERE id = ?",
+                    ("provisioning", now, row["id"]),
+                )
+            else:
+                self.db.execute(
+                    "UPDATE hosts SET status = ?, updated_at = ? WHERE id = ?",
+                    ("provisioning", now, row["id"]),
+                )
+        elif host_status == "provisioning" and hcloud_status in (
+            "off",
+            "error",
+            "unknown",
+            None,
+        ):
+            if hcloud_status == "off" and _host_in_boot_grace(row):
+                pass
+            else:
+                detail = "hetzner server status: %s" % (hcloud_status or "none")
+                if "last_error" in row.keys():
+                    self.db.execute(
+                        "UPDATE hosts SET status = ?, last_error = ?, updated_at = ? WHERE id = ?",
+                        ("error", detail, now, row["id"]),
+                    )
+                else:
+                    self.db.execute(
+                        "UPDATE hosts SET status = ?, updated_at = ? WHERE id = ?",
+                        ("error", now, row["id"]),
+                    )
+
         # Refresh public IP once Hetzner has allocated it.
-        if info.get("ip") and (not row["ip"] or row["ip"] != info["ip"]):
-            self.db.execute(
-                "UPDATE hosts SET ip = ?, updated_at = ? WHERE id = ?",
-                (info["ip"], now, row["id"]),
-            )
-        status = info.get("status")
-        if status in ("off", "error", "unknown", None) and row["status"] == "provisioning":
-            self.db.execute(
-                "UPDATE hosts SET status = ?, updated_at = ? WHERE id = ?",
-                ("error", now, row["id"]),
-            )
+        if info.get("ip"):
+            fresh = self.db.fetchone("SELECT * FROM hosts WHERE id = ?", (row["id"],))
+            ref = fresh or row
+            if not ref["ip"] or ref["ip"] != info["ip"]:
+                self.db.execute(
+                    "UPDATE hosts SET ip = ?, updated_at = ? WHERE id = ?",
+                    (info["ip"], now, row["id"]),
+                )
         self.db.execute("UPDATE hosts SET updated_at = ? WHERE id = ?", (now, row["id"]))
         return self.db.fetchone("SELECT * FROM hosts WHERE id = ?", (row["id"],))
 
@@ -2052,6 +2185,147 @@ class LiorgHandler(BaseHTTPRequestHandler):
             self.send_json(200, self.check_entitlement(org_id, feature_key))
             return
 
+        bots_match = re.fullmatch(r"/org/v1/orgs/([^/]+)/bots", path)
+        if bots_match:
+            org_id = bots_match.group(1)
+            if not self.require_org_member(org_id):
+                return
+            rows = self.db.fetchall(
+                "SELECT * FROM bots WHERE org_id = ? ORDER BY created_at",
+                (org_id,),
+            )
+            self.send_json(200, [row_bot(r) for r in rows])
+            return
+
+        bot_approval_one = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/bots/([^/]+)/approvals/([^/]+)", path
+        )
+        if bot_approval_one:
+            org_id, bot_id, approval_id = bot_approval_one.groups()
+            if not self.require_org_member(org_id):
+                return
+            row = self.db.fetchone(
+                "SELECT * FROM approvals WHERE org_id = ? AND bot_id = ? AND id = ?",
+                (org_id, bot_id, approval_id),
+            )
+            if not row:
+                self.send_json(404, {"error": "approval not found"})
+                return
+            self.send_json(200, row_approval(row))
+            return
+
+        bot_approvals = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/bots/([^/]+)/approvals", path
+        )
+        if bot_approvals:
+            org_id, bot_id = bot_approvals.groups()
+            if not self.require_org_member(org_id):
+                return
+            bot_row = self.db.fetchone(
+                "SELECT id FROM bots WHERE org_id = ? AND id = ?",
+                (org_id, bot_id),
+            )
+            if not bot_row:
+                self.send_json(404, {"error": "bot not found"})
+                return
+            q = parse_qs(parsed.query)
+            state_filter = (q.get("state", [""])[0]).strip()
+            if state_filter:
+                rows = self.db.fetchall(
+                    "SELECT * FROM approvals WHERE org_id = ? AND bot_id = ? AND state = ? "
+                    "ORDER BY created_at",
+                    (org_id, bot_id, state_filter),
+                )
+            else:
+                rows = self.db.fetchall(
+                    "SELECT * FROM approvals WHERE org_id = ? AND bot_id = ? ORDER BY created_at",
+                    (org_id, bot_id),
+                )
+            self.send_json(200, [row_approval(r) for r in rows])
+            return
+
+        mail_oauth_clients = re.fullmatch(r"/org/v1/orgs/([^/]+)/mail/oauth-clients", path)
+        if mail_oauth_clients:
+            org_id = mail_oauth_clients.group(1)
+            if not self.require_org_role(org_id, "admin"):
+                return
+            self.send_json(200, mail_api.list_mail_oauth_clients(self.db, org_id))
+            return
+
+        mail_oauth_one = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/mail/oauth-clients/([^/]+)", path
+        )
+        if mail_oauth_one:
+            org_id, provider = mail_oauth_one.groups()
+            if not self.require_org_role(org_id, "admin"):
+                return
+            status, payload = mail_api.get_mail_oauth_client_admin(
+                self.db, org_id, provider.strip().lower()
+            )
+            self.send_json(status, payload)
+            return
+
+        mail_defaults = re.fullmatch(r"/org/v1/orgs/([^/]+)/mail/defaults", path)
+        if mail_defaults:
+            org_id = mail_defaults.group(1)
+            if not self.require_org_role(org_id, "admin"):
+                return
+            self.send_json(200, mail_api.list_mail_provider_defaults(self.db, org_id))
+            return
+
+        mail_accounts = re.fullmatch(r"/org/v1/orgs/([^/]+)/mail/accounts", path)
+        if mail_accounts:
+            org_id = mail_accounts.group(1)
+            if not self.require_org_role(org_id, "admin"):
+                return
+            self.send_json(200, mail_api.list_mail_accounts(self.db, org_id))
+            return
+
+        mail_account_one = re.fullmatch(r"/org/v1/orgs/([^/]+)/mail/accounts/([^/]+)", path)
+        if mail_account_one:
+            org_id, account_id = mail_account_one.groups()
+            if not self.require_org_role(org_id, "admin"):
+                return
+            status, payload = mail_api.get_mail_account_admin(self.db, org_id, account_id)
+            self.send_json(status, payload)
+            return
+
+        mail_drafts_list = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/bots/([^/]+)/mail/drafts", path
+        )
+        if mail_drafts_list:
+            org_id, bot_id = mail_drafts_list.groups()
+            if not self.require_org_member(org_id):
+                return
+            self.send_json(200, mail_api.list_mail_drafts(self.db, org_id, bot_id))
+            return
+
+        mail_draft_one = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/bots/([^/]+)/mail/drafts/([^/]+)", path
+        )
+        if mail_draft_one:
+            org_id, bot_id, draft_id = mail_draft_one.groups()
+            if not self.require_org_member(org_id):
+                return
+            status, payload = mail_api.get_mail_draft(self.db, org_id, bot_id, draft_id)
+            self.send_json(status, payload)
+            return
+
+        bot_one = re.fullmatch(r"/org/v1/orgs/([^/]+)/bots/([^/]+)", path)
+        if bot_one:
+            org_id, bot_id = bot_one.groups()
+            if not self.require_org_member(org_id):
+                return
+            row = self.db.fetchone(
+                "SELECT * FROM bots WHERE org_id = ? AND id = ?",
+                (org_id, bot_id),
+            )
+            if not row:
+                self.send_json(404, {"error": "bot not found"})
+                return
+            self.send_json(200, row_bot(row))
+            return
+
         hosts_match = re.fullmatch(r"/org/v1/orgs/([^/]+)/hosts", path)
         if hosts_match:
             org_id = hosts_match.group(1)
@@ -2184,9 +2458,19 @@ class LiorgHandler(BaseHTTPRequestHandler):
             error_message = str(body.get("error", ""))[:500] if body.get("error") else None
             try:
                 self.db.execute(
-                    "INSERT INTO mcp_usage_log (org_id, tool_name, status, latency_ms, ip_address, user_agent, error_message) "
-                    "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (org_id, tool_name, status, latency_ms, ip_address, user_agent, error_message),
+                    "INSERT INTO mcp_usage_log (id, org_id, tool_name, status, latency_ms, ip_address, user_agent, error_message, created_at) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        new_id("mcpu"),
+                        org_id,
+                        tool_name,
+                        status,
+                        latency_ms,
+                        ip_address,
+                        user_agent,
+                        error_message,
+                        utc_now(),
+                    ),
                 )
                 self.db.commit()
             except Exception:
@@ -2665,6 +2949,318 @@ class LiorgHandler(BaseHTTPRequestHandler):
             self.send_json(200, row_provider(row))
             return
 
+        org_bots = re.fullmatch(r"/org/v1/orgs/([^/]+)/bots", path)
+        if org_bots:
+            org_id = org_bots.group(1)
+            if not self.require_org_role(org_id, "member"):
+                return
+            # Agents require a paid/self-host plan (same gate family as instances).
+            gate = self.check_entitlement(org_id, "instance.launch")
+            if gate["code"] == 0:
+                self.send_json(403, {"error": "entitlement denied", "entitlement": gate})
+                return
+            name = str(body.get("name", "")).strip()
+            if not name:
+                self.send_json(400, {"error": "name required"})
+                return
+            profile = str(body.get("profile", "office")).strip() or "office"
+            if profile == "coding":
+                self.send_json(400, {"error": "coding profile deferred; use office"})
+                return
+            harness = str(body.get("harness", "pi")).strip() or "pi"
+            if harness not in ("pi", "hermes_stripped"):
+                self.send_json(400, {"error": "harness must be pi or hermes_stripped"})
+                return
+            host_id = body.get("hostId") or body.get("host_id")
+            if host_id:
+                host_row = self.db.fetchone(
+                    "SELECT id FROM hosts WHERE org_id = ? AND id = ?",
+                    (org_id, str(host_id)),
+                )
+                if not host_row:
+                    self.send_json(400, {"error": "host not found in org"})
+                    return
+            instructions = str(body.get("instructions", "")).strip()
+            now = utc_now()
+            bot_id = new_id("bot")
+            self.db.execute(
+                "INSERT INTO bots "
+                "(id, org_id, name, instructions, profile, harness, host_id, status, "
+                "avatar, created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    bot_id,
+                    org_id,
+                    name,
+                    instructions,
+                    profile,
+                    harness,
+                    str(host_id) if host_id else None,
+                    "active",
+                    body.get("avatar"),
+                    now,
+                    now,
+                ),
+            )
+            ws_id = new_id("bws")
+            self.db.execute(
+                "INSERT INTO bot_workspaces "
+                "(id, bot_id, org_id, host_id, container_id, volume_path, status, "
+                "created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, NULL, NULL, ?, ?, ?)",
+                (
+                    ws_id,
+                    bot_id,
+                    org_id,
+                    str(host_id) if host_id else None,
+                    "active",
+                    now,
+                    now,
+                ),
+            )
+            row = self.db.fetchone("SELECT * FROM bots WHERE id = ?", (bot_id,))
+            self.send_json(201, row_bot(row))
+            return
+
+        bot_approval_approve = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/bots/([^/]+)/approvals/([^/]+)/approve", path
+        )
+        if bot_approval_approve:
+            org_id, bot_id, approval_id = bot_approval_approve.groups()
+            claims = self.require_org_role(org_id, "admin")
+            if not claims:
+                return
+            row = self.db.fetchone(
+                "SELECT * FROM approvals WHERE org_id = ? AND bot_id = ? AND id = ?",
+                (org_id, bot_id, approval_id),
+            )
+            if not row:
+                self.send_json(404, {"error": "approval not found"})
+                return
+            if row["state"] != "pending":
+                self.send_json(409, {"error": "approval already resolved", "state": row["state"]})
+                return
+            requester = row["requested_by"] if "requested_by" in row.keys() else None
+            if requester and requester == claims.get("sub"):
+                self.send_json(403, {"error": "cannot approve or reject your own approval request"})
+                return
+            now = utc_now()
+            self.db.execute(
+                "UPDATE approvals SET state = ?, resolved_at = ?, resolved_by = ? WHERE id = ?",
+                ("approved", now, claims["sub"], approval_id),
+            )
+            updated = self.db.fetchone("SELECT * FROM approvals WHERE id = ?", (approval_id,))
+            self.send_json(200, row_approval(updated))
+            return
+
+        bot_approval_reject = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/bots/([^/]+)/approvals/([^/]+)/reject", path
+        )
+        if bot_approval_reject:
+            org_id, bot_id, approval_id = bot_approval_reject.groups()
+            claims = self.require_org_role(org_id, "admin")
+            if not claims:
+                return
+            row = self.db.fetchone(
+                "SELECT * FROM approvals WHERE org_id = ? AND bot_id = ? AND id = ?",
+                (org_id, bot_id, approval_id),
+            )
+            if not row:
+                self.send_json(404, {"error": "approval not found"})
+                return
+            if row["state"] != "pending":
+                self.send_json(409, {"error": "approval already resolved", "state": row["state"]})
+                return
+            requester = row["requested_by"] if "requested_by" in row.keys() else None
+            if requester and requester == claims.get("sub"):
+                self.send_json(403, {"error": "cannot approve or reject your own approval request"})
+                return
+            now = utc_now()
+            self.db.execute(
+                "UPDATE approvals SET state = ?, resolved_at = ?, resolved_by = ? WHERE id = ?",
+                ("rejected", now, claims["sub"], approval_id),
+            )
+            updated = self.db.fetchone("SELECT * FROM approvals WHERE id = ?", (approval_id,))
+            self.send_json(200, row_approval(updated))
+            return
+
+        bot_approvals_create = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/bots/([^/]+)/approvals", path
+        )
+        if bot_approvals_create:
+            org_id, bot_id = bot_approvals_create.groups()
+            claims = self.require_org_role(org_id, "member")
+            if not claims:
+                return
+            bot_row = self.db.fetchone(
+                "SELECT id FROM bots WHERE org_id = ? AND id = ?",
+                (org_id, bot_id),
+            )
+            if not bot_row:
+                self.send_json(404, {"error": "bot not found"})
+                return
+            tool_name = str(body.get("toolName", body.get("tool_name", ""))).strip()
+            if not tool_name:
+                self.send_json(400, {"error": "toolName required"})
+                return
+            payload = body.get("payload")
+            if payload is None:
+                payload = {}
+            if not isinstance(payload, dict):
+                self.send_json(400, {"error": "payload must be an object"})
+                return
+            payload_json = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+            computed_hash = approval_payload_hash(payload)
+            client_hash = body.get("payloadHash") or body.get("payload_hash")
+            if client_hash:
+                client_hash = str(client_hash).strip()
+                if client_hash != computed_hash:
+                    self.send_json(
+                        409,
+                        {
+                            "error": "payloadHash mismatch",
+                            "payloadHash": computed_hash,
+                        },
+                    )
+                    return
+            requester_id = claims.get("sub")
+            now = utc_now()
+            approval_id = new_id("apr")
+            self.db.execute(
+                "INSERT INTO approvals "
+                "(id, org_id, bot_id, tool_name, payload_json, payload_hash, state, "
+                "requested_by, created_at, resolved_at, resolved_by) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)",
+                (
+                    approval_id,
+                    org_id,
+                    bot_id,
+                    tool_name,
+                    payload_json,
+                    computed_hash,
+                    "pending",
+                    requester_id,
+                    now,
+                ),
+            )
+            row = self.db.fetchone("SELECT * FROM approvals WHERE id = ?", (approval_id,))
+            self.send_json(201, row_approval(row))
+            return
+
+        mail_oauth_upsert = re.fullmatch(r"/org/v1/orgs/([^/]+)/mail/oauth-clients", path)
+        if mail_oauth_upsert:
+            org_id = mail_oauth_upsert.group(1)
+            if not self.require_org_role(org_id, "admin"):
+                return
+            status, payload = mail_api.upsert_mail_oauth_client(
+                self.db,
+                org_id,
+                body,
+                utc_now,
+                new_id,
+                kms_configured,
+                kms_seal,
+            )
+            self.send_json(status, payload)
+            return
+
+        mail_default_set = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/mail/defaults/([^/]+)", path
+        )
+        if mail_default_set:
+            org_id, provider = mail_default_set.groups()
+            if not self.require_org_role(org_id, "admin"):
+                return
+            status, payload = mail_api.set_mail_provider_default(
+                self.db, org_id, provider.strip().lower(), body, utc_now
+            )
+            self.send_json(status, payload)
+            return
+
+        mail_accounts_create = re.fullmatch(r"/org/v1/orgs/([^/]+)/mail/accounts", path)
+        if mail_accounts_create:
+            org_id = mail_accounts_create.group(1)
+            if not self.require_org_role(org_id, "admin"):
+                return
+            status, payload = mail_api.create_mail_account(
+                self.db,
+                org_id,
+                body,
+                utc_now,
+                new_id,
+                kms_configured,
+                kms_seal,
+            )
+            self.send_json(status, payload)
+            return
+
+        mail_drafts_create = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/bots/([^/]+)/mail/drafts", path
+        )
+        if mail_drafts_create:
+            org_id, bot_id = mail_drafts_create.groups()
+            if not self.require_org_role(org_id, "member"):
+                return
+            bot_row = self.db.fetchone(
+                "SELECT id FROM bots WHERE org_id = ? AND id = ?",
+                (org_id, bot_id),
+            )
+            if not bot_row:
+                self.send_json(404, {"error": "bot not found"})
+                return
+            claims = self.bearer_claims() or self.mcp_claims()
+            if not claims or not claims.get("sub"):
+                self.send_json(401, {"error": "unauthorized"})
+                return
+            status, payload = mail_api.create_mail_draft(
+                self.db,
+                org_id,
+                bot_id,
+                body,
+                str(claims["sub"]),
+                utc_now,
+                new_id,
+                approval_payload_hash,
+            )
+            self.send_json(status, payload)
+            return
+
+        mail_send = re.fullmatch(r"/org/v1/orgs/([^/]+)/bots/([^/]+)/mail/send", path)
+        if mail_send:
+            org_id, bot_id = mail_send.groups()
+            if not self.require_org_role(org_id, "member"):
+                return
+            draft_id = str(body.get("draftId", body.get("draft_id", ""))).strip()
+            if not draft_id:
+                self.send_json(400, {"error": "draftId required"})
+                return
+            claims = self.bearer_claims() or self.mcp_claims()
+            if not claims or not claims.get("sub"):
+                self.send_json(401, {"error": "unauthorized"})
+                return
+            if not kms_configured():
+                # klaut-only sends work without KMS; gmail/msgraph need unseal.
+                draft_row = self.db.fetchone(
+                    "SELECT provider FROM mail_drafts WHERE org_id = ? AND bot_id = ? AND id = ?",
+                    (org_id, bot_id, draft_id),
+                )
+                if draft_row and draft_row["provider"] != "klaut":
+                    self.send_json(503, {"error": "KMS not configured (set LIBREBASE_KMS_URL)"})
+                    return
+            status, payload = mail_api.send_mail_draft(
+                self.db,
+                org_id,
+                bot_id,
+                draft_id,
+                str(claims["sub"]),
+                utc_now,
+                new_id,
+                approval_payload_hash,
+                kms_unseal,
+            )
+            self.send_json(status, payload)
+            return
+
         org_hosts = re.fullmatch(r"/org/v1/orgs/([^/]+)/hosts", path)
         if org_hosts:
             org_id = org_hosts.group(1)
@@ -2748,14 +3344,7 @@ class LiorgHandler(BaseHTTPRequestHandler):
             row = self.agent_host()
             if not row:
                 return
-            new_ip = body.get("ip")
-            now = utc_now()
-            if new_ip and (not row["ip"] or row["ip"] != new_ip):
-                self.db.execute("UPDATE hosts SET ip = ? WHERE id = ?", (new_ip, row["id"]))
-            self.db.execute(
-                "UPDATE hosts SET status = ?, updated_at = ? WHERE id = ?",
-                ("running", now, row["id"]),
-            )
+            self._mark_host_running_from_agent(row, body)
             self.send_json(200, {"status": "running"})
             return
 
@@ -2764,7 +3353,12 @@ class LiorgHandler(BaseHTTPRequestHandler):
             row = self.agent_host()
             if not row:
                 return
-            self.db.execute("UPDATE hosts SET updated_at = ? WHERE id = ?", (utc_now(), row["id"]))
+            if row["status"] in ("provisioning", "error"):
+                self._mark_host_running_from_agent(row, body)
+            else:
+                self.db.execute(
+                    "UPDATE hosts SET updated_at = ? WHERE id = ?", (utc_now(), row["id"])
+                )
             self.send_json(200, {"ok": True})
             return
 
@@ -3127,6 +3721,24 @@ class LiorgHandler(BaseHTTPRequestHandler):
             self.send_json(200, {"ok": True})
             return
 
+        bot_del = re.fullmatch(r"/org/v1/orgs/([^/]+)/bots/([^/]+)", path)
+        if bot_del:
+            org_id, bot_id = bot_del.groups()
+            if not self.require_org_role(org_id, "admin"):
+                return
+            row = self.db.fetchone(
+                "SELECT * FROM bots WHERE org_id = ? AND id = ?",
+                (org_id, bot_id),
+            )
+            if not row:
+                self.send_json(404, {"error": "bot not found"})
+                return
+            self.db.execute("DELETE FROM approvals WHERE org_id = ? AND bot_id = ?", (org_id, bot_id))
+            self.db.execute("DELETE FROM bot_workspaces WHERE org_id = ? AND bot_id = ?", (org_id, bot_id))
+            self.db.execute("DELETE FROM bots WHERE org_id = ? AND id = ?", (org_id, bot_id))
+            self.send_json(200, {"ok": True})
+            return
+
         host_del = re.fullmatch(r"/org/v1/orgs/([^/]+)/hosts/([^/]+)", path)
         if host_del:
             org_id, host_id = host_del.groups()
@@ -3212,6 +3824,109 @@ class LiorgHandler(BaseHTTPRequestHandler):
                 (role, row["org_id"], row["user_id"]),
             )
             self.send_json(200, {"userId": row["user_id"], "role": role})
+            return
+
+        mail_draft_patch = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/bots/([^/]+)/mail/drafts/([^/]+)", path
+        )
+        if mail_draft_patch:
+            org_id, bot_id, draft_id = mail_draft_patch.groups()
+            if not self.require_org_role(org_id, "member"):
+                return
+            status, payload = mail_api.patch_mail_draft(
+                self.db,
+                org_id,
+                bot_id,
+                draft_id,
+                body,
+                utc_now,
+                approval_payload_hash,
+            )
+            self.send_json(status, payload)
+            return
+
+        bot_patch = re.fullmatch(r"/org/v1/orgs/([^/]+)/bots/([^/]+)", path)
+        if bot_patch:
+            org_id, bot_id = bot_patch.groups()
+            if not self.require_org_role(org_id, "member"):
+                return
+            row = self.db.fetchone(
+                "SELECT * FROM bots WHERE org_id = ? AND id = ?",
+                (org_id, bot_id),
+            )
+            if not row:
+                self.send_json(404, {"error": "bot not found"})
+                return
+            fields: list[str] = []
+            values: list[Any] = []
+            if "name" in body:
+                name = str(body["name"]).strip()
+                if not name:
+                    self.send_json(400, {"error": "name required"})
+                    return
+                fields.append("name = ?")
+                values.append(name)
+            if "instructions" in body:
+                fields.append("instructions = ?")
+                values.append(str(body["instructions"]).strip())
+            if "profile" in body:
+                profile = str(body["profile"]).strip() or "office"
+                if profile == "coding":
+                    self.send_json(400, {"error": "coding profile deferred; use office"})
+                    return
+                fields.append("profile = ?")
+                values.append(profile)
+            if "harness" in body:
+                harness = str(body["harness"]).strip() or "pi"
+                if harness not in ("pi", "hermes_stripped"):
+                    self.send_json(400, {"error": "harness must be pi or hermes_stripped"})
+                    return
+                fields.append("harness = ?")
+                values.append(harness)
+            if "hostId" in body or "host_id" in body:
+                host_id = body.get("hostId", body.get("host_id"))
+                if host_id:
+                    host_row = self.db.fetchone(
+                        "SELECT id FROM hosts WHERE org_id = ? AND id = ?",
+                        (org_id, str(host_id)),
+                    )
+                    if not host_row:
+                        self.send_json(400, {"error": "host not found in org"})
+                        return
+                    fields.append("host_id = ?")
+                    values.append(str(host_id))
+                else:
+                    fields.append("host_id = ?")
+                    values.append(None)
+            if "avatar" in body:
+                fields.append("avatar = ?")
+                values.append(body.get("avatar"))
+            if "status" in body:
+                status = str(body["status"]).strip()
+                if status not in BOT_STATUSES:
+                    self.send_json(
+                        400,
+                        {"error": "status must be one of: active, paused, disabled"},
+                    )
+                    return
+                fields.append("status = ?")
+                values.append(status)
+            if not fields:
+                self.send_json(400, {"error": "no updatable fields"})
+                return
+            now = utc_now()
+            fields.append("updated_at = ?")
+            values.append(now)
+            values.extend([org_id, bot_id])
+            self.db.execute(
+                f"UPDATE bots SET {', '.join(fields)} WHERE org_id = ? AND id = ?",
+                tuple(values),
+            )
+            updated = self.db.fetchone(
+                "SELECT * FROM bots WHERE org_id = ? AND id = ?",
+                (org_id, bot_id),
+            )
+            self.send_json(200, row_bot(updated))
             return
 
         project_link = re.fullmatch(r"/org/v1/orgs/([^/]+)/projects/([^/]+)", path)

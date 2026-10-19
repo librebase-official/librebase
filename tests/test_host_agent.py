@@ -142,6 +142,40 @@ class TestHostAgent(unittest.TestCase):
         self.assertIn("POST", methods)
         self.assertIn("GET", methods)
 
+    def test_admin_url_defaults_to_studio_admin_proxy(self) -> None:
+        for key in (
+            "LIBREBASE_AGENT_URL",
+            "LIBREBASE_ADMIN_URL",
+            "LIBREBASE_CONSOLE_URL",
+        ):
+            os.environ.pop(key, None)
+        self.assertEqual(
+            self.mod.admin_url(),
+            "https://app.librebase.xyz/api/admin-proxy",
+        )
+
+    def test_registration_tick_retries_until_success(self) -> None:
+        attempts = 0
+
+        def flaky_register() -> bool:
+            nonlocal attempts
+            attempts += 1
+            return attempts >= 2
+
+        self.mod.register = flaky_register  # type: ignore[assignment]
+        state: dict[str, float | bool] = {
+            "registered": False,
+            "backoff": 1.0,
+            "next_attempt": 0.0,
+        }
+        self.mod._registration_tick(state)
+        self.assertFalse(state["registered"])
+        self.assertEqual(attempts, 1)
+        state["next_attempt"] = 0.0
+        self.mod._registration_tick(state)
+        self.assertTrue(state["registered"])
+        self.assertEqual(attempts, 2)
+
 
 if __name__ == "__main__":
     unittest.main()

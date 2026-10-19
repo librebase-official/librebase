@@ -19,6 +19,57 @@ _MCP_KEY = os.environ.get("LIBREBASE_MCP_KEY", "").strip()
 _org_cache: str | None = None
 
 
+def _mcp_key_hint() -> str:
+    return (
+        "Issue a fresh key in Librebase Studio as org admin: open /admin → MCP key → "
+        '"Generate new key" (revokes prior keys). API: POST /org/v1/orgs/{orgId}/mcp-keys/rotate '
+        "with Authorization: Bearer <session JWT> (admin role)."
+    )
+
+
+def _snippet(value: Any, limit: int = 200) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        text = value
+    else:
+        text = json.dumps(value)
+    text = text.replace("\n", " ").strip()
+    if len(text) > limit:
+        return text[:limit] + "…"
+    return text
+
+
+def _format_mcp_org_failure(payload: Any) -> str:
+    if not isinstance(payload, dict):
+        return f"could not resolve org from MCP key (unexpected response). {_mcp_key_hint()}"
+
+    status = payload.get("status")
+    err = payload.get("error")
+    message = payload.get("message")
+
+    if payload.get("error") == "connection_error":
+        return (
+            f"could not reach Admin API at {_ADMIN_URL}: {_snippet(message)}. "
+            f"Check LIBREBASE_ADMIN_URL. {_mcp_key_hint()}"
+        )
+
+    detail = _snippet(err or message)
+    if status == 401 or (isinstance(err, str) and "mcp key" in err.lower()):
+        return (
+            f"GET /org/v1/mcp/org returned HTTP {status}: {detail}. "
+            f"LIBREBASE_MCP_KEY may be missing, revoked, or mistyped. {_mcp_key_hint()}"
+        )
+    if status and int(status) >= 400:
+        return (
+            f"GET /org/v1/mcp/org failed with HTTP {status}: {detail}. "
+            f"Verify LIBREBASE_ADMIN_URL ({_ADMIN_URL}) is the Admin API base "
+            f"(e.g. https://app.example.com/api/admin-proxy), not a Studio HTML page. "
+            f"{_mcp_key_hint()}"
+        )
+    return f"could not resolve org from MCP key (missing orgId in response). {_mcp_key_hint()}"
+
+
 def _request(
     method: str,
     path: str,
@@ -44,16 +95,26 @@ def _request(
             payload = {"error": "http_error", "message": raw or str(exc), "status": exc.code}
         payload.setdefault("status", exc.code)
         return payload
+    except urllib.error.URLError as exc:
+        return {
+            "error": "connection_error",
+            "message": str(exc.reason),
+            "status": 0,
+        }
 
 
 def _org_id() -> str:
     global _org_cache
-    if _org_cache is None:
-        payload = _request("GET", "/org/v1/mcp/org")
-        _org_cache = str(payload.get("orgId", "")) if isinstance(payload, dict) else ""
-    if not _org_cache:
-        raise RuntimeError("could not resolve org from MCP key")
-    return _org_cache
+    if _org_cache:
+        return _org_cache
+    if not _MCP_KEY:
+        raise RuntimeError(f"LIBREBASE_MCP_KEY is not set. {_mcp_key_hint()}")
+    payload = _request("GET", "/org/v1/mcp/org")
+    org_id = str(payload.get("orgId", "")) if isinstance(payload, dict) else ""
+    if org_id:
+        _org_cache = org_id
+        return _org_cache
+    raise RuntimeError(_format_mcp_org_failure(payload))
 
 
 TOOLS: list[dict[str, Any]] = [
@@ -278,7 +339,7 @@ def _handle(msg: dict[str, Any]) -> dict[str, Any] | None:
             "result": {
                 "protocolVersion": "2024-11-05",
                 "capabilities": {"tools": {}},
-                "serverInfo": {"name": "librebase", "version": "0.1.30"},
+                "serverInfo": {"name": "librebase", "version": "0.1.35"},
             },
         }
     if method == "notifications/initialized":
