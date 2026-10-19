@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "librebase-mcp"
+description = "Stdio MCP server for Librebase Admin API (org, projects, instances)"
+readme = "README.md"
+requires-python = ">=3.10"
+dynamic = ["version"]
+# License SPDX TBD before first PyPI publish (LIB-150) — Julian will choose; no LICENSE file in repo yet.
+license = { text = "TODO: SPDX to be set before publish (LIB-150)" }
+authors = [{ name = "Librebase" }]
+keywords = ["mcp", "librebase", "model-context-protocol"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Software Development :: Libraries",
+]
+
+[project.urls]
+Homepage = "https://github.com/librebase-official/librebase"
+Repository = "https://github.com/librebase-official/librebase"
+Documentation = "https://github.com/librebase-official/librebase/tree/main/mcp"
+
+[project.scripts]
+librebase-mcp = "librebase_mcp.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["librebase_mcp*"]
+
+[tool.setuptools.dynamic]
+version = { file = "VERSION" }

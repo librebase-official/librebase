@@ -6,6 +6,10 @@
   "bin": {
     "librebase-mcp": "./src/server.js"
   },
+  "files": [
+    "src",
+    "README.md"
+  ],
   "scripts": {
     "test": "node test/session.unit.mjs && node test/smoke.mjs && node test/e2e.mjs",
     "smoke": "node test/smoke.mjs"
@@ -15,6 +19,15 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/librebase-official/librebase.git",
+    "directory": "packages/mcp"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
   "license": "GPL-3.0-or-later"
 }

@@ -1,0 +1,39 @@
+name: Package build
+
+# Build/pack all publishable artifacts without releasing (LIB-150/LIB-151 prep).
+# Kept separate from test.yml while PR #54 stabilizes the main test workflow.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  package-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build and check Python MCP (librebase-mcp)
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+          python -m build mcp
+          twine check mcp/dist/*
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Verify npm pack layouts (@librebase/*)
+        run: |
+          set -euo pipefail
+          for pkg in packages/mcp packages/cli packages/sdk; do
+            echo "==> npm pack --dry-run in ${pkg}"
+            (cd "$pkg" && npm pack --dry-run)
+          done
