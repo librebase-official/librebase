@@ -4019,11 +4019,24 @@ class LiorgHandler(BaseHTTPRequestHandler):
         self.send_json(404, {"error": "not found"})
 
 
-def main() -> None:
+def _admin_listen_host() -> str:
     host = os.environ.get(
         "LIBREBASE_ADMIN_BIND",
         os.environ.get("LIORG_BIND", "0.0.0.0"),
-    )
+    ).strip()
+    loopback_only = host in ("127.0.0.1", "localhost", "::1")
+    if loopback_only and Path("/.dockerenv").exists():
+        print(
+            "WARNING: LIBREBASE_ADMIN_BIND is loopback inside a container; "
+            "forcing 0.0.0.0 so other processes can reach the Admin API.",
+            file=sys.stderr,
+        )
+        return "0.0.0.0"
+    return host or "0.0.0.0"
+
+
+def main() -> None:
+    host = _admin_listen_host()
     port = int(
         os.environ.get(
             "LIBREBASE_ADMIN_PORT",

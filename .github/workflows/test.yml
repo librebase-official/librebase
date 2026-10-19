@@ -7,6 +7,20 @@ on:
     branches: [main]
 
 jobs:
+  conflict-markers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for unresolved merge conflict markers
+        run: bash scripts/check-merge-conflict-markers.sh
+
+  compose-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: OSS Docker Compose smoke (setup + MCP org_whoami)
+        run: bash scripts/compose-smoke.sh
+
   test:
     runs-on: ubuntu-latest
     defaults:
@@ -25,6 +39,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: Check for unresolved merge conflict markers
+        working-directory: ${{ github.workspace }}
+        run: bash scripts/check-merge-conflict-markers.sh
 
       - name: Install dependencies
         run: npm ci

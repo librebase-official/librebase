@@ -54,7 +54,7 @@ Today the token has to be pasted into the client's header config (or held by the
 - Full guide in the Librebase repo: \`docs/self-hosting.md\` (OSS \`deploy/compose/docker-compose.yml\`: Studio + Admin + KMS).
 - First org (no browser): \`POST /org/v1/setup\` on the Admin API with JSON \`name\`, \`ownerEmail\`, \`password\` — returns \`orgId\`, session \`token\`, and an initial \`mcpKey\` (\`lb_mcp_…\`, shown once).
 - New MCP key: \`POST /org/v1/orgs/{orgId}/mcp-keys/rotate\` with \`Authorization: Bearer <session JWT>\` from setup/login.
-- Agents use the same hosted MCP shape as cloud: \`POST {your Studio origin}/api/mcp\` with \`Authorization: Bearer <lb_mcp_…>\` for \`org_whoami\`, \`project_list\`, etc. Admin must listen on \`0.0.0.0\` inside Docker; Studio uses \`LIBREBASE_ADMIN_URL=http://librebase-admin:54330\` on the compose network.
+- Agents use the same hosted MCP shape as cloud: \`POST {your Studio origin}/api/mcp\` with \`Authorization: Bearer <lb_mcp_…>\` for \`org_whoami\`, \`project_list\`, etc. OSS compose shares one network namespace — Studio calls Admin at \`http://127.0.0.1:54330\` (see \`docs/self-hosting.md\`).
 
 ## Tools (live hosted tools/list, 24)
 - \`org_whoami\` -- resolve the token's org (id, name, edition)
