@@ -39,10 +39,15 @@ Override with `LIBREBASE_STUDIO_DATA_DIR`.
 Librebase exposes a hosted MCP endpoint — no local repo needed:
 
 1. **Auto-discover:** `GET https://app.librebase.xyz/.well-known/mcp.json`
-2. **Connect:** `POST https://app.librebase.xyz/api/mcp` with `Authorization: Bearer <mcp_key>`
-3. **Use tools:** `org_whoami`, `project_list`, `project_create`, `instance_list`, `instance_create`, `host_list`, etc.
+2. **Sign in:** device flow (`auth_start` / `auth_poll` on `POST https://app.librebase.xyz/api/mcp`) — a human approves once in the browser; the agent receives an `lb_agt_*` token.
+3. **Connect:** send `Authorization: Bearer <token>` on every other tool call (`org_whoami`, `project_list`, `instance_list`, KMS tools, etc.).
 
-Or run the MCP server locally:
+Optional stdio bridge (repo checkout or future `librebase-mcp` package) — same contract as `@librebase/mcp`:
+
+| Variable | Purpose |
+|----------|---------|
+| `LIBREBASE_MCP_URL` | Hosted MCP JSON-RPC URL (default `https://app.librebase.xyz/api/mcp`) |
+| `LIBREBASE_MCP_TOKEN` | Optional `lb_mcp_*` / `lb_agt_*` bearer when skipping device flow |
 
 ```json
 {
@@ -51,15 +56,19 @@ Or run the MCP server locally:
       "command": "python3",
       "args": ["-m", "librebase_mcp"],
       "env": {
-        "LIBREBASE_ADMIN_URL": "https://app.librebase.xyz/api/admin-proxy",
-        "LIBREBASE_CONSOLE_URL": "https://app.librebase.xyz"
+        "LIBREBASE_MCP_URL": "https://app.librebase.xyz/api/mcp",
+        "LIBREBASE_MCP_TOKEN": "lb_mcp_…"
       }
     }
   }
 }
 ```
 
-Docs: https://app.librebase.xyz/for-agents · https://app.librebase.xyz/llms.txt
+Details: [`mcp/README.md`](mcp/README.md) · https://app.librebase.xyz/for-agents · https://app.librebase.xyz/llms.txt
+
+## Self-hosting
+
+Run Studio, Admin API, and KMS on your own VM with Docker Compose. See [`docs/self-hosting.md`](docs/self-hosting.md) and [`deploy/compose/.env.example`](deploy/compose/.env.example).
 
 ## Development
 

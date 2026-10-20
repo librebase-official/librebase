@@ -31,9 +31,8 @@ export async function GET() {
       command: "python3",
       args: ["-m", "librebase_mcp"],
       env: {
-        LIBREBASE_ADMIN_URL: `${SITE_URL}/api/admin-proxy`,
-        LIBREBASE_CONSOLE_URL: SITE_URL,
-        LIBREBASE_MCP_KEY: "CI-only-static-key",
+        LIBREBASE_MCP_URL: `${SITE_URL}/api/mcp`,
+        LIBREBASE_MCP_TOKEN: "lb_mcp_…",
       },
     },
     docs: {
