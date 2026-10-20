@@ -144,10 +144,12 @@ async function callTool(
 
     case "auth_start": {
       const clientName = String(args.clientName ?? "MCP Agent");
+      const startBody: Record<string, unknown> = { clientName };
+      if (args.botId) startBody.botId = args.botId;
       const res = await fetch(`${adminBaseUrl()}/org/v1/mcp/device/start`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientName }),
+        body: JSON.stringify(startBody),
         cache: "no-store",
       });
       const payload = await res.json().catch(() => ({}));
@@ -187,6 +189,31 @@ async function callTool(
       return adminFetch("PATCH", `/org/v1/keys/${String(args.keyId)}`, token, clean(args));
     case "key_delete":
       return adminFetch("DELETE", `/org/v1/keys/${String(args.keyId)}`, token);
+    case "mcp_token_list": {
+      const botId = args.botId ? String(args.botId) : "";
+      const suffix = botId
+        ? `?botId=${encodeURIComponent(botId)}`
+        : "";
+      return adminFetch(
+        "GET",
+        `/org/v1/orgs/${orgId}/mcp-tokens${suffix}`,
+        token,
+      );
+    }
+    case "mcp_token_rotate":
+      return adminFetch(
+        "POST",
+        `/org/v1/orgs/${orgId}/mcp-tokens/${String(args.tokenId)}/rotate`,
+        token,
+        {},
+      );
+    case "mcp_token_revoke":
+      return adminFetch(
+        "POST",
+        `/org/v1/orgs/${orgId}/mcp-tokens/${String(args.tokenId)}/revoke`,
+        token,
+        {},
+      );
     default:
       return { error: "not_found", message: `unknown tool ${name}` };
   }
@@ -235,14 +262,16 @@ async function handleJsonRpc(
     const orgRes = await adminFetch("GET", "/org/v1/mcp/org", token);
     orgId = String(orgRes.orgId ?? "");
     if (!orgId) {
-      // Invalid key — return MCP error, not HTTP error
+      const cause =
+        typeof orgRes.cause === "string" ? orgRes.cause : "unknown";
       return jsonRpc(id, {
         content: [
           {
             type: "text",
             text: JSON.stringify({
               error: "auth_error",
-              message: "Invalid or revoked MCP key",
+              cause,
+              message: `MCP token rejected (${cause})`,
             }),
           },
         ],

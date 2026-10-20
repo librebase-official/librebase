@@ -44,4 +44,4 @@ def test_mcp_metadata_uses_repository_version_and_matches_tool_count():
     version = (ROOT / "VERSION").read_text().strip()
     assert f'version: "{version}"' not in route
     assert "APP_VERSION = process.env.LIBREBASE_VERSION" in route
-    assert "toolCount: TOOLS.length" in route
+    assert "toolCount: HOSTED_MCP_TOOLS.length" in route

@@ -32,6 +32,7 @@ if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 import mail_api  # noqa: E402
 import mail_pack  # noqa: E402
+import mcp_tokens as mcp_tokens_mod  # noqa: E402
 
 MIGRATIONS = ROOT / "migrations"
 SCRIPTS = Path(__file__).resolve().parent
@@ -776,27 +777,22 @@ def slugify(name: str) -> str:
 
 
 def issue_mcp_key(db: "LiorgDb", org_id: str) -> str:
-    """Issue a new MCP key (revokes any prior active key). Returns plaintext."""
-    key = "lb_mcp_" + secrets.token_urlsafe(32)
-    now = utc_now()
-    db.execute(
-        "UPDATE mcp_keys SET revoked_at = ? WHERE org_id = ? AND revoked_at IS NULL",
-        (now, org_id),
+    """Issue a new org console MCP key (does not revoke per-agent tokens)."""
+    return mcp_tokens_mod.issue_org_mcp_key(
+        db,
+        org_id,
+        new_id=new_id,
+        hash_token=hash_token,
+        utc_now=utc_now,
     )
-    db.execute(
-        "INSERT INTO mcp_keys (id, org_id, key_hash, created_at) VALUES (?, ?, ?, ?)",
-        (new_id("mcpk"), org_id, hash_token(key), now),
-    )
-    return key
 
 
 def row_mcp_key(row: Mapping[str, Any]) -> dict[str, Any]:
-    return {
-        "id": row["id"],
-        "orgId": row["org_id"],
-        "createdAt": row["created_at"],
-        "revoked": bool(row["revoked_at"]),
-    }
+    return mcp_tokens_mod.row_mcp_key(row)
+
+
+def public_site_base() -> str:
+    return os.environ.get("LIBREBASE_PUBLIC_URL", "http://127.0.0.1:3000").rstrip("/")
 
 
 class LiorgDb:
@@ -1503,26 +1499,38 @@ class LiorgHandler(BaseHTTPRequestHandler):
         token = auth[7:].strip()
         return verify_jwt(token, self.jwt_secret)
 
+    def resolve_mcp_auth(
+        self, token: str
+    ) -> tuple[dict[str, Any] | None, mcp_tokens_mod.McpAuthCause]:
+        ctx, cause = mcp_tokens_mod.resolve_bearer(
+            self.db,
+            token,
+            hash_token=hash_token,
+            utc_now=utc_now,
+        )
+        if not ctx:
+            return None, cause
+        return mcp_tokens_mod.mcp_claims_from_context(ctx), mcp_tokens_mod.McpAuthCause.OK
+
     def mcp_key_org(self) -> str | None:
-        """Return the org scoped to a valid MCP key (lb_mcp_...) or None."""
+        """Return the org scoped to a valid MCP bearer (lb_mcp_* or lb_agt_*) or None."""
         auth = self.headers.get("Authorization", "")
         if not auth.startswith("Bearer "):
             return None
         token = auth[7:].strip()
-        if not token.startswith("lb_mcp_"):
-            return None
-        row = self.db.fetchone(
-            "SELECT org_id FROM mcp_keys WHERE key_hash = ? AND revoked_at IS NULL",
-            (hash_token(token),),
-        )
-        return row["org_id"] if row else None
+        claims, cause = self.resolve_mcp_auth(token)
+        if claims:
+            return str(claims["org_id"])
+        return None
 
     def mcp_claims(self) -> dict[str, Any] | None:
         """MCP-key identity: admin-scoped to the key's org, or None."""
-        org_id = self.mcp_key_org()
-        if not org_id:
+        auth = self.headers.get("Authorization", "")
+        if not auth.startswith("Bearer "):
             return None
-        return {"sub": "mcp", "org_id": org_id, "role": "admin", "via": "mcp"}
+        token = auth[7:].strip()
+        claims, _cause = self.resolve_mcp_auth(token)
+        return claims
 
 
     def require_org_member(self, org_id: str) -> dict[str, Any] | None:
@@ -1929,9 +1937,20 @@ class LiorgHandler(BaseHTTPRequestHandler):
             return
 
         if path == "/org/v1/mcp/org":
-            mcp = self.mcp_claims()
+            auth = self.headers.get("Authorization", "")
+            if not auth.startswith("Bearer "):
+                self.send_json(
+                    401,
+                    {"error": "unauthorized", "cause": mcp_tokens_mod.McpAuthCause.MALFORMED.value},
+                )
+                return
+            token = auth[7:].strip()
+            mcp, cause = self.resolve_mcp_auth(token)
             if not mcp:
-                self.send_json(401, {"error": "invalid or missing MCP key"})
+                self.send_json(
+                    401,
+                    {"error": "invalid mcp token", "cause": cause.value},
+                )
                 return
             org_id = mcp["org_id"]
             org = self.db.fetchone("SELECT * FROM organizations WHERE id = ?", (org_id,))
@@ -2067,6 +2086,52 @@ class LiorgHandler(BaseHTTPRequestHandler):
                 (org_id,),
             )
             self.send_json(200, [row_mcp_key(r) for r in rows])
+            return
+
+        org_mcp_tokens = re.fullmatch(r"/org/v1/orgs/([^/]+)/mcp-tokens", path)
+        if org_mcp_tokens:
+            org_id = org_mcp_tokens.group(1)
+            if not self.require_org_role(org_id, "admin"):
+                return
+            q = parse_qs(parsed.query)
+            bot_filter = (q.get("botId", [""])[0] or "").strip() or None
+            self.send_json(
+                200,
+                mcp_tokens_mod.list_mcp_tokens(self.db, org_id, bot_id=bot_filter),
+            )
+            return
+
+        mcp_device_view = re.fullmatch(r"/org/v1/mcp/device/([^/]+)", path)
+        if mcp_device_view:
+            user_code = mcp_device_view.group(1)
+            claims = self.bearer_claims()
+            if not claims:
+                self.send_json(401, {"error": "unauthorized"})
+                return
+            user_id = claims.get("sub")
+            if not user_id:
+                self.send_json(401, {"error": "unauthorized"})
+                return
+            memberships = self.db.fetchall(
+                "SELECT m.org_id, m.role, o.name FROM members m "
+                "JOIN organizations o ON o.id = m.org_id WHERE m.user_id = ?",
+                (user_id,),
+            )
+            mem_payload = [
+                {"orgId": m["org_id"], "role": m["role"], "name": m["name"]}
+                for m in memberships
+            ]
+            view = mcp_tokens_mod.device_view(
+                self.db,
+                user_code,
+                utc_now=utc_now,
+                memberships=mem_payload,
+                active_org_id=claims.get("org_id"),
+            )
+            if not view:
+                self.send_json(404, {"error": "unknown device code"})
+                return
+            self.send_json(200, view)
             return
 
         members_match = re.fullmatch(r"/org/v1/orgs/([^/]+)/members", path)
@@ -2440,6 +2505,163 @@ class LiorgHandler(BaseHTTPRequestHandler):
                 return
             mcp_key = issue_mcp_key(self.db, org_id)
             self.send_json(200, {"mcpKey": mcp_key})
+            return
+
+        mcp_revoke_all = re.fullmatch(r"/org/v1/orgs/([^/]+)/mcp-keys/revoke-all", path)
+        if mcp_revoke_all:
+            org_id = mcp_revoke_all.group(1)
+            if not self.require_org_role(org_id, "owner"):
+                return
+            count = mcp_tokens_mod.revoke_all_org_mcp_keys(
+                self.db, org_id, utc_now=utc_now
+            )
+            self.send_json(200, {"ok": True, "revoked": count})
+            return
+
+        org_mcp_rotate = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/mcp-tokens/([^/]+)/rotate", path
+        )
+        if org_mcp_rotate:
+            org_id, token_id = org_mcp_rotate.groups()
+            if not self.require_org_role(org_id, "admin"):
+                return
+            try:
+                token_plain, new_token_id = mcp_tokens_mod.rotate_mcp_token(
+                    self.db,
+                    org_id,
+                    token_id,
+                    new_id=new_id,
+                    hash_token=hash_token,
+                    utc_now=utc_now,
+                )
+            except ValueError as exc:
+                self.send_json(404, {"error": str(exc)})
+                return
+            self.send_json(
+                200,
+                {"accessToken": token_plain, "tokenId": new_token_id},
+            )
+            return
+
+        org_mcp_revoke = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/mcp-tokens/([^/]+)/revoke", path
+        )
+        if org_mcp_revoke:
+            org_id, token_id = org_mcp_revoke.groups()
+            if not self.require_org_role(org_id, "admin"):
+                return
+            if not mcp_tokens_mod.revoke_mcp_token(
+                self.db, org_id, token_id, utc_now=utc_now
+            ):
+                self.send_json(404, {"error": "token not found"})
+                return
+            self.send_json(200, {"ok": True})
+            return
+
+        bot_mcp_mint = re.fullmatch(
+            r"/org/v1/orgs/([^/]+)/bots/([^/]+)/mcp-tokens", path
+        )
+        if bot_mcp_mint:
+            org_id, bot_id = bot_mcp_mint.groups()
+            if not self.require_org_role(org_id, "admin"):
+                return
+            try:
+                token_plain, token_id = mcp_tokens_mod.issue_bot_mcp_token(
+                    self.db,
+                    org_id,
+                    bot_id,
+                    new_id=new_id,
+                    hash_token=hash_token,
+                    utc_now=utc_now,
+                )
+            except ValueError as exc:
+                self.send_json(404, {"error": str(exc)})
+                return
+            self.send_json(
+                200,
+                {"accessToken": token_plain, "tokenId": token_id, "botId": bot_id},
+            )
+            return
+
+        if path == "/org/v1/mcp/device/start":
+            client_name = str(body.get("clientName", "MCP Agent")).strip()
+            bot_id = body.get("botId")
+            bot_id_str = str(bot_id).strip() if bot_id else None
+            started = mcp_tokens_mod.device_start(
+                self.db,
+                client_name=client_name,
+                bot_id=bot_id_str or None,
+                new_id=new_id,
+                hash_token=hash_token,
+                utc_now=utc_now,
+                utc_now_offset=utc_now_offset,
+                site_base=public_site_base(),
+            )
+            self.send_json(200, started)
+            return
+
+        if path == "/org/v1/mcp/device/token":
+            device_code = str(body.get("deviceCode", "")).strip()
+            if not device_code:
+                self.send_json(400, {"error": "invalid_grant"})
+                return
+            payload = mcp_tokens_mod.device_poll_token(
+                self.db,
+                device_code,
+                hash_token=hash_token,
+                utc_now=utc_now,
+            )
+            status = 200 if "accessToken" in payload else 400
+            self.send_json(status, payload)
+            return
+
+        mcp_device_approve = re.fullmatch(r"/org/v1/mcp/device/([^/]+)/approve", path)
+        if mcp_device_approve:
+            user_code = mcp_device_approve.group(1)
+            claims = self.bearer_claims()
+            if not claims:
+                self.send_json(401, {"error": "unauthorized"})
+                return
+            org_id = str(body.get("orgId") or claims.get("org_id") or "").strip()
+            if not org_id:
+                self.send_json(400, {"error": "orgId required"})
+                return
+            if not self.require_org_role(org_id, "admin"):
+                return
+            try:
+                result = mcp_tokens_mod.device_approve(
+                    self.db,
+                    user_code,
+                    org_id,
+                    str(claims["sub"]),
+                    bot_id=body.get("botId"),
+                    scope=body.get("scope"),
+                    project_id=body.get("projectId"),
+                    new_id=new_id,
+                    hash_token=hash_token,
+                    utc_now=utc_now,
+                )
+            except ValueError as exc:
+                self.send_json(400, {"error": str(exc)})
+                return
+            self.send_json(200, result)
+            return
+
+        mcp_device_deny = re.fullmatch(r"/org/v1/mcp/device/([^/]+)/deny", path)
+        if mcp_device_deny:
+            user_code = mcp_device_deny.group(1)
+            claims = self.bearer_claims()
+            if not claims:
+                self.send_json(401, {"error": "unauthorized"})
+                return
+            try:
+                result = mcp_tokens_mod.device_deny(
+                    self.db, user_code, utc_now=utc_now
+                )
+            except ValueError as exc:
+                self.send_json(404, {"error": str(exc)})
+                return
+            self.send_json(200, result)
             return
 
         # MCP usage logging — POST /org/v1/mcp/usage

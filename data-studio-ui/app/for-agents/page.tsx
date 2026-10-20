@@ -91,12 +91,12 @@ export default function ForAgentsPage() {
             <Code>LIBREBASE_MCP_URL</Code> plus optional <Code>LIBREBASE_MCP_TOKEN</Code> — never paste tokens into chat.
           </p>
           <p className="lb-doc-muted">
-            Known issue: console-issued MCP keys (<Code>lb_mcp_…</Code>) can fail with “could not resolve org from MCP
-            key”. Use the device flow above.
+            Auth failures return an explicit <Code>cause</Code> (<Code>revoked</Code>, <Code>expired</Code>,{" "}
+            <Code>unknown</Code>, …) instead of a generic org-resolution error.
           </p>
         </Section>
 
-        <Section title="3. Hosted MCP tools (24)">
+        <Section title="3. Hosted MCP tools (27)">
           <p className="lb-doc-muted" style={{ marginBottom: "0.75rem" }}>
             Source of truth: <Code>POST /api/mcp</Code> → <Code>tools/list</Code>.
           </p>
@@ -125,6 +125,11 @@ export default function ForAgentsPage() {
               <Code>key_list</Code>, <Code>key_get</Code>, <Code>key_create</Code>, <Code>key_rotate</Code>,{" "}
               <Code>key_update</Code>, <Code>key_delete</Code>, <Code>key_decrypt</Code> — only{" "}
               <Code>key_decrypt</Code> returns a stored value; never echo it into chat
+            </li>
+            <li>
+              <Code>mcp_token_list</Code>, <Code>mcp_token_rotate</Code>, <Code>mcp_token_revoke</Code>{" "}
+              — MCP tokens by id (bound to WP-02 <Code>botId</Code> and/or device-flow{" "}
+              <Code>deviceCodeId</Code>)
             </li>
           </ul>
           <p className="lb-doc-muted">

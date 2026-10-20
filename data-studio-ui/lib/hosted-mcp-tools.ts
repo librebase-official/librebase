@@ -162,6 +162,7 @@ export const HOSTED_MCP_TOOLS: HostedMcpTool[] = [
       type: "object",
       properties: {
         clientName: { type: "string", description: "Shown on the approve screen (default: MCP Agent)" },
+        botId: { type: "string", description: "Optional WP-02 bot id to bind the minted lb_agt_* token" },
       },
     },
   },
@@ -243,6 +244,34 @@ export const HOSTED_MCP_TOOLS: HostedMcpTool[] = [
       type: "object",
       required: ["keyId"],
       properties: { keyId: { type: "string" } },
+    },
+  },
+  {
+    name: "mcp_token_list",
+    description:
+      "List MCP bearer tokens for the org (optional botId filter). Metadata only; includes lastUsedAt, botId, deviceCodeId.",
+    inputSchema: {
+      type: "object",
+      properties: { botId: { type: "string", description: "Filter to one WP-02 bot" } },
+    },
+  },
+  {
+    name: "mcp_token_rotate",
+    description:
+      "Rotate one MCP token by id. Revokes only that token and mints a successor with the same botId/deviceCodeId bindings.",
+    inputSchema: {
+      type: "object",
+      required: ["tokenId"],
+      properties: { tokenId: { type: "string" } },
+    },
+  },
+  {
+    name: "mcp_token_revoke",
+    description: "Revoke one MCP token by id.",
+    inputSchema: {
+      type: "object",
+      required: ["tokenId"],
+      properties: { tokenId: { type: "string" } },
     },
   },
 ];

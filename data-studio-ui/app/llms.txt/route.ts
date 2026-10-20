@@ -28,7 +28,7 @@ export function llmsBody(): string {
 3. Call \`auth_poll\` with the \`deviceCode\` every \`interval\` seconds until it returns \`accessToken\` (\`lb_agt_...\`).
 4. Send that token as \`Authorization: Bearer <accessToken>\` on every other call. Keep it out of chat and out of model-visible output.
 
-Known issue (Oct 2026): console-issued MCP keys (\`lb_mcp_...\`) can fail with "could not resolve org from MCP key". This is a server-side problem, not a config mistake on your side. Use the device flow above, and report the error if it also appears with an \`lb_agt_...\` token.
+Invalid or revoked tokens return an explicit \`cause\` (\`revoked\`, \`expired\`, \`unknown\`) from \`org_whoami\` / protected tools — not a generic org-resolution error.
 
 ## Hosted MCP config
 Clients that let you set headers:
@@ -50,7 +50,7 @@ Today the token has to be pasted into the client's header config (or held by the
 ## Local stdio server (repo checkout only)
 \`python3 -m librebase_mcp\` works only from a checkout of the Librebase repository; it is not published on PyPI or npm. It exposes a subset of the hosted tools (no \`auth_*\`, no \`key_*\`). Set \`LIBREBASE_MCP_URL\` (default ${base}/api/mcp) and optional \`LIBREBASE_MCP_TOKEN\` (\`lb_mcp_*\` / \`lb_agt_*\` from device flow or Studio). Prefer the hosted endpoint.
 
-## Tools (live hosted tools/list, 24)
+## Tools (live hosted tools/list, 27)
 - \`org_whoami\` -- resolve the token's org (id, name, edition)
 - \`project_list\`, \`project_create\` (requires an existing instanceId)
 - \`auth_provider_list\`, \`auth_provider_upsert\` -- OAuth sign-in providers for a project; the client secret is KMS-sealed and never returned
@@ -62,6 +62,7 @@ Today the token has to be pasted into the client's header config (or held by the
 - \`key_create\`, \`key_rotate\` -- the secret value is returned once
 - \`key_decrypt\` -- returns the plaintext to the calling process; never echo it to the model or chat
 - \`key_update\`, \`key_delete\` (soft delete)
+- \`mcp_token_list\`, \`mcp_token_rotate\`, \`mcp_token_revoke\` -- MCP bearer tokens by token id (botId / deviceCodeId bindings)
 
 Not available on the hosted server today: SQL execution, migrations, table listing, storage, functions, billing and log tools.
 
