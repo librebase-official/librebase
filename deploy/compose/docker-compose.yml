@@ -1,27 +1,4 @@
 services:
-  librebase-admin:
-    build:
-      context: ../..
-      dockerfile: admin-api/Dockerfile
-    # Admin is an internal API: never expose it to the internet. The studio
-    # reaches it over the compose network; keep this port on loopback only.
-    ports:
-      - "127.0.0.1:54330:54330"
-    env_file:
-      - .env
-    environment:
-      LIBREBASE_ADMIN_DB_PATH: /data/admin.db
-      LIBREBASE_KMS_URL: http://kms:54340
-    volumes:
-      - librebase-admin-data:/data
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:54330/health"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
-    networks:
-      - librebase-deploy-net
-
   kms:
     build:
       context: ../..
@@ -32,8 +9,47 @@ services:
       LIBREBASE_KMS_BIND: 0.0.0.0
       LIBREBASE_KMS_PORT: 54340
       LIBREBASE_KMS_DB_PATH: /data/kms.db
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python3",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:54340/health')",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
     volumes:
       - librebase-kms-data:/data
+    networks:
+      - librebase-deploy-net
+
+  librebase-admin:
+    build:
+      context: ../..
+      dockerfile: admin-api/Dockerfile
+    env_file:
+      - .env
+    environment:
+      LIBREBASE_ADMIN_BIND: 0.0.0.0
+      LIBREBASE_ADMIN_PORT: 54330
+      LIBREBASE_ADMIN_DB_PATH: /data/admin.db
+      LIBREBASE_KMS_URL: http://kms:54340
+      LIBREBASE_KMS_SERVICE_ROLE: ${LIBREBASE_KMS_SERVICE_ROLE}
+      LIBREBASE_ADMIN_JWT_SECRET: ${LIBREBASE_ADMIN_JWT_SECRET}
+    depends_on:
+      kms:
+        condition: service_healthy
+    volumes:
+      - librebase-admin-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:54330/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
     networks:
       - librebase-deploy-net
 
@@ -44,7 +60,6 @@ services:
       args:
         LIBREBASE_VERSION: ${LIBREBASE_VERSION}
         NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://127.0.0.1:3005}
-    # Only nginx on the host talks to the studio; keep it off the internet.
     ports:
       - "127.0.0.1:3005:3005"
     env_file:
@@ -54,6 +69,18 @@ services:
     depends_on:
       librebase-admin:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3005/api/mcp').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - librebase-deploy-net
 
