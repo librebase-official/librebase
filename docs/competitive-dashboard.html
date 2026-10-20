@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LibreBase Research Dashboard — Standalone</title>
+<style>
+  :root {
+    --bg: #0a0d12; --panel: #11161e; --panel-2: #161c25; --border: #1f2833;
+    --text: #e6e9ef; --muted: #9aa4b2; --dim: #5d6b7a;
+    --accent: #2fd4c2; --amber: #FF7800; --red: #e55c5c; --green: #5cbf8a; --blue: #5a9bd4;
+    --font: system-ui, -apple-system, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.55; min-height: 100vh; overflow-x: hidden; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+  header { padding: 1.5rem 0 1rem; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; }
+  header h1 { font-family: var(--mono); font-size: 1.1rem; font-weight: 600; letter-spacing: 0.03em; }
+  header h1 span { color: var(--accent); }
+  .meta { font-size: 0.8rem; color: var(--dim); font-family: var(--mono); }
+  .meta strong { color: var(--muted); }
+  .search-row { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; }
+  .search-row input { flex: 1; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.88rem; font-family: var(--mono); outline: none; transition: border-color 0.2s; }
+  .search-row input:focus { border-color: var(--accent); }
+  .search-row input::placeholder { color: var(--dim); }
+  .btn { background: var(--accent); color: var(--bg); border: none; border-radius: 8px; padding: 0.55rem 1rem; font-weight: 600; font-size: 0.82rem; cursor: pointer; font-family: var(--mono); letter-spacing: 0.02em; white-space: nowrap; }
+  .btn:hover { opacity: 0.85; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; }
+  .stat-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem 1rem; position: relative; overflow: hidden; }
+  .stat-card .label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--dim); margin-bottom: 0.3rem; }
+  .stat-card .value { font-family: var(--mono); font-size: 1.5rem; font-weight: 700; color: var(--text); }
+  .stat-card .sub { font-size: 0.75rem; color: var(--dim); margin-top: 0.2rem; }
+  .stat-card.accent::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--amber), transparent); opacity: 0.5; }
+  .stat-card.red::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--red), transparent); opacity: 0.5; }
+  .tabs { display: flex; gap: 0.25rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border); overflow-x: auto; }
+  .tab { background: none; border: none; color: var(--muted); padding: 0.6rem 1rem; font-size: 0.82rem; font-family: var(--mono); cursor: pointer; border-bottom: 2px solid transparent; transition: color 0.2s, border-color 0.2s; white-space: nowrap; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem; margin-bottom: 1.25rem; display: none; }
+  .panel.active { display: block; }
+  .panel h2 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.3rem; }
+  .panel .panel-sub { font-size: 0.78rem; color: var(--dim); margin-bottom: 1rem; }
+  .comp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0.75rem; }
+  .comp-card { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.9rem 1rem; }
+  .comp-card .comp-name { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.3rem; display: flex; align-items: center; gap: 0.4rem; }
+  .comp-card .comp-name .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .comp-card .comp-desc { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.6rem; line-height: 1.5; }
+  .comp-card .tag { display: inline-block; font-size: 0.68rem; padding: 0.15rem 0.45rem; border-radius: 999px; margin-right: 0.3rem; margin-bottom: 0.3rem; font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.04em; }
+  .tag-blue { background: rgba(90,155,212,0.15); color: var(--blue); }
+  .tag-green { background: rgba(92,191,138,0.15); color: var(--green); }
+  .comp-card .detail { font-size: 0.75rem; color: var(--dim); margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border); }
+  .comp-card .detail strong { color: var(--muted); }
+  .issue-list { display: flex; flex-direction: column; gap: 0.5rem; }
+  .issue-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0.75rem; background: var(--panel-2); border-radius: 6px; border: 1px solid var(--border); font-size: 0.82rem; }
+  .issue-item .iid { font-family: var(--mono); font-weight: 600; font-size: 0.75rem; min-width: 48px; padding: 0.15rem 0.4rem; border-radius: 4px; text-align: center; }
+  .iid-todo { background: rgba(90,155,212,0.15); color: var(--blue); }
+  .iid-ip { background: rgba(255,120,0,0.15); color: var(--amber); }
+  .iid-done { background: rgba(92,191,138,0.15); color: var(--green); }
+  .issue-item .state { font-size: 0.68rem; font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.05em; padding: 0.15rem 0.4rem; border-radius: 4px; }
+  .state-todo { background: rgba(90,155,212,0.12); color: var(--blue); }
+  .state-ip { background: rgba(255,120,0,0.12); color: var(--amber); }
+  .state-done { background: rgba(92,191,138,0.12); color: var(--green); }
+  .find-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0.75rem; }
+  .find-card { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.9rem 1rem; border-left: 3px solid var(--red); }
+  .find-card.good { border-left-color: var(--green); }
+  .find-card.info { border-left-color: var(--blue); }
+  .find-card.fix { border-left-color: var(--amber); }
+  .find-card .fc-badge { font-size: 0.68rem; font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.06em; padding: 0.15rem 0.45rem; border-radius: 999px; font-weight: 600; }
+  .badge-iss { background: rgba(229,92,92,0.18); color: var(--red); }
+  .badge-good { background: rgba(92,191,138,0.18); color: var(--green); }
+  .badge-info { background: rgba(90,155,212,0.18); color: var(--blue); }
+  .badge-fix { background: rgba(255,120,0,0.18); color: var(--amber); }
+  .find-card .fc-title { font-size: 0.85rem; font-weight: 600; }
+  .find-card .fc-body { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+  .log-list { font-family: var(--mono); font-size: 0.75rem; max-height: 300px; overflow-y: auto; }
+  .log-entry { padding: 0.4rem 0; border-bottom: 1px solid var(--border); display: flex; gap: 0.6rem; }
+  .log-entry .log-time { color: var(--dim); flex-shrink: 0; }
+  .log-entry .log-msg { color: var(--muted); }
+  .pos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.75rem; }
+  .pos-card { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.9rem 1rem; }
+  .pos-card .pos-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--dim); margin-bottom: 0.4rem; }
+  .pos-card .pos-text { font-size: 0.82rem; color: var(--text); line-height: 1.55; font-style: italic; }
+  .empty { text-align: center; padding: 2rem; color: var(--dim); font-size: 0.85rem; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .loading { text-align: center; padding: 3rem; color: var(--dim); font-size: 0.85rem; }
+  .loading .spinner { width: 24px; height: 24px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 0.5rem; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .error { text-align: center; padding: 2rem; color: var(--red); font-size: 0.85rem; }
+  .highlight { border-color: var(--accent) !important; background: rgba(47,212,194,0.06) !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>LibreBase <span>Research Dashboard</span></h1>
+    <div class="meta">
+      <strong>Built from sources — no feedback loop:</strong> librebase_competitive.db · competitive_digest_2026-08-29.md · agent-onboarding-audit.md · market-research-report.json · Linear (LIB team)<br>
+      <strong>Generated:</strong> <span id="genDate">—</span>
+    </div>
+  </header>
+
+  <div class="search-row">
+    <input type="text" id="searchInput" placeholder="Search (e.g. Supabase, LIB-33, Appwrite, weak, MCP, vercel)">
+    <button class="btn" id="searchBtn">Search</button>
+    <button class="btn" id="clearBtn" style="background:var(--panel);color:var(--muted);border:1px solid var(--border)">Clear</button>
+  </div>
+
+  <div class="stats" id="statsStrip"></div>
+  <div class="tabs" id="tabs"></div>
+  <div id="panels"></div>
+</div>
+
+<script>
+let DATA = null;
+const $ = id => document.getElementById(id);
+const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+
+async function loadData() {
+  $("statsStrip").innerHTML = `<div class="loading"><div class="spinner"></div>Loading dashboard data…</div>`;
+  try {
+    const resp = await fetch("./data.json");
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    DATA = await resp.json();
+    $("genDate").textContent = DATA.generated;
+    renderStats();
+    renderTabs();
+    ["competitors","issues","findings","positioning","scan","deviceprobe","log"].forEach(id => {
+      const p = document.getElementById("panel-"+id);
+      if (p) { p.innerHTML = ""; p.dataset.rendered = "0"; switchTab(id); switchTab(id); }
+    });
+    switchTab("competitors");
+  } catch (e) {
+    $("statsStrip").innerHTML = `<div class="error">Failed to load data.json: ${e.message}.<br>Run build-dashboard-data.py first, then place data.json next to this HTML.</div>`;
+  }
+}
+
+function renderStats() {
+  const issues = DATA.linearIssues || [];
+  const comps = Object.keys(DATA.competitors || {}).length;
+  const findings = DATA.auditFindings || [];
+  const findingsCount = findings.length;
+  const criticalCount = findings.filter(f => f.severity === "CRITICAL" || f.severity === "HIGH").length;
+  const scan = DATA.dailyScan || {};
+  const stats = scan.stats || {};
+  const lastIssue = issues[0]?.id || "—";
+  const todo = issues.filter(i => i.state === "Todo").length;
+  const done = issues.filter(i => i.state === "Done").length;
+  const ip = issues.filter(i => i.state === "InProgress" || i.state === "In Progress").length;
+  const backlog = issues.filter(i => i.state === "Backlog").length;
+  $("statsStrip").innerHTML = `
+    <div class="stat-card"><div class="label">Competitors Tracked</div><div class="value">${comps}</div><div class="sub">${stats.competitorsTracked || "—"} active</div></div>
+    <div class="stat-card"><div class="label">Linear Issues</div><div class="value">${issues.length}</div><div class="sub">${lastIssue} latest</div></div>
+    <div class="stat-card"><div class="label">Todo</div><div class="value" style="color:var(--blue)">${todo}</div><div class="sub">awaiting</div></div>
+    <div class="stat-card accent"><div class="label">In Progress</div><div class="value" style="color:var(--amber)">${ip}</div><div class="sub">active</div></div>
+    <div class="stat-card"><div class="label">Done</div><div class="value" style="color:var(--green)">${done}</div><div class="sub">resolved</div></div>
+    <div class="stat-card"><div class="label">Backlog</div><div class="value" style="color:var(--dim)">${backlog}</div><div class="sub">later</div></div>
+    <div class="stat-card"><div class="label">Audit Findings</div><div class="value">${findingsCount}</div><div class="sub">agent onboarding</div></div>
+    <div class="stat-card red"><div class="label">Critical + High</div><div class="value" style="color:var(--red)">${criticalCount}</div><div class="sub">blockers</div></div>
+    ${stats.scansToday ? `<div class="stat-card accent"><div class="label">Today's Scans</div><div class="value" style="color:var(--amber)">${stats.scansToday}</div><div class="sub">${stats.strongScans||"?"} strong · ${stats.featureChangesToday||"?"} changes</div></div>` : ""}
+  `;
+}
+
+function renderTabs() {
+  const tabs = [
+    { id: "competitors", label: "Competitors", icon: "◎" },
+    { id: "issues", label: "Linear Issues", icon: "⚡" },
+    { id: "findings", label: "Audit Findings", icon: "🔍" },
+    { id: "positioning", label: "Positioning", icon: "🎯" },
+    { id: "scan", label: "Daily Scan", icon: "📡" },
+    { id: "deviceprobe", label: "MCP Device Flow", icon: "🔐" },
+    { id: "log", label: "Activity Log", icon: "📋" }
+  ];
+  $("tabs").innerHTML = "";
+  tabs.forEach(t => {
+    const btn = el("button", "tab" + (t.id === "competitors" ? " active" : ""), t.icon + " " + t.label);
+    btn.onclick = () => switchTab(t.id);
+    $("tabs").appendChild(btn);
+  });
+}
+
+function switchTab(id) {
+  currentTab = id;
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.textContent.trim().includes(t.textContent.trim().split(" ")[1] || "")));
+  document.querySelectorAll(".panel").forEach(p => p.classList.toggle("active", p.id === "panel-" + id));
+  renderActivePanel();
+}
+
+function renderActivePanel() {
+  const panel = document.getElementById("panel-" + currentTab);
+  if (!panel) return;
+  if (panel.dataset.rendered === "1") return;
+  panel.dataset.rendered = "1";
+  const existingEmpty = panel.querySelector(".empty");
+  if (existingEmpty) existingEmpty.remove();
+  switch (currentTab) {
+    case "competitors": renderCompetitors(panel); break;
+    case "issues": renderIssues(panel); break;
+    case "findings": renderFindings(panel); break;
+    case "positioning": renderPositioning(panel); break;
+    case "scan": renderScan(panel); break;
+    case "deviceprobe": renderDeviceProbe(panel); break;
+    case "log": renderLog(panel); break;
+  }
+}
+
+function renderCompetitors(panel) {
+  panel.innerHTML = `<h2>BAAS + PaaS Competitive Landscape</h2><div class="panel-sub">Source: librebase_competitive.db (canonical, 31 competitors, 24 features each) + market-research-report.json (13 with marketing narrative). MCP agent API is the #1 competitive signal. ${Object.keys(DATA.competitors || {}).length} competitors tracked.</div>`;
+  const grid = el("div", "comp-grid");
+  Object.entries(DATA.competitors || {}).forEach(([name, c]) => {
+    const card = el("div", "comp-card");
+    const mcpTag = c.mcps ? el("span", "tag " + (c.mcps.includes("20+") || c.mcps.includes("GA") ? "tag-green" : "tag-blue"), "MCP: " + c.mcps) : null;
+    card.innerHTML = `
+      <div class="comp-name"><span class="dot" style="background:${c.color}"></span>${name}</div>
+      <div class="comp-desc">${c.description || ""}</div>
+      <span class="tag tag-blue">${c.category || "—"}</span>
+      ${mcpTag ? mcpTag.outerHTML : ""}
+      <div class="detail">
+        <div class="row"><strong>Strengths:</strong> ${c.strengths || ""}</div>
+        <div class="row"><strong>Weaknesses:</strong> ${c.weaknesses || ""}</div>
+        <div class="row"><strong>Price motion:</strong> ${c.priceMotion || ""}</div>
+        <div class="row"><strong>LibreBase delta:</strong> ${c.librebaseDelta || ""}</div>
+        ${c.confidence ? `<div class="row"><strong>Confidence:</strong> ${c.confidence}%</div>` : ""}
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+  panel.appendChild(grid);
+}
+
+function renderIssues(panel) {
+  panel.innerHTML = `<h2>Linear Issues — LIB Team (${DATA.linearIssues ? DATA.linearIssues.length : 0})</h2><div class="panel-sub">Source: Linear API (LIB team). State: Todo / InProgress / Done / Backlog.</div>`;
+  const list = el("div", "issue-list");
+  (DATA.linearIssues || []).forEach(iss => {
+    const item = el("div", "issue-item");
+    const stateMap = {
+      "Todo": ["iid-todo", "state-todo", "Todo"],
+      "InProgress": ["iid-ip", "state-ip", "InProg"],
+      "In Progress": ["iid-ip", "state-ip", "InProg"],
+      "Done": ["iid-done", "state-done", "Done"],
+      "Backlog": ["iid-backlog", "state-backlog", "Backlog"],
+      "Backlog/On Hold": ["iid-backlog", "state-backlog", "Backlog"]
+    };
+    const [iidCls, stateCls, stateLabel] = stateMap[iss.state] || stateMap["Todo"];
+    const labelsHtml = iss.labels && iss.labels.length ? `<span style="font-size:0.7rem;color:var(--dim);font-family:var(--mono)">${iss.labels.join(", ")}</span>` : "";
+    item.innerHTML = `
+      <span class="iid ${iidCls}">${iss.id}</span>
+      <span class="title">${iss.title}</span>
+      <span class="state ${stateCls}">${stateLabel}</span>
+      ${labelsHtml}
+    `;
+    list.appendChild(item);
+  });
+  panel.appendChild(list);
+}
+
+function renderFindings(panel) {
+  panel.innerHTML = `<h2>Agent Onboarding Audit — Findings</h2><div class="panel-sub">Source: docs/agent-onboarding-audit.md. ${DATA.auditFindings ? DATA.auditFindings.length : 0} findings.</div>`;
+  const fgrid = el("div", "find-grid");
+  (DATA.auditFindings || []).forEach(f => {
+    const sev = (f.severity || "").toUpperCase();
+    const sevClass = sev === "GOOD" ? "good" : sev === "FIXED" ? "fix" : sev === "ENV" || sev === "INFO" ? "info" : sev === "CRITICAL" || sev === "HIGH" ? "" : "info";
+    const badgeMap = { "CRITICAL": "badge-iss", "HIGH": "badge-iss", "GOOD": "badge-good", "FIXED": "badge-fix", "ENV": "badge-env", "INFO": "badge-info", "ISSUE": "badge-iss", "MEDIUM": "badge-info" };
+    const card = el("div", "find-card " + sevClass);
+    card.innerHTML = `
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem">
+        <span class="fc-badge ${badgeMap[sev] || "badge-info"}">${sev}</span>
+        <span class="fc-title">${f.title || ""}</span>
+      </div>
+      <div class="fc-body">${f.body || ""}</div>
+    `;
+    fgrid.appendChild(card);
+  });
+  panel.appendChild(fgrid);
+}
+
+function renderPositioning(panel) {
+  const pos = DATA.positioning || {};
+  panel.innerHTML = `<h2>Positioning & GTM</h2><div class="panel-sub">Source: market-research-report.json.</div>`;
+  const pg = el("div", "pos-grid");
+
+  // North stars
+  const ns = pos.northStars || [];
+  if (ns.length) {
+    const nsCard = el("div", "pos-card");
+    nsCard.innerHTML = `<div class="pos-label">North Stars</div><div class="pos-text">${ns.map(n => Array.isArray(n) ? n[0] + ": " + n[1] : n).join(" · ")}</div>`;
+    pg.appendChild(nsCard);
+  }
+
+  // One-line pitch
+  if (pos.oneLinePitch) {
+    const pitch = el("div", "pos-card");
+    pitch.innerHTML = `<div class="pos-label">One-Line Pitch</div><div class="pos-text">${pos.oneLinePitch}</div>`;
+    pg.appendChild(pitch);
+  }
+
+  // Positioning details
+  const items = [
+    { label: "ICP", key: "icp" },
+    { label: "Wedge", key: "wedge" },
+    { label: "Motion", key: "motion" },
+    { label: "Channel", key: "channel" },
+    { label: "Whitespace", key: "whitespace" }
+  ];
+  const posn = pos.positioning || {};
+  items.forEach(p => {
+    if (!posn[p.key]) return;
+    const card = el("div", "pos-card");
+    card.innerHTML = `<div class="pos-label">${p.label}</div><div class="pos-text">${posn[p.key]}</div>`;
+    pg.appendChild(card);
+  });
+
+  // Position quotes (sound bites)
+  const quotes = pos.positionQuotes || {};
+  if (Object.keys(quotes).length) {
+    const qdiv = el("div", "");
+    qdiv.innerHTML = `<h3 style="font-size:0.85rem;margin:1rem 0 0.5rem;color:var(--amber)">Positioning Sound Bites</h3>`;
+    Object.entries(quotes).forEach(([label, quote]) => {
+      const card = el("div", "pos-card");
+      card.innerHTML = `<div class="pos-label">${label}</div><div class="pos-text">${quote}</div>`;
+      qdiv.appendChild(card);
+    });
+    pg.appendChild(qdiv);
+  }
+
+  panel.appendChild(pg);
+}
+
+function renderScan(panel) {
+  const s = DATA.dailyScan || {};
+  panel.innerHTML = `<h2>Daily Competitive Scan — ${s.date || "—"}</h2><div class="panel-sub">${s.summary || ""}</div>`;
+
+  if (s.featureChanges && s.featureChanges.length) {
+    const cg = el("div", "comp-grid");
+    s.featureChanges.forEach(ch => {
+      const card = el("div", "comp-card");
+      card.innerHTML = `
+        <div class="comp-name"><span class="dot" style="background:var(--red)"></span>${ch.comp}</div>
+        <div class="comp-desc"><strong>${ch.feature}</strong>: ${ch.change}</div>
+        <span class="tag ${ch.dir === "up" ? "tag-red" : "tag-green"}">${ch.dir === "up" ? "Competitor gains" : "Competitor loses"}</span>
+      `;
+      cg.appendChild(card);
+    });
+    panel.appendChild(cg);
+  }
+
+  if (s.weakAreas && s.weakAreas.length) {
+    const wdiv = el("div", "");
+    wdiv.style.marginTop = "1rem";
+    wdiv.innerHTML = `<h3 style="font-size:0.85rem;margin-bottom:0.5rem;color:var(--red)">🔴 Where LibreBase Is WEAK</h3>`;
+    const wdetails = el("div", "detail");
+    wdetails.style.borderLeft = "3px solid var(--red)";
+    wdetails.style.paddingLeft = "0.75rem";
+    s.weakAreas.forEach(w => {
+      const row = el("div", "row");
+      row.innerHTML = `<strong>${w.feature}</strong> <span class="tag tag-red">${w.severity || "HIGH"}</span><br><span style="font-size:0.75rem">${w.detail || ""}</span>`;
+      wdetails.appendChild(row);
+    });
+    wdiv.appendChild(wdetails);
+    panel.appendChild(wdiv);
+  }
+
+  if (s.newCompetitors && s.newCompetitors.length) {
+    const ndiv = el("div", "");
+    ndiv.style.marginTop = "1rem";
+    ndiv.innerHTML = `<h3 style="font-size:0.85rem;margin-bottom:0.5rem;color:var(--amber)">🔎 New Competitor Candidates (${s.newCompetitors.length} discovered)</h3>`;
+    s.newCompetitors.forEach(nc => {
+      const card = el("div", "comp-card");
+      card.innerHTML = `
+        <div class="comp-name"><span class="dot" style="background:var(--amber)"></span>${nc.name}</div>
+        <div class="comp-desc">${nc.note || ""}</div>
+        ${nc.url ? `<a href="${nc.url}" style="font-size:0.75rem;color:var(--accent);text-decoration:none;display:block;margin-top:0.3rem" target="_blank">${nc.url}</a>` : ""}
+      `;
+      ndiv.appendChild(card);
+    });
+    panel.appendChild(ndiv);
+  }
+
+  if (s.other && s.other.length) {
+    const odiv = el("div", "");
+    odiv.style.marginTop = "1rem";
+    odiv.innerHTML = `<h3 style="font-size:0.85rem;margin-bottom:0.5rem;color:var(--dim)">⚪ Other (noise / neutral — logged for record)</h3><ul style="font-size:0.75rem;color:var(--dim);padding-left:1.2rem;line-height:1.6">`;
+    s.other.forEach(o => { odiv.querySelector("ul").innerHTML += `<li>${o}</li>`; });
+    odiv.innerHTML += `</ul>`;
+    panel.appendChild(odiv);
+  }
+
+  const dbStats = s.stats || {};
+  if (dbStats.competitorsTracked) {
+    const db = el("div", "detail");
+    db.style.marginTop = "1rem";
+    db.style.padding = "0.75rem";
+    db.style.background = "var(--panel-2)";
+    db.style.borderRadius = "6px";
+    db.style.fontSize = "0.75rem";
+    db.style.color = "var(--muted)";
+    db.innerHTML = `<strong>DB:</strong> /Users/julian/Documents/coding-projects/librebase/librebase_competitive.db<br>
+      <strong>Competitors tracked:</strong> ${dbStats.competitorsTracked} (active: ${dbStats.active || "—"})<br>
+      <strong>Today's scans:</strong> ${dbStats.scansToday || "—"} (${dbStats.strongScans || "—"} strong, ${dbStats.featureChangesToday || "—"} feature changes)<br>
+      <strong>Features tracked:</strong> ${dbStats.featuresTracked || "—"}`;
+    panel.appendChild(db);
+  }
+}
+
+function renderDeviceProbe(panel) {
+  const dp = DATA.deviceProbe || {};
+  panel.innerHTML = `<h2>MCP Device Flow Probe — ${dp.date || "—"}</h2><div class="panel-sub">Source: probe-device-flow.py (HTTP probes to app.librebase.xyz). Tests: discovery, device start, approve, poll, deny, tools/list.</div>`;
+
+  if (!dp.results) {
+    panel.innerHTML += `<div class="empty">No device probe data. Run:<br><code>python3 probe-device-flow.py</code><br>(or build-dashboard-data.py which invokes it)</div>`;
+    return;
+  }
+
+  const res = dp.results;
+  const logDiv = el("div", "log-list");
+  logDiv.style.maxHeight = "none";
+  logDiv.style.fontSize = "0.8rem";
+  logDiv.style.padding = "0";
+
+  function addLog(step, label, status, ct, body) {
+    const e = el("div", "log-entry", "");
+    const bodyStr = typeof body === "string" ? body : (body ? JSON.stringify(body).slice(0, 300) : "—");
+    e.innerHTML = `<span class="log-time">${step}. ${label}</span><span class="log-msg"><strong>${status}</strong> (${ct})<br>${bodyStr}</span>`;
+    logDiv.appendChild(e);
+    return e;
+  }
+
+  // Discovery
+  const d = res.discovery || {};
+  addLog("1", "Discovery GET /.well-known/mcp.json", d.status || "—", d.content_type || "?", d.body);
+
+  // Device start
+  const s = res.device_start || {};
+  const sBody = typeof s.body === "string" ? s.body : (s.body || "");
+  addLog("2", "device_start POST /api/mcp/device/start", s.status || "—", s.content_type || "?", sBody);
+
+  // Approve
+  const a = res.device_approve || {};
+  const aBody = typeof a.body === "string" ? a.body : (a.body ? JSON.stringify(a.body) : "—");
+  addLog("3", "device_approve POST /api/mcp/device/approve", a.status || "—", a.content_type || "?", aBody);
+
+  // Poll
+  const p = res.device_poll || {};
+  const pBody = typeof p.body === "string" ? p.body : (p.body ? JSON.stringify(p.body) : "—");
+  addLog("4", "device_poll GET /api/mcp/device?user_code=...", p.status || "—", p.content_type || "?", pBody);
+
+  // Deny
+  const dn = res.device_deny || {};
+  const dnBody = typeof dn.body === "string" ? dn.body : (dn.body ? JSON.stringify(dn.body) : "—");
+  addLog("5", "device_deny POST /api/mcp/device/deny", dn.status || "—", dn.content_type || "?", dnBody);
+
+  // Tools list
+  const t = res.tools_list || {};
+  const tBody = typeof t.body === "string" ? t.body : (t.body ? JSON.stringify(t.body).slice(0, 300) : "—");
+  addLog("6", "tools/list POST /api/mcp", t.status || "—", t.content_type || "?", tBody);
+
+  panel.appendChild(logDiv);
+
+  // Auth link highlight
+  if (typeof s.body === "object" && s.body && s.body.verificationUriComplete) {
+    const al = el("div", "");
+    al.style.marginTop = "1rem";
+    al.style.padding = "1rem";
+    al.style.background = "rgba(47,212,194,0.08)";
+    al.style.border = "1px solid var(--accent)";
+    al.style.borderRadius = "8px";
+    al.innerHTML = `<strong style="color:var(--accent)">AUTH LINK (click to approve in browser):</strong><br>
+      <a href="${s.body.verificationUriComplete}" target="_blank" style="font-size:1.2rem;color:var(--accent);text-decoration:none;font-family:var(--mono)">${s.body.verificationUriComplete}</a>
+      <div style="margin-top:0.5rem;font-size:0.75rem;color:var(--muted)">Open this URL in a browser, authenticate, and approve. The agent can then poll /api/mcp/device to get a session.</div>`;
+    panel.appendChild(al);
+  }
+}
+
+function renderLog(panel) {
+  panel.innerHTML = `<h2>Activity Log</h2><div class="panel-sub">Recent dashboard rebuilds and updates.</div>`;
+  const log = el("div", "log-list");
+  (DATA.log || []).forEach(l => {
+    const e = el("div", "log-entry", "");
+    e.innerHTML = `<span class="log-time">${l.time || ""}</span><span class="log-msg">${l.msg || ""}</span>`;
+    log.appendChild(e);
+  });
+  panel.appendChild(log);
+}
+
+let currentTab = "competitors";
+
+function doSearch(q) {
+  q = q.trim().toLowerCase();
+  if (!q) { switchTab("competitors"); return; }
+  const compMatch = Object.entries(DATA.competitors || {}).find(([name, c]) =>
+    name.toLowerCase().includes(q) ||
+    (c.description || "").toLowerCase().includes(q) ||
+    (c.strengths || "").toLowerCase().includes(q) ||
+    (c.weaknesses || "").toLowerCase().includes(q) ||
+    (c.category || "").toLowerCase().includes(q) ||
+    (c.mcps || "").toLowerCase().includes(q)
+  );
+  if (compMatch) { switchTab("competitors"); highlightCard(compMatch[0]); return; }
+
+  const issMatch = (DATA.linearIssues || []).find(i =>
+    i.id.toLowerCase().includes(q) || (i.title || "").toLowerCase().includes(q) ||
+    (i.labels || []).some(l => l.toLowerCase().includes(q))
+  );
+  if (issMatch) { switchTab("issues"); highlightIssue(issMatch.id); return; }
+
+  const findMatch = (DATA.auditFindings || []).find(f =>
+    (f.title || "").toLowerCase().includes(q) || (f.body || "").toLowerCase().includes(q)
+  );
+  if (findMatch) { switchTab("findings"); highlightFinding(findMatch.title); return; }
+
+  const posMatch = Object.entries(DATA.positioning?.positionQuotes || {}).find(([l, v]) =>
+    l.toLowerCase().includes(q) || (v || "").toLowerCase().includes(q)
+  ) || Object.entries(DATA.positioning?.positioning || {}).find(([k, v]) =>
+    k.toLowerCase().includes(q) || (v || "").toLowerCase().includes(q)
+  );
+  if (posMatch) { switchTab("positioning"); return; }
+
+  const scanMatch = (DATA.dailyScan?.featureChanges || []).find(c =>
+    (c.comp || "").toLowerCase().includes(q) || (c.feature || "").toLowerCase().includes(q)
+  ) || (DATA.dailyScan?.weakAreas || []).find(w => (w.feature || "").toLowerCase().includes(q)) ||
+    (DATA.dailyScan?.newCompetitors || []).find(n => (n.name || "").toLowerCase().includes(q));
+  if (scanMatch) { switchTab("scan"); return; }
+
+  const logMatch = (DATA.log || []).find(l => (l.msg || "").toLowerCase().includes(q));
+  if (logMatch) { switchTab("log"); return; }
+
+  showEmptyInCurrent(`No results for "<strong>${q}</strong>"`);
+}
+
+function showEmptyInCurrent(msg) {
+  const panel = document.getElementById("panel-" + currentTab);
+  if (!panel) return;
+  if (panel.querySelector(".empty")) panel.querySelector(".empty").remove();
+  const e = el("div", "empty", msg);
+  panel.appendChild(e);
+}
+
+function highlightCard(name) {
+  document.querySelectorAll(".comp-card").forEach(c => c.classList.remove("highlight"));
+  const card = Array.from(document.querySelectorAll(".comp-card")).find(c => c.textContent.includes(name));
+  if (card) { card.classList.add("highlight"); card.scrollIntoView({ behavior: "smooth", block: "center" }); }
+}
+
+function highlightIssue(id) {
+  document.querySelectorAll(".issue-item").forEach(i => i.classList.remove("highlight"));
+  const item = Array.from(document.querySelectorAll(".issue-item")).find(i => i.textContent.includes(id));
+  if (item) { item.classList.add("highlight"); item.scrollIntoView({ behavior: "smooth", block: "center" }); }
+}
+
+function highlightFinding(title) {
+  document.querySelectorAll(".find-card").forEach(f => f.classList.remove("highlight"));
+  const card = Array.from(document.querySelectorAll(".find-card")).find(f => f.textContent.includes(title));
+  if (card) { card.classList.add("highlight"); card.scrollIntoView({ behavior: "smooth", block: "center" }); }
+}
+
+$("searchBtn").onclick = () => doSearch($("searchInput").value);
+$("clearBtn").onclick = () => { $("searchInput").value = ""; switchTab("competitors"); };
+$("searchInput").onkeydown = e => { if (e.key === "Enter") doSearch(e.target.value); };
+
+loadData();
+</script>
+</body>
+</html>

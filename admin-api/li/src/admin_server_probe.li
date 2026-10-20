@@ -1,0 +1,42 @@
+import seam
+import routes
+import health
+
+def not_impl_body(buf: ptr) raises IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  li_rt_vec_i32_set(buf, 0, 123)
+  li_rt_vec_i32_set(buf, 1, 125)
+  li_rt_vec_i32_set(buf, 2, 0)
+  return 0
+
+def main() raises Net, Alloc, IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var listen_fd: int = tcp_listen(54330)
+  var okbody: ptr = net_buf_alloc(64)
+  var nibody: ptr = net_buf_alloc(64)
+  discard fill_health_body(okbody)
+  discard not_impl_body(nibody)
+  var n: int = 0
+  while n < 4:
+    var conn: int = tcp_accept(listen_fd)
+    var req: ptr = tcp_recv_i(conn, 8192)
+    var rid: int = route_id(req)
+    var status: int = 501
+    if rid == 1:
+      status = 200
+    if rid == 0:
+      status = 404
+    var body: ptr = nibody
+    if rid == 1:
+      body = okbody
+    tcp_http_write_response(conn, status, body)
+    tcp_close(conn)
+    n = n + 1
+  tcp_close(listen_fd)
+  return 0

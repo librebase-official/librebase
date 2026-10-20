@@ -1,0 +1,17 @@
+import seam
+
+def main() raises Net, Alloc, IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var listen_fd: int = tcp_listen(54330)
+  var body: ptr = net_buf_alloc(8)
+  li_rt_vec_i32_set(body, 0, 123)
+  li_rt_vec_i32_set(body, 1, 125)
+  li_rt_vec_i32_set(body, 2, 0)
+  var conn: int = tcp_accept(listen_fd)
+  tcp_http_write_response(conn, 200, body)
+  tcp_close(conn)
+  tcp_close(listen_fd)
+  return 0

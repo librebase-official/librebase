@@ -1,0 +1,35 @@
+{
+  "report_id": "lb-market-intel-2026-08-28",
+  "title": "LibreBase Market Intelligence & Competitive Positioning — August 2026",
+  "prepared_for": "Sales + Engineering + Agentic UX",
+  "date": "2026-08-28",
+  "classification": "Internal — Confidential",
+  "one_line_pitch": "A new way of doing backend-as-a-service: agent-first, simple for humans and agents, yet secure. Open knowledge base and competitive intelligence platform — your data, your freedom to leave, your agents as first-class citizens.",
+  "north_stars": [
+    {"name": "Open", "desc": "Knowledge is free to find, attribute, and reuse. The core stays general-purpose; commercial layers sit on top."},
+    {"name": "Lean", "desc": "Dedicated instance ≤ 64 MB RSS north star (≤ 256 MB current gate). 1 container vs Supabase's 12."},
+    {"name": "Fast", "desc": "Supabase-class core-path latency/throughput vs Postgres 16 on equal hardware."},
+    {"name": "Honest", "desc": "No fake green status. No invented MB numbers. No 'as fast as Supabase' without evidence."},
+    {"name": "Simple", "desc": "Org → instance → project. Dedicated (1:1) and shared (1:N) both supported."}
+  ],
+  "markets": {
+    "baas_competitive": {
+      "source": "brand/niche-research.json (mcp-submit-brief, marketRealityScan deep, 2026-07-29) + librebase_today audit 2026-08-28",
+      "competitors": {
+        "Supabase": {
+          "description": "Production-grade platform bundling Postgres, auth, storage, real-time into one portable system. Targets teams needing instant APIs and vector embeddings with strong security defaults.",
+          "strengths": "Fully bundled ecosystem (Auth + Storage) reduces initial setup time.",
+          "weaknesses": "Heavy resource consumption, hidden costs in Pro tier obscure true infrastructure spend, proprietary extensions → vendor lock-in.",
+          "priceMotion": "Freemium escalates quickly to vendor lock-in via proprietary extensions."
+        },
+        "Neon": {
+          "description": "Serverless Postgres bundling auth, storage, AI features. Targets developers wanting low-memory backend without fake-green SaaS dashboards.",
+          "strengths": "Per-project billing, instant scaling for variable load serverless workloads.",
+          "weaknesses": "Lacks native agent-first features like embedded MCP integration out of the box, per-minute usage models lack predictable low-memory baselines.",
+          "priceMotion": "Pay-per-use favors high-volume throughput but lacks predictable low-memory baselines."
+        }
+      }
+    }
+  },
+  "positioning_against_incumbents": {}
+}

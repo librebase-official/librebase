@@ -1,0 +1,19 @@
+import seam
+import health
+
+def main() raises Net, Alloc, IO -> int
+  requires true
+  ensures result == 0
+  decreases 0
+=
+  var listen_fd: int = tcp_listen(54330)
+  var okbody: ptr = net_buf_alloc(64)
+  discard fill_health_body(okbody)
+  var n: int = 0
+  while n < 8:
+    var conn: int = tcp_accept(listen_fd)
+    tcp_http_write_response(conn, 200, okbody)
+    tcp_close(conn)
+    n = n + 1
+  tcp_close(listen_fd)
+  return 0

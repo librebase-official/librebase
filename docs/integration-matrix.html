@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LibreBase — Integration Matrix</title>
+<style>
+  :root {
+    --bg: #0f172a; --card: #1e293b; --text: #e2e8f0;
+    --muted: #94a3b8; --accent: #38bdf8;
+    --green: #4ade80; --amber: #fbbf24; --red: #f87171; --border: #334155;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg); color: var(--text); padding: 24px; min-width: 1200px;
+  }
+  h1 { font-size: 24px; margin-bottom: 4px; }
+  .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 20px; line-height: 1.5; }
+  .controls { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+  select, button {
+    background: var(--card); color: var(--text);
+    border: 1px solid var(--border); padding: 6px 12px;
+    border-radius: 6px; font-size: 13px; cursor: pointer;
+  }
+  select:focus, button:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .matrix-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--card); }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  th, td { text-align: center; padding: 6px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th { background: #0f172a; color: var(--muted); font-weight: 600; font-size: 10px; position: sticky; top: 0; }
+  td { cursor: default; }
+  th:first-child, td:first-child { text-align: left; padding-left: 12px; }
+  .comp-name { font-weight: 600; font-size: 12px; }
+  .comp-cat { color: var(--muted); font-size: 10px; text-align: left; padding-left: 12px; }
+  .feature-col { min-width: 90px; }
+  .score-cell { width: 32px; font-weight: 700; font-size: 12px; }
+  .score-2 { color: var(--green); }
+  .score-1 { color: var(--amber); }
+  .score-0 { color: var(--muted); }
+  .highlight-row td { background: rgba(56,189,248,0.06); font-weight: 600; }
+  .legend { display: flex; gap: 16px; margin-top: 12px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 4px; }
+  .legend-swatch { width: 16px; height: 16px; border-radius: 3px; }
+  .swatch-2 { background: rgba(74,222,128,0.2); border: 1px solid var(--green); }
+  .swatch-1 { background: rgba(251,191,36,0.2); border: 1px solid var(--amber); }
+  .swatch-0 { background: transparent; border: 1px solid var(--border); }
+  .summary { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px; }
+  .summary h2 { font-size: 16px; margin-bottom: 8px; }
+  .summary p { font-size: 13px; color: var(--muted); margin-bottom: 4px; line-height: 1.5; max-width: 800px; }
+  .total-bar { display: flex; gap: 16px; margin-top: 12px; flex-wrap: wrap; }
+  .total-item { font-size: 13px; }
+  .total-num { font-weight: 700; color: var(--accent); }
+  .header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; gap: 12px; flex-wrap: wrap; }
+  .last-updated { font-size: 11px; color: var(--muted); }
+  .gap-count { color: var(--red); font-size: 10px; margin-left: 4px; }
+</style>
+</head>
+<body>
+<div class="header-row">
+  <div>
+    <h1>LibreBase — Integration Gap Matrix</h1>
+    <p class="subtitle">11 integration dimensions × 34 competitors. Score: <span style="color:var(--green)">✓✓ = fully offered</span>, <span style="color:var(--amber)">✓ = partial / limited</span>, <span style="color:var(--muted)">✗ = not offered</span>. LibreBase row is our current positioning — the rest is the competitive landscape.</p>
+  </div>
+  <div class="last-updated">Source: librebase_competitive.db · 2026-08-29</div>
+</div>
+<div class="controls">
+  <select id="catFilter">
+    <option value="all">All categories</option>
+    <option value="AI-platform">AI-platform</option>
+    <option value="BaaS">BaaS</option>
+    <option value="Backend">Backend</option>
+    <option value="CMS-overlap">CMS-overlap</option>
+    <option value="Cloud">Cloud</option>
+    <option value="Other">Other</option>
+    <option value="PaaS">PaaS</option>
+  </select>
+  <button id="resetView">Reset</button>
+  <span style="font-size:11px;color:var(--muted);">Filter by category (LibreBase row always visible)</span>
+</div>
+<div class="matrix-wrap">
+<table>
+<thead>
+<tr>
+  <th style="min-width:160px;">Competitor</th>
+  <th class="feature-col">webhooks</th>
+  <th class="feature-col">slack-integration</th>
+  <th class="feature-col">observability / logging</th>
+  <th class="feature-col">ci-cd hooks</th>
+  <th class="feature-col">partner marketplace</th>
+  <th class="feature-col">billing usage-metering</th>
+  <th class="feature-col">github-issues-sync</th>
+  <th class="feature-col">edge-functions / serverless</th>
+  <th class="feature-col">SSO SAML</th>
+  <th class="feature-col">multi-region active-active</th>
+  <th class="feature-col">partner-agent-auth</th>
+</tr>
+</thead>
+<tbody>
+<tr class="highlight-row">
+  <td class="comp-name">LibreBase <span style="font-weight:400;color:var(--accent);">(us)</span></td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">AWS Amplify</td>
+  <td class="comp-cat">BaaS</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">Anthropic</td>
+  <td class="comp-cat">AI-platform</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">Appwrite</td>
+  <td class="comp-cat">BaaS</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">Azure Static Web Apps</td>
+  <td class="comp-cat">BaaS</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">Baseten</td>
+  <td class="comp-cat">AI-platform</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">Cloudflare Workers</td>
+  <td class="comp-cat">Cloud</td>
+  <td class="score-cell score-2">✓✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">Convex</td>
+  <td class="comp-cat">BaaS</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">Directus</td>
+  <td class="comp-cat">CMS-overlap</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">ElectricSQL</td>
+  <td class="comp-cat">Backend</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">ElevenLabs</td>
+  <td class="comp-cat">AI-platform</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">Firebase</td>
+  <td class="comp-cat">BaaS</td>
+  <td class="score-cell score-2">✓✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">Fly.io</td>
+  <td class="comp-cat">PaaS</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">Harper</td>
+  <td class="comp-cat">AI-platform</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">Heroku</td>
+  <td class="comp-cat">PaaS</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">HuggingFace</td>
+  <td class="comp-cat">AI-platform</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">Knack</td>
+  <td class="comp-cat">BaaS</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">Koywe</td>
+  <td class="comp-cat">BaaS</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">LangChain</td>
+  <td class="comp-cat">AI-platform</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">LoRA</td>
+  <td class="comp-cat">AI-platform</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">Merge.dev</td>
+  <td class="comp-cat">BaaS</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">Nango</td>
+  <td class="comp-cat">BaaS</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">Neon</td>
+  <td class="comp-cat">BaaS</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">Nhost</td>
+  <td class="comp-cat">BaaS</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">OpenAI Agents</td>
+  <td class="comp-cat">AI-platform</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">PocketBase</td>
+  <td class="comp-cat">BaaS</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">PowerDNS</td>
+  <td class="comp-cat">Other</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">Railway</td>
+  <td class="comp-cat">PaaS</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-1">✓</td>
+</tr>
+<tr>
+  <td class="comp-name">Render</td>
+  <td class="comp-cat">PaaS</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-1">✓</td>
+</tr>
+<tr>
+  <td class="comp-name">Retool</td>
+  <td class="comp-cat">BaaS</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">Sequin</td>
+  <td class="comp-cat">Backend</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">Supabase</td>
+  <td class="comp-cat">BaaS</td>
+  <td class="score-cell score-2">✓✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-2">✓✓</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">Vercel</td>
+  <td class="comp-cat">Cloud</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">Xano</td>
+  <td class="comp-cat">BaaS</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-1">✓</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+<tr>
+  <td class="comp-name">backenly</td>
+  <td class="comp-cat">BaaS</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+  <td class="score-cell score-0">✗</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="legend">
+  <div class="legend-item"><div class="legend-swatch swatch-2"></div> <strong>✓✓ = fully offered</strong></div>
+  <div class="legend-item"><div class="legend-swatch swatch-1"></div> <strong>✓ = partial / limited</strong></div>
+  <div class="legend-item"><div class="legend-swatch swatch-0"></div> <strong>✗ = not offered</strong></div>
+  <div class="legend-item" style="margin-left:auto;">Max score per competitor: 22 (11 × 2)</div>
+</div>
+<div class="summary">
+<h2>LibreBase positioning — all 11 integration dimensions currently weak</h2>
+<p><strong>webhooks</strong> — Not implemented — no webhook system, no signature verification, no event delivery</p>
+<p><strong>slack-integration</strong> — Not implemented — no Slack app, slash commands, or message→issue flow</p>
+<p><strong>observability-logging</strong> — Not surfaced — no structured logging endpoint, no Sentry/Datadog integration, no instance health telemetry beyond basic </p>
+<p><strong>ci-cd-integration</strong> — Not implemented — no GitHub Actions integration, no CI pipeline hooks, no deploy-from- CI flow</p>
+<p><strong>marketplace-extensibility</strong> — Not implemented — no plugin/extension marketplace, no third-party app catalog</p>
+<p><strong>billing-usage-metering</strong> — Best-effort only — Stripe usage reporting on instance launch when LIBREBASE_STRIPE_METERED_PRICE set. Not comprehensive.</p>
+<p><strong>github-issues-sync</strong> — Not implemented — no GitHub issue sync, PR↔issue linking, or Linear-style GitHub integration</p>
+<p><strong>serverless-functions</strong> — Not implemented — no cloud functions / edge functions / custom backend logic runtime</p>
+<p><strong>sso-saml</strong> — Not implemented — no SAML SSO for enterprise. Competitors: Supabase (SSO enterprise), Firebase (SSO enterprise), Auth0/C</p>
+<p><strong>multi-region-active-active</strong> — Not yet surfaced — single-region today (VPS in IONOS). Instance lifecycle Phase 3 mentions region scheduling. Competitor</p>
+<p><strong>partner-agent-auth</strong> — Not implemented — no agent-facing OAuth for third-party integrations. Supabase has Stripe Projects (agent-provisionable)</p>
+</div>
+<div class="summary">
+<h2>Competitor coverage (11 dimensions, max 22)</h2>
+<div class="total-bar">
+<div class="total-item"><strong>Supabase</strong> <span style="color:var(--muted);font-size:11px;">(BaaS)</span> — <span class="total-num">10/22</span> <span class="gap-count">3 gaps</span></div>
+<div class="total-item"><strong>Cloudflare Workers</strong> <span style="color:var(--muted);font-size:11px;">(Cloud)</span> — <span class="total-num">6/22</span> <span class="gap-count">6 gaps</span></div>
+<div class="total-item"><strong>Firebase</strong> <span style="color:var(--muted);font-size:11px;">(BaaS)</span> — <span class="total-num">6/22</span> <span class="gap-count">6 gaps</span></div>
+<div class="total-item"><strong>Railway</strong> <span style="color:var(--muted);font-size:11px;">(PaaS)</span> — <span class="total-num">6/22</span> <span class="gap-count">5 gaps</span></div>
+<div class="total-item"><strong>Render</strong> <span style="color:var(--muted);font-size:11px;">(PaaS)</span> — <span class="total-num">6/22</span> <span class="gap-count">5 gaps</span></div>
+<div class="total-item"><strong>AWS Amplify</strong> <span style="color:var(--muted);font-size:11px;">(BaaS)</span> — <span class="total-num">5/22</span> <span class="gap-count">6 gaps</span></div>
+<div class="total-item"><strong>Vercel</strong> <span style="color:var(--muted);font-size:11px;">(Cloud)</span> — <span class="total-num">5/22</span> <span class="gap-count">6 gaps</span></div>
+<div class="total-item"><strong>Heroku</strong> <span style="color:var(--muted);font-size:11px;">(PaaS)</span> — <span class="total-num">4/22</span> <span class="gap-count">7 gaps</span></div>
+<div class="total-item"><strong>Appwrite</strong> <span style="color:var(--muted);font-size:11px;">(BaaS)</span> — <span class="total-num">3/22</span> <span class="gap-count">8 gaps</span></div>
+<div class="total-item"><strong>Azure Static Web Apps</strong> <span style="color:var(--muted);font-size:11px;">(BaaS)</span> — <span class="total-num">3/22</span> <span class="gap-count">8 gaps</span></div>
+<div class="total-item"><strong>Convex</strong> <span style="color:var(--muted);font-size:11px;">(BaaS)</span> — <span class="total-num">3/22</span> <span class="gap-count">8 gaps</span></div>
+<div class="total-item"><strong>Fly.io</strong> <span style="color:var(--muted);font-size:11px;">(PaaS)</span> — <span class="total-num">3/22</span> <span class="gap-count">8 gaps</span></div>
+<div class="total-item"><strong>Nhost</strong> <span style="color:var(--muted);font-size:11px;">(BaaS)</span> — <span class="total-num">3/22</span> <span class="gap-count">8 gaps</span></div>
+<div class="total-item"><strong>Directus</strong> <span style="color:var(--muted);font-size:11px;">(CMS-overlap)</span> — <span class="total-num">2/22</span> <span class="gap-count">9 gaps</span></div>
+<div class="total-item"><strong>Xano</strong> <span style="color:var(--muted);font-size:11px;">(BaaS)</span> — <span class="total-num">2/22</span> <span class="gap-count">9 gaps</span></div>
+<div class="total-item"><strong>Knack</strong> <span style="color:var(--muted);font-size:11px;">(BaaS)</span> — <span class="total-num">1/22</span> <span class="gap-count">10 gaps</span></div>
+<div class="total-item"><strong>Merge.dev</strong> <span style="color:var(--muted);font-size:11px;">(BaaS)</span> — <span class="total-num">1/22</span> <span class="gap-count">10 gaps</span></div>
+<div class="total-item"><strong>Nango</strong> <span style="color:var(--muted);font-size:11px;">(BaaS)</span> — <span class="total-num">1/22</span> <span class="gap-count">10 gaps</span></div>
+<div class="total-item"><strong>Neon</strong> <span style="color:var(--muted);font-size:11px;">(BaaS)</span> — <span class="total-num">1/22</span> <span class="gap-count">10 gaps</span></div>
+<div class="total-item"><strong>PocketBase</strong> <span style="color:var(--muted);font-size:11px;">(BaaS)</span> — <span class="total-num">1/22</span> <span class="gap-count">10 gaps</span></div>
+<div class="total-item"><strong>Retool</strong> <span style="color:var(--muted);font-size:11px;">(BaaS)</span> — <span class="total-num">1/22</span> <span class="gap-count">10 gaps</span></div>
+<div class="total-item"><strong>Anthropic</strong> <span style="color:var(--muted);font-size:11px;">(AI-platform)</span> — <span class="total-num">0/22</span> <span class="gap-count">11 gaps</span></div>
+<div class="total-item"><strong>Baseten</strong> <span style="color:var(--muted);font-size:11px;">(AI-platform)</span> — <span class="total-num">0/22</span> <span class="gap-count">11 gaps</span></div>
+<div class="total-item"><strong>ElectricSQL</strong> <span style="color:var(--muted);font-size:11px;">(Backend)</span> — <span class="total-num">0/22</span> <span class="gap-count">11 gaps</span></div>
+<div class="total-item"><strong>ElevenLabs</strong> <span style="color:var(--muted);font-size:11px;">(AI-platform)</span> — <span class="total-num">0/22</span> <span class="gap-count">11 gaps</span></div>
+<div class="total-item"><strong>Harper</strong> <span style="color:var(--muted);font-size:11px;">(AI-platform)</span> — <span class="total-num">0/22</span> <span class="gap-count">11 gaps</span></div>
+<div class="total-item"><strong>HuggingFace</strong> <span style="color:var(--muted);font-size:11px;">(AI-platform)</span> — <span class="total-num">0/22</span> <span class="gap-count">11 gaps</span></div>
+<div class="total-item"><strong>Koywe</strong> <span style="color:var(--muted);font-size:11px;">(BaaS)</span> — <span class="total-num">0/22</span> <span class="gap-count">11 gaps</span></div>
+<div class="total-item"><strong>LangChain</strong> <span style="color:var(--muted);font-size:11px;">(AI-platform)</span> — <span class="total-num">0/22</span> <span class="gap-count">11 gaps</span></div>
+<div class="total-item"><strong>LoRA</strong> <span style="color:var(--muted);font-size:11px;">(AI-platform)</span> — <span class="total-num">0/22</span> <span class="gap-count">11 gaps</span></div>
+<div class="total-item"><strong>OpenAI Agents</strong> <span style="color:var(--muted);font-size:11px;">(AI-platform)</span> — <span class="total-num">0/22</span> <span class="gap-count">11 gaps</span></div>
+<div class="total-item"><strong>PowerDNS</strong> <span style="color:var(--muted);font-size:11px;">(Other)</span> — <span class="total-num">0/22</span> <span class="gap-count">11 gaps</span></div>
+<div class="total-item"><strong>Sequin</strong> <span style="color:var(--muted);font-size:11px;">(Backend)</span> — <span class="total-num">0/22</span> <span class="gap-count">11 gaps</span></div>
+<div class="total-item"><strong>backenly</strong> <span style="color:var(--muted);font-size:11px;">(BaaS)</span> — <span class="total-num">0/22</span> <span class="gap-count">11 gaps</span></div>
+</div>
+</div>
+<script>
+const catFilter = document.getElementById('catFilter');
+const resetBtn = document.getElementById('resetView');
+function filterRows(category) {
+  document.querySelectorAll('tbody tr').forEach(row => {
+    const nameEl = row.querySelector('.comp-name');
+    if (!nameEl) { row.style.display = ''; return; }
+    const name = nameEl.textContent;
+    if (name.includes('LibreBase')) { row.style.display = ''; return; }
+    const cat = row.querySelector('.comp-cat');
+    if (!cat) { row.style.display = ''; return; }
+    row.style.display = cat.textContent === category ? '' : 'none';
+  });
+}
+catFilter.addEventListener('change', () => filterRows(catFilter.value));
+resetBtn.addEventListener('click', () => { catFilter.value = 'all'; filterRows('all'); });
+</script>
+</body>
+</html>

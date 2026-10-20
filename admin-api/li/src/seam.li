@@ -43,6 +43,16 @@ extern def li_rt_vec_i32_set(buf: ptr, i: int, v: int) raises IO -> int
   ensures true
   decreases 0
 
+extern def container_getenv_i(name: ptr, buf: ptr, cap: int) -> int
+  requires 0 < cap
+  ensures true
+  decreases 0
+
+extern def container_str_atoi_i(s: ptr, default_val: int) -> int
+  requires true
+  ensures true
+  decreases 0
+
 # lidb embed — open org database and exec SQL (JSON row protocol).
 
 extern def lidb_open_i(path: ptr) raises IO, Alloc -> int

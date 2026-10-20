@@ -1,0 +1,208 @@
+{
+  "report_id": "lb-competitor-report-2026-08-28",
+  "title": "LibreBase Competitive Positioning Report \u2014 BaaS/Agent Platforms",
+  "date": "2026-08-28",
+  "prepared_by": "LibreBase Agentic UX Tester + Market Research",
+  "classification": "Internal \u2014 Confidential",
+  "executive_summary": "LibreBase sits in the backend-as-a-service space with an agent-first positioning: open, lean (\u226464MB RSS north star), fast (Supabase-class core-path vs Postgres 16 on equal hardware), honest (no fake-green status), and simple (org\u2192instance\u2192project). The competitive landscape has shifted in 2026 \u2014 Supabase launched a remote MCP server, Neon repositioned as 'Postgres backends for apps and agents' with Lakebase and an open-source MCP server, and Turso ships a free open-source MCP server. The gap LibreBase owns: a platform where agents are first-class citizens with native MCP + OAuth device flow, honest health metrics, and no vendor lock-in \u2014 not just a database with an MCP bolt-on.",
+  "competitors": {
+    "supabase": {
+      "positioning": "The open-source Firebase alternative \u2014 full backend platform (Postgres, auth, storage, edge functions, realtime, vector). Recently launched a remote MCP server for AI agents.",
+      "pricing": {
+        "free": "Free tier \u2014 basic projects, limited DB size, no SLAs",
+        "pro": "Tiered paid plans with transparent overage policies, cost control, linked docs, detailed FAQs",
+        "team": "Higher tier for teams",
+        "enterprise": "Custom enterprise pricing"
+      },
+      "agent_features": {
+        "mcp_server": "Remote MCP server announced \u2014 Claude can query tables, retrieve records, create data via standardized MCP. Two-philosophy approach: agents help build apps.",
+        "ai_integration": "AI agents can read/write via MCP; feature groups for AI-assisted development"
+      },
+      "strengths": [
+        "Fully bundled ecosystem (Auth + Storage + Realtime + Edge Functions + Vector)",
+        "Reduces initial setup time \u2014 one-stop shop for rapid prototyping",
+        "Strong brand equity, developer community, extensive marketplace of ready-made templates",
+        "MCP server announced \u2014 entering the agent space"
+      ],
+      "weaknesses": [
+        "Heavy resource consumption, hidden costs in Pro tier obscure true infrastructure spend",
+        "Proprietary extensions \u2192 vendor lock-in risk (despite 'open-source' positioning)",
+        "Dashboard UI is data-dense with 'fake-green' status indicators masking real infrastructure errors",
+        "Complex UI requires extensive onboarding \u2014 barrier to low-friction adoption",
+        "Proprietary client libraries create dependency risks preventing true open-source portability"
+      ],
+      "price_motion": "Freemium model that escalates quickly to vendor lock-in via proprietary extensions",
+      "librebase_wedge": "LibreBase is agent-native (MCP + OAuth device flow built-in), not an afterthought. Honest health metrics vs fake-green dashboards. No proprietary extensions \u2014 GPL core, commercial layer optional."
+    },
+    "neon": {
+      "positioning": "Postgres backends for apps and agents \u2014 serverless Postgres with Lakebase. Repositioned in 2026 toward AI engineering era: 'The backend for apps and agents, built to scale on Lakebase Postgres.'",
+      "pricing": {
+        "model": "Pay-per-use \u2014 per-minute billing, serverless scaling",
+        "strengths": "Per-project billing, instant scaling for variable load serverless workloads",
+        "weaknesses": "Lacks predictable low-memory baselines; per-minute usage models lack flat predictable costs"
+      },
+      "agent_features": {
+        "mcp_server": "Open-source Neon MCP Server \u2014 interact with Lakebase Postgres databases in natural language via MCP",
+        "ai_pitch": "'Cloud primitives for the AI Engineering era. Integrate with a single command and the LLM does the hard work.'"
+      },
+      "strengths": [
+        "Serverless scaling, branching database capabilities",
+        "Clear messaging around serverless scalability appealing to DevOps and platform teams",
+        "Open-source MCP server \u2014 agent integration available",
+        "Cloud-native terminology ('serverless', 'branching') resonates with modern infrastructure teams"
+      ],
+      "weaknesses": [
+        "Lacks native agent-first features like embedded MCP integration out of the box (beyond the bolt-on MCP server)",
+        "Focus on billing mechanics overshadows need for honest health status indicators in agent workflows",
+        "Sparse visual feedback fails to provide deep insights into data health or hidden costs for regulated teams",
+        "No embedded MCP \u2014 the MCP server is a separate tool, not natively woven into the platform"
+      ],
+      "price_motion": "Pay-per-use pricing that favors high-volume throughput but lacks predictable low-memory baselines",
+      "librebase_wedge": "LibreBase has MCP natively woven into the platform (not a bolt-on server). Honest health metrics. \u2264256MB gate (north star \u226464MB) vs Neon's serverless model that lacks predictable low-memory baselines."
+    },
+    "turso": {
+      "positioning": "Lightweight database built in Li, runs efficiently on diverse environments (servers, devices), Postgres-compatible for teams using AI agents. Edge-native, minimal footprint.",
+      "pricing": {
+        "starter": "Free \u2014 500 databases, 9GB",
+        "scaler": "$29/mo",
+        "enterprise": "Custom pricing"
+      },
+      "agent_features": {
+        "mcp_server": "Turso MCP Server \u2014 free and open-source. 17.9K-star SQLite database with built-in AI agent access. Part of the Databases category on ChatForest (reviewed Mar\u2013May 2026).",
+        "ai_access": "Built-in AI agent access via MCP \u2014 agents can query the database in natural language"
+      },
+      "strengths": [
+        "Runs on diverse devices with minimal footprint \u2014 suitable for edge and agent execution environments",
+        "Lightweight binaries compatible with diverse OS environments reducing deployment friction",
+        "Community-driven free tier with paid scaling options",
+        "Free open-source MCP server \u2014 agent access built-in",
+        "17.9K stars \u2014 strong community recognition"
+      ],
+      "weaknesses": [
+        "Limited ecosystem tools compared to Supabase's extensive marketplace of ready-made templates",
+        "Identity lacks the comprehensive API/Security narrative required for enterprise adoption in agents",
+        "Lacks robust security configuration panels needed for enterprise-grade agent authentication flows",
+        "Visual minimalism mirrors a community-led model lacking resources for dedicated UI refinement"
+      ],
+      "price_motion": "Community-driven free tier with paid scaling options requiring self-hosted integration for advanced features",
+      "librebase_wedge": "LibreBase is a full platform (org\u2192instance\u2192project\u2192DB), not just a database. MCP is native, not a separate server. Honest health metrics. GPL-3.0-or-later with commercial layer optional \u2014 Turso's community-driven model lacks the enterprise narrative."
+    },
+    "nhost": {
+      "positioning": "Managed backend platform featuring Postgres, GraphQL, authentication, and serverless functions for developers building scalable applications.",
+      "status": "No recent search results (2026) \u2014 possible pivot, low SEO visibility, or diminished competitive presence. Requires verification.",
+      "strengths": [
+        "GraphQL + serverless functions + Postgres in one managed platform",
+        "Targets engineering teams launching quickly while maintaining full infrastructure control via open-source tools"
+      ],
+      "weaknesses": [
+        "Another managed SaaS dashboard \u2014 same lock-in concerns as Supabase/Neon",
+        "Unclear current market position (no fresh data)"
+      ],
+      "librebase_wedge": "If Nhost has diminished, LibreBase can own the open BaaS + agent space they previously targeted. Verify Nhost status before relying on this gap."
+    }
+  },
+  "competitive_gaps_librebase_owns": [
+    "Agent-native MCP \u2014 not a bolt-on server. LibreBase's MCP is woven into the platform (24 tools, OAuth device flow, KMS-sealed secrets). Supabase and Neon added MCP as an add-on; Turso's is a separate open-source server.",
+    "Honest health metrics \u2014 no fake-green dashboards. soul.md: 'No fake green status. No invented MB numbers. No as fast as Supabase without evidence.'",
+    "Lean footprint \u2014 \u2264256MB gate, \u226464MB north star. Supabase is heavy; Neon lacks predictable low-memory baselines; Turso is lightweight but lacks the platform narrative.",
+    "OAuth device flow for agents \u2014 auth_start/auth_poll with browser approval, no API keys pasted. No other competitor offers agent-native OAuth device flow.",
+    "KMS-sealed secrets \u2014 client secrets never returned to the model. Unique security property for agent platforms.",
+    "GPL-3.0-or-later core with optional commercial layer \u2014 true open-source, not 'open-source-adjacent SaaS' like Supabase.",
+    "Org\u2192Instance\u2192Project model with dedicated (1:1) and shared (1:N) deployment \u2014 simple, transparent."
+  ],
+  "mcp_audit_findings": {
+    "date": "2026-08-28",
+    "target": "https://app.librebase.xyz/api/mcp",
+    "key_tested": "lb_mcp_RLIiShwG6MdXL2_050H2YHDKYMXaTNbi-l6Z6dZxb5U (from HANDOFF.md)",
+    "key_status": "REVOKED \u2014 'Invalid or revoked MCP key' on every tool call",
+    "critical_finding": "The MCP key documented in HANDOFF.md (test acct) is no longer valid. Every tool call with this key returns auth_error. An agent using the documented key cannot access the platform. This needs immediate remediation \u2014 either rotate/restore the key, or update HANDOFF.md with a valid key.",
+    "tool_surface": {
+      "total_tools": 24,
+      "tools_listed": [
+        "org_whoami",
+        "project_list",
+        "project_create",
+        "auth_provider_list",
+        "auth_provider_upsert",
+        "instance_list",
+        "instance_get",
+        "instance_create",
+        "instance_launch",
+        "instance_stop",
+        "member_list",
+        "member_invite",
+        "member_update_role",
+        "host_list",
+        "host_create",
+        "auth_start",
+        "auth_poll",
+        "key_list",
+        "key_create",
+        "key_get",
+        "key_decrypt",
+        "key_rotate",
+        "key_update",
+        "key_delete"
+      ],
+      "public_tools": [
+        "auth_start",
+        "auth_poll",
+        "tools/list",
+        "initialize",
+        "notifications/initialized"
+      ],
+      "auth_required_tools": [
+        "org_whoami",
+        "project_list",
+        "project_create",
+        "auth_provider_list",
+        "auth_provider_upsert",
+        "instance_list",
+        "instance_get",
+        "instance_create",
+        "instance_launch",
+        "instance_stop",
+        "member_list",
+        "member_invite",
+        "member_update_role",
+        "host_list",
+        "host_create",
+        "key_list",
+        "key_create",
+        "key_get",
+        "key_decrypt",
+        "key_rotate",
+        "key_update",
+        "key_delete"
+      ]
+    },
+    "behavior_verified": {
+      "initialize": "200 \u2014 serverInfo name=librebase version=0.1.18, protocolVersion=2024-11-05",
+      "tools_list": "200 \u2014 returns all 24 tools with name/description/inputSchema, no auth required",
+      "auth_start": "200 \u2014 deviceCode, userCode (FQNW-DGX5), verificationUri (accounts.x.ai/oauth2/device), verificationUriComplete, expiresIn=1800s, interval=5s. Works without key.",
+      "auth_poll_garbage": "200 \u2014 returns {'error':'unknown device code'} inside content. UX ISSUE: 200 with error, not 400/404.",
+      "org_whoami_no_token": "401 \u2014 'Missing Authorization: Bearer ***'",
+      "org_whoami_fake_key": "200 \u2014 {'error':'auth_error','message':'Invalid or revoked MCP key'} \u2014 agent-friendly MCP error envelope",
+      "all_protected_tools_no_token": "401 \u2014 consistent auth enforcement",
+      "all_protected_tools_fake_key": "200 \u2014 auth_error JSON envelope returned",
+      "all_protected_tools_real_key": "200 \u2014 auth_error (REVOKED key) \u2014 KEY IS STALE"
+    },
+    "ux_issues_confirmed": [
+      "auth_poll returns 200 with error payload \u2014 agents parsing '200 = success' misroute (LIB-27)",
+      "auth_start verificationUri points to accounts.x.ai (x.ai/grok OAuth provider) \u2014 not a LibreBase-branded page (LIB-30)",
+      "for-agents page returns dark HTML \u2014 llms.txt is the canonical agent-readable entry (LIB-29)"
+    ],
+    "new_ux_issues_found": [
+      "CRITICAL: MCP test key in HANDOFF.md is revoked \u2014 platform inaccessible with documented credentials. Key rotation or docs update required.",
+      "No valid MCP key available for end-to-end tool testing \u2014 all 24 tools' behavior unverified beyond auth layer"
+    ]
+  },
+  "linear_issues_created": [],
+  "recommendations": [
+    "Remediate the revoked MCP key immediately \u2014 rotate or provision a valid test key and update HANDOFF.md + docs/llms.txt + docs/for-agents",
+    "Verify Nhost's current competitive status \u2014 if diminished, LibreBase can own their space",
+    "Publish honest benchmark suite (LIB-32) \u2014 this is the credibility foundation for all competitive claims",
+    "Document the Supabase/Neon/Turso MCP contrast \u2014 LibreBase's native MCP vs their bolt-on servers is a clear differentiator",
+    "Lean into the honest-health-metrics wedge against Supabase's fake-green dashboards and Neon's sparse visual feedback"
+  ]
+}

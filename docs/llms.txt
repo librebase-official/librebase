@@ -1,0 +1,98 @@
+# Librebase MCP Server — Agent Discovery Document
+
+This document describes how AI agents can discover and authenticate with the Librebase MCP server.
+
+## Discovery
+
+The MCP endpoint is discoverable via the well-known URI:
+
+```
+GET https://app.librebase.xyz/.well-known/mcp.json
+```
+
+Response:
+```json
+{
+  "name": "librebase",
+  "version": "1.0.0",
+  "description": "Librebase MCP server — org/projects/instances/members/hosts management",
+  "endpoint": "https://app.librebase.xyz/api/mcp",
+  "auth": {
+    "type": "bearer",
+    "description": "MCP key generated in the admin console (/admin → MCP key → Generate new key)"
+  }
+}
+```
+
+## Authentication
+
+Agents authenticate with an MCP key (bearer token):
+
+```
+Authorization: Bearer lb_mcp_<key>
+```
+
+MCP keys are org-scoped. Generate a key in the admin console at `https://app.librebase.xyz/admin` under **MCP key → Generate new key**.
+
+## MCP Endpoint
+
+```
+POST https://app.librebase.xyz/api/mcp
+Content-Type: application/json
+Authorization: Bearer lb_mcp_<key>
+
+{
+  "jsonrpc": "2.0",
+  "id": <number>,
+  "method": "tools/call",
+  "params": {
+    "name": "<tool_name>",
+    "arguments": { ... }
+  }
+}
+```
+
+## Available Tools
+
+| Tool | Description |
+|------|-------------|
+| `org_whoami` | Resolve the key's org |
+| `project_list` / `project_create` | List/create projects |
+| `instance_list` / `instance_get` / `instance_create` / `instance_launch` / `instance_stop` | Instance lifecycle |
+| `member_list` / `member_invite` / `member_update_role` | Team membership |
+| `host_list` / `host_create` | Host management |
+| `auth_provider_list` / `auth_provider_upsert` | OAuth provider config per project |
+
+## Example: org_whoami
+
+```bash
+curl -X POST https://app.librebase.xyz/api/mcp \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer lb_mcp_<key>" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"org_whoami","arguments":{}}}'
+```
+
+## Example: project_list
+
+```bash
+curl -X POST https://app.librebase.xyz/api/mcp \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer lb_mcp_<key>" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"project_list","arguments":{}}}'
+```
+
+## Local Development
+
+```bash
+cd mcp
+LIBREBASE_ADMIN_URL=https://app.librebase.xyz/api/admin-proxy \
+LIBREBASE_MCP_KEY=lb_mcp_<key> \
+  python3 -m librebase_mcp
+```
+
+## Notes
+
+- MCP keys are for CI/agent use. For interactive browser auth, use OAuth (GitHub/Google) via the admin console.
+- Keys are rotatable — generate a new one at any time from the admin console.
+- The MCP server is an stdio JSON-RPC server with no SDK dependency.
+- **Setup requires a real MCP key.** The `LIBREBASE_MCP_KEY` env var is not optional for the stdio server — it must be a valid key generated in the admin console (`/admin` → MCP key → Generate new key). Do not use placeholder values. If you need an agent to authenticate without a pre-shared key, use the OAuth device flow (`auth_start`/`auth_poll`) via the hosted endpoint instead.
