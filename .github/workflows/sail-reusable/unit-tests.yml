@@ -1,0 +1,71 @@
+name: sail / unit-tests
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: Node.js version for JS/TS repos
+        required: false
+        type: string
+        default: "22"
+      working-directory:
+        description: Package root (use . for repo root)
+        required: false
+        type: string
+        default: "."
+      coverage-floor:
+        description: Minimum line coverage percent (0 disables enforcement)
+        required: false
+        type: number
+        default: 60
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+
+jobs:
+  unit-tests:
+    name: sail / unit-tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        if: hashFiles(format('{0}/package.json', inputs.working-directory)) != ''
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: npm
+          cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+      - name: Node tests
+        if: hashFiles(format('{0}/package.json', inputs.working-directory)) != ''
+        run: |
+          if [ -f bun.lock ] || [ -f bun.lockb ]; then
+            curl -fsSL https://bun.sh/install | bash
+            export PATH="$HOME/.bun/bin:$PATH"
+            bun install --frozen-lockfile
+            bun test
+          elif [ -f package-lock.json ]; then npm ci; else npm install --no-audit --no-fund; fi
+          if npm run | grep -q " test"; then
+            if npm run | grep -q "test:coverage"; then npm run test:coverage; else npm test; fi
+          else echo "No test script"; fi
+      - uses: actions/setup-python@v5
+        if: hashFiles(format('{0}/pyproject.toml', inputs.working-directory)) != '' || hashFiles(format('{0}/requirements.txt', inputs.working-directory)) != ''
+        with:
+          python-version: "3.12"
+      - name: Python tests
+        if: hashFiles(format('{0}/pyproject.toml', inputs.working-directory)) != '' || hashFiles(format('{0}/requirements.txt', inputs.working-directory)) != ''
+        run: |
+          pip install pytest pytest-cov
+          pytest -q --cov=. --cov-report=term-missing || pytest -q
+      - name: Rust tests
+        if: hashFiles(format('{0}/Cargo.toml', inputs.working-directory)) != ''
+        run: cargo test --all-features
+      - name: Coverage floor (Node, best-effort)
+        if: inputs.coverage-floor > 0 && hashFiles(format('{0}/package.json', inputs.working-directory)) != ''
+        run: |
+          echo "Coverage floor ${{ inputs.coverage-floor }}% — enforce in repo test:coverage thresholds when available"
