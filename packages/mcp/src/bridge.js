@@ -4,6 +4,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolveMcpSessionToken } from "./env.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -33,7 +34,10 @@ export function createHostedBridge(options = {}) {
     /\/$/,
     "",
   );
-  let sessionToken = (options.token ?? process.env.LIBREBASE_MCP_TOKEN ?? "").trim();
+  let sessionToken =
+    options.token !== undefined
+      ? String(options.token).trim()
+      : resolveMcpSessionToken();
 
   function setMcpUrl(url) {
     mcpUrl = String(url).replace(/\/$/, "");

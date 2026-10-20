@@ -39,5 +39,5 @@ def test_interactive_docs_do_not_require_a_pasted_key():
     docs = read("app/for-agents/page.tsx") + read("app/llms.txt/route.ts")
     assert "browser" in docs.lower()
     assert "never" in docs.lower() and "pasted" in docs.lower()
-    assert "LIBREBASE_MCP_KEY" in docs
+    assert "LIBREBASE_MCP_TOKEN" in docs
     assert "CI-only-static-key" not in docs

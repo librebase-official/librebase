@@ -86,8 +86,9 @@ export default function ForAgentsPage() {
             <code>{JSON.stringify(mcpConfig, null, 2)}</code>
           </pre>
           <p className="lb-doc-muted">
-            Not live yet: automatic OAuth connect cards in MCP clients, and PyPI/npm packages. The Python stdio server
-            (<Code>python3 -m librebase_mcp</Code>) runs only from a repo checkout and has a subset of the tools.
+            Not live yet: automatic OAuth connect cards in MCP clients, and PyPI/npm packages. The Python stdio bridge (
+            <Code>python3 -m librebase_mcp</Code>) runs only from a repo checkout, proxies the hosted server, and uses{" "}
+            <Code>LIBREBASE_MCP_URL</Code> plus optional <Code>LIBREBASE_MCP_TOKEN</Code> — never paste tokens into chat.
           </p>
           <p className="lb-doc-muted">
             Auth failures return an explicit <Code>cause</Code> (<Code>revoked</Code>, <Code>expired</Code>,{" "}

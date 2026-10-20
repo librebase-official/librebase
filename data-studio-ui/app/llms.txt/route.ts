@@ -48,7 +48,7 @@ Clients that let you set headers:
 Today the token has to be pasted into the client's header config (or held by the agent process); it should never be pasted into chat. An agent can also run the device flow itself: call \`auth_start\` / \`auth_poll\` against ${base}/api/mcp with no header, then use the token.
 
 ## Local stdio server (repo checkout only)
-\`python3 -m librebase_mcp\` works only from a checkout of the Librebase repository; it is not published on PyPI or npm. It exposes a subset of the hosted tools (no \`auth_*\`, no \`key_*\`) and needs a \`LIBREBASE_MCP_KEY\`. Prefer the hosted endpoint.
+\`python3 -m librebase_mcp\` works only from a checkout of the Librebase repository; it is not published on PyPI or npm. It exposes a subset of the hosted tools (no \`auth_*\`, no \`key_*\`). Set \`LIBREBASE_MCP_URL\` (default ${base}/api/mcp) and optional \`LIBREBASE_MCP_TOKEN\` (\`lb_mcp_*\` / \`lb_agt_*\` from device flow or Studio). Prefer the hosted endpoint.
 
 ## Tools (live hosted tools/list, 27)
 - \`org_whoami\` -- resolve the token's org (id, name, edition)
