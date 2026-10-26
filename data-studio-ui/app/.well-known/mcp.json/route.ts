@@ -30,6 +30,8 @@ export async function GET() {
       type: "stdio",
       command: "python3",
       args: ["-m", "librebase_mcp"],
+      note:
+        "Requires a Librebase repository checkout (mcp/ on PYTHONPATH). Not published on PyPI or npm yet.",
       env: {
         LIBREBASE_MCP_URL: `${SITE_URL}/api/mcp`,
         LIBREBASE_MCP_TOKEN: "lb_mcp_…",

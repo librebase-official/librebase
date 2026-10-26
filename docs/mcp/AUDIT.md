@@ -5,8 +5,8 @@
 | Surface | Transport | Audience | Tool count (approx.) |
 | --- | --- | --- | --- |
 | **Hosted** `data-studio-ui/app/api/mcp/route.ts` | Streamable HTTP `POST /api/mcp` | Production agents (Cursor remote MCP) | **22** |
-| **Python stdio bridge** `mcp/librebase_mcp` | `uvx librebase-mcp` / `python -m librebase_mcp` | Proxies hosted `tools/list` + `tools/call` | **same as hosted** |
-| **Node stdio bridge** `packages/mcp` | `npx @librebase/mcp` | Proxies hosted MCP | **same as hosted** |
+| **Python stdio bridge** `mcp/librebase_mcp` | `python3 -m librebase_mcp` from a **repo checkout** (PyPI `librebase-mcp` / `uvx` prep — not published yet) | Proxies hosted `tools/list` + `tools/call` | **same as hosted** |
+| **Node stdio bridge** `packages/mcp` | `node packages/mcp/src/server.js` from a **repo checkout** (`@librebase/mcp` on npm — not published yet) | Proxies hosted MCP | **same as hosted** |
 | **Node dev harness** `packages/mcp-dev-harness` (private) | stdio | Local dev, parity matrix, Supabase-shaped stubs | **30+** (different names) |
 
 **Canonical product API for agents:** hosted HTTP at `{SITE_URL}/api/mcp`, discovered via `GET /.well-known/mcp.json`.
@@ -35,7 +35,7 @@ KMS secrets (org-scoped key; values must not be echoed to the model):
 
 ## Stdio bridges
 
-`@librebase/mcp` and `librebase-mcp` are thin proxies — no local tool catalog. Auth: `LIBREBASE_MCP_TOKEN` or device flow (`auth_start` / `auth_poll`) via the hosted server.
+`packages/mcp` and `mcp/librebase_mcp` are thin proxies — no local tool catalog. Run them only from a Librebase repository checkout until LIB-150 publishes PyPI/npm packages. Auth: `LIBREBASE_MCP_TOKEN` (deprecated alias: `LIBREBASE_MCP_KEY`) or device flow (`auth_start` / `auth_poll`) via the hosted server.
 
 ## Auth & security (hosted)
 

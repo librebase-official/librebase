@@ -5,7 +5,7 @@
 Production agents should use:
 
 - **Hosted MCP:** `https://app.librebase.xyz/api/mcp`
-- **Stdio bridge:** `@librebase/mcp` (`npx -y @librebase/mcp`) or PyPI `librebase-mcp`
+- **Stdio bridge (repo checkout):** `node packages/mcp/src/server.js` or `python3 -m librebase_mcp` — npm/PyPI packages not published yet (LIB-150)
 
 ## Run
 
