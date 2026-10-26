@@ -1,0 +1,19 @@
+title = "Librebase gitleaks"
+
+[extend]
+useDefault = true
+
+# Console / agent / app bearer tokens (see tests/test_no_secrets_in_docs.py).
+[[rules]]
+id = "librebase-lb-key"
+description = "Librebase lb_mcp_, lb_agt_, or lb_app_ bearer token"
+regex = '''lb_(mcp|agt|app)_[A-Za-z0-9_-]{20,}'''
+
+[allowlist]
+description = "Obvious placeholders in docs and examples"
+regexTarget = "match"
+regexes = [
+  '''lb_(mcp|agt|app)_[xX]{8,}''',
+  '''lb_(mcp|agt|app)_YOUR_KEY''',
+  '''lb_(mcp|agt|app)_secret''',
+]
