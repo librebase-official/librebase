@@ -1,0 +1,20 @@
+name: mcp-conformance
+on:
+  workflow_call:
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mcp-conformance:
+    name: mcp-conformance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: "STUB — MCP conformance STANDARD C-01..C-42"
+        run: |
+          echo "::warning title=mcp-conformance stub::Wire to STANDARD MCP conformance suite (C-01 through C-42). Do not add ruleset required check until this job runs green on default branch."
+          exit 0
