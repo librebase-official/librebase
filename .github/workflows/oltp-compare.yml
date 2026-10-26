@@ -58,21 +58,7 @@ jobs:
         id: pin
         run: |
           set -euo pipefail
-          # Prefer table row: lidb | ... @ `SHA`
-          PIN="$(python3 - <<'PY'
-          import re
-          from pathlib import Path
-          text = Path("docs/li-dependency-pins.md").read_text(encoding="utf-8")
-          # Match "| lidb | ... @ `abcdef1` |"
-          m = re.search(r"\|\s*lidb\s*\|[^|]*@\s*`([0-9a-f]{7,40})`", text, re.I)
-          if not m:
-              # Fallback: any `lidb` line with @ `sha`
-              m = re.search(r"lidb[^\n]*@\s*`([0-9a-f]{7,40})`", text, re.I)
-          if not m:
-              raise SystemExit("could not parse lidb pin from docs/li-dependency-pins.md")
-          print(m.group(1))
-          PY
-          )"
+          PIN="$(python3 scripts/resolve-li-ci-pin.py lidb)"
           echo "sha=$PIN" >> "$GITHUB_OUTPUT"
           echo "Resolved lidb pin: $PIN"
 
@@ -83,7 +69,7 @@ jobs:
           repository: li-langverse/lidb
           ref: ${{ steps.pin.outputs.sha }}
           path: _deps/lidb
-          token: ${{ secrets.LIDB_CHECKOUT_TOKEN || github.token }}
+          fetch-depth: 1
         continue-on-error: true
 
       - name: Build lidb-engine (smoke)
@@ -226,18 +212,7 @@ jobs:
         id: lidb_pin
         run: |
           set -euo pipefail
-          PIN="$(python3 - <<'PY'
-          import re
-          from pathlib import Path
-          text = Path("docs/li-dependency-pins.md").read_text(encoding="utf-8")
-          m = re.search(r"\|\s*lidb\s*\|[^|]*@\s*`([0-9a-f]{7,40})`", text, re.I)
-          if not m:
-              m = re.search(r"lidb[^\n]*@\s*`([0-9a-f]{7,40})`", text, re.I)
-          if not m:
-              raise SystemExit("could not parse lidb pin from docs/li-dependency-pins.md")
-          print(m.group(1))
-          PY
-          )"
+          PIN="$(python3 scripts/resolve-li-ci-pin.py lidb)"
           echo "sha=$PIN" >> "$GITHUB_OUTPUT"
           echo "Resolved lidb pin: $PIN"
 
@@ -245,18 +220,7 @@ jobs:
         id: lis_pin
         run: |
           set -euo pipefail
-          PIN="$(python3 - <<'PY'
-          import re
-          from pathlib import Path
-          text = Path("docs/li-dependency-pins.md").read_text(encoding="utf-8")
-          m = re.search(r"\|\s*lis\s*\|[^|]*@\s*`([0-9a-f]{7,40})`", text, re.I)
-          if not m:
-              m = re.search(r"lis[^\n]*@\s*`([0-9a-f]{7,40})`", text, re.I)
-          if not m:
-              raise SystemExit("could not parse lis pin from docs/li-dependency-pins.md")
-          print(m.group(1))
-          PY
-          )"
+          PIN="$(python3 scripts/resolve-li-ci-pin.py lis)"
           echo "sha=$PIN" >> "$GITHUB_OUTPUT"
           echo "Resolved lis pin: $PIN"
 
@@ -267,7 +231,7 @@ jobs:
           repository: li-langverse/lidb
           ref: ${{ steps.lidb_pin.outputs.sha }}
           path: _deps/lidb
-          token: ${{ secrets.LIDB_CHECKOUT_TOKEN || github.token }}
+          fetch-depth: 1
         continue-on-error: true
 
       - name: Checkout lis at pin
@@ -277,7 +241,7 @@ jobs:
           repository: li-langverse/lis
           ref: ${{ steps.lis_pin.outputs.sha }}
           path: _deps/lis
-          token: ${{ secrets.LIDB_CHECKOUT_TOKEN || github.token }}
+          fetch-depth: 1
         continue-on-error: true
 
       - name: Build lidb-engine (smoke)
