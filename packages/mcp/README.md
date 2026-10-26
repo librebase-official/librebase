@@ -7,10 +7,14 @@ Stdio **bridge** to the hosted Librebase MCP server. Tool definitions always com
 
 Local Admin/parity tooling lives in **`@librebase/mcp-dev-harness`** (private, not published).
 
-## Install
+> **Packaging:** `@librebase/mcp` is not on npm yet. Use a **Librebase repo checkout** (paths below). `npx -y @librebase/mcp` will work after the first npm publish (LIB-150).
+
+## Local (from a repo checkout)
 
 ```bash
-npx -y @librebase/mcp
+cd packages/mcp
+npm install
+node src/server.js
 ```
 
 ## Cursor
@@ -21,8 +25,11 @@ npx -y @librebase/mcp
 {
   "mcpServers": {
     "librebase": {
-      "command": "npx",
-      "args": ["-y", "@librebase/mcp"]
+      "command": "node",
+      "args": ["/path/to/librebase/packages/mcp/src/server.js"],
+      "env": {
+        "LIBREBASE_MCP_URL": "https://app.librebase.xyz/api/mcp"
+      }
     }
   }
 }
@@ -34,22 +41,13 @@ Optional token (skip browser device flow):
 {
   "mcpServers": {
     "librebase": {
-      "command": "npx",
-      "args": ["-y", "@librebase/mcp"],
+      "command": "node",
+      "args": ["/path/to/librebase/packages/mcp/src/server.js"],
       "env": {
+        "LIBREBASE_MCP_URL": "https://app.librebase.xyz/api/mcp",
         "LIBREBASE_MCP_TOKEN": "lb_mcp_…"
       }
     }
-  }
-}
-```
-
-Custom endpoint:
-
-```json
-{
-  "env": {
-    "LIBREBASE_MCP_URL": "https://app.librebase.xyz/api/mcp"
   }
 }
 ```
@@ -63,8 +61,8 @@ Custom endpoint:
   "servers": {
     "librebase": {
       "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@librebase/mcp"]
+      "command": "node",
+      "args": ["/path/to/librebase/packages/mcp/src/server.js"]
     }
   }
 }
@@ -78,11 +76,17 @@ Custom endpoint:
 {
   "mcpServers": {
     "librebase": {
-      "command": "npx",
-      "args": ["-y", "@librebase/mcp"]
+      "command": "node",
+      "args": ["/path/to/librebase/packages/mcp/src/server.js"]
     }
   }
 }
+```
+
+## After npm publish (future)
+
+```bash
+npx -y @librebase/mcp
 ```
 
 ## Develop
