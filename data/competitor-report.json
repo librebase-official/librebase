@@ -113,7 +113,7 @@
   "mcp_audit_findings": {
     "date": "2026-08-28",
     "target": "https://app.librebase.xyz/api/mcp",
-    "key_tested": "lb_mcp_RLIiShwG6MdXL2_050H2YHDKYMXaTNbi-l6Z6dZxb5U (from HANDOFF.md)",
+    "key_tested": "<redacted> (from HANDOFF.md)",
     "key_status": "REVOKED \u2014 'Invalid or revoked MCP key' on every tool call",
     "critical_finding": "The MCP key documented in HANDOFF.md (test acct) is no longer valid. Every tool call with this key returns auth_error. An agent using the documented key cannot access the platform. This needs immediate remediation \u2014 either rotate/restore the key, or update HANDOFF.md with a valid key.",
     "tool_surface": {

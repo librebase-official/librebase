@@ -129,7 +129,7 @@ If a human generates an MCP key in the admin console and provides it to the agen
 - `project_list` → returns projects
 - etc.
 
-The new key `lb_mcp_QcGE05dxRzFfNlqcurUOjMblK2djcV-R4wxfsvA2fOg` works against the live endpoint.
+The new key `<redacted>` works against the live endpoint.
 
 ---
 
@@ -310,10 +310,10 @@ The new key `lb_mcp_QcGE05dxRzFfNlqcurUOjMblK2djcV-R4wxfsvA2fOg` works against t
 
 ### Blocker 3 (HIGH): MCP key from HANDOFF.md was revoked (now resolved — new key provided)
 
-- **What:** The MCP key documented in HANDOFF.md (`lb_mcp_RLIiShwG6MdXL2_050H2YHDKYMXaTNbi-l6Z6dZxb5U`) did not authenticate.
+- **What:** The MCP key documented in HANDOFF.md (`<redacted>`) did not authenticate.
 - **Where it was documented:** HANDOFF.md line 104, `docs/llms.txt` fallback stdio config, `docs/for-agents/page.tsx` fallback stdio config.
 - **Impact:** Any agent following the documented setup could not use the MCP endpoint.
-- **Status:** RESOLVED — new key `lb_mcp_QcGE05dxRzFfNlqcurUOjMblK2djcV-R4wxfsvA2fOg` generated and verified. `mcp/README.md` updated with the new key.
+- **Status:** RESOLVED — new key generated and verified (value not committed). `mcp/README.md` uses placeholder keys only.
 
 ### Blocker 4 (HIGH): Old `auth_start` tool only offered grok, and grok was not configured
 
@@ -376,7 +376,7 @@ The new key `lb_mcp_QcGE05dxRzFfNlqcurUOjMblK2djcV-R4wxfsvA2fOg` works against t
 - ✅ Rate limiting — kicks in at 30 req/min, returns 429.
 - ✅ GitHub OAuth on the admin console — redirects to github.com with valid client ID.
 - ✅ Google OAuth on the admin console — redirects to accounts.google.com with valid client ID.
-- ✅ New MCP key works — `lb_mcp_QcGE05dxRzFfNlqcurUOjMblK2djcV-R4wxfsvA2fOg` authenticates and returns org + projects + instances.
+- ✅ New MCP key works — `<redacted>` authenticates and returns org + projects + instances.
 
 ### What doesn't work on the live server right now
 
