@@ -52,6 +52,8 @@ COMPOSE_ENV_FILES = [
     "deploy/compose/compose.env",
 ]
 
+STUDIO_COMPOSE = "data-studio-ui/docker-compose.yml"
+
 # Python MCP serverInfo version
 MCP_PY = "mcp/librebase_mcp/__main__.py"
 MCP_PY_VERSION = "mcp/VERSION"
@@ -215,6 +217,22 @@ def patch_compose_env(path: Path, version: str) -> bool:
     return True
 
 
+def patch_studio_compose_default(path: Path, version: str) -> bool:
+    """Keep ${LIBREBASE_VERSION:-X.Y.Z} default in data-studio-ui/docker-compose.yml."""
+    if not path.exists():
+        return False
+    content = path.read_text()
+    new_content = re.sub(
+        r"(\$\{LIBREBASE_VERSION:-)\d+\.\d+\.\d+(\})",
+        f"\\g<1>{version}\\g<2>",
+        content,
+    )
+    if new_content == content:
+        return False
+    path.write_text(new_content)
+    return True
+
+
 def patch_layout_version(path: Path, version: str) -> bool:
     """Update the hardcoded LIBREBASE_VERSION const in layout.tsx."""
     if not path.exists():
@@ -285,6 +303,10 @@ def main() -> int:
         if patch_compose_env(repo / rel, version):
             print(f"  patched {rel}")
             patched += 1
+
+    if patch_studio_compose_default(repo / STUDIO_COMPOSE, version):
+        print(f"  patched {STUDIO_COMPOSE}")
+        patched += 1
 
     layout_tsx = repo / "data-studio-ui/app/layout.tsx"
     if patch_layout_version(layout_tsx, version):

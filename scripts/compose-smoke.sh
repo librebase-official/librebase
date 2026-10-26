@@ -129,8 +129,9 @@ assert_mcp_whoami() {
 
 ADMIN_JWT="$(openssl rand -hex 32)"
 KMS_ROLE="$(openssl rand -hex 32)"
+LIBREBASE_VERSION="$(cat "${ROOT}/VERSION")"
 {
-  echo "LIBREBASE_VERSION=0.1.38"
+  echo "LIBREBASE_VERSION=${LIBREBASE_VERSION}"
   echo "NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3005"
   echo "LIBREBASE_CONSOLE_URL=http://127.0.0.1:3005"
   echo "LIBREBASE_ADMIN_JWT_SECRET=${ADMIN_JWT}"
