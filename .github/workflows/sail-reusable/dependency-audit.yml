@@ -1,0 +1,22 @@
+name: sail / dependency-audit
+on:
+  workflow_call:
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-audit:
+    name: sail / dependency-audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install OSV-Scanner
+        run: |
+          curl -sSfL https://github.com/google/osv-scanner/releases/download/v1.9.2/osv-scanner_1.9.2_linux_amd64.tar.gz | tar -xz -C /usr/local/bin osv-scanner
+      - name: OSV scan
+        run: osv-scanner --recursive . || true

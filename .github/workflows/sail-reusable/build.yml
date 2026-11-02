@@ -1,0 +1,53 @@
+name: sail / build
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: Node.js version for JS/TS repos
+        required: false
+        type: string
+        default: "22"
+      working-directory:
+        description: Package root (use . for repo root)
+        required: false
+        type: string
+        default: "."
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+
+jobs:
+  build:
+    name: sail / build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        if: hashFiles(format('{0}/package.json', inputs.working-directory)) != ''
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: npm
+          cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+      - name: Node build
+        if: hashFiles(format('{0}/package.json', inputs.working-directory)) != ''
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install --no-audit --no-fund; fi
+          if npm run | grep -q " build"; then npm run build; else echo "No build script; skipped"; fi
+      - name: Rust build
+        if: hashFiles(format('{0}/Cargo.toml', inputs.working-directory)) != ''
+        run: cargo build --release
+      - uses: actions/setup-go@v5
+        if: hashFiles(format('{0}/go.mod', inputs.working-directory)) != ''
+        with:
+          go-version: "1.22"
+      - name: Go build
+        if: hashFiles(format('{0}/go.mod', inputs.working-directory)) != ''
+        run: go build ./...

@@ -1,0 +1,44 @@
+name: sail / license-check
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: Node.js version for JS/TS repos
+        required: false
+        type: string
+        default: "22"
+      working-directory:
+        description: Package root (use . for repo root)
+        required: false
+        type: string
+        default: "."
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+
+jobs:
+  license-check:
+    name: sail / license-check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Node license allowlist
+        if: hashFiles(format('{0}/package.json', inputs.working-directory)) != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+      - name: Check licenses
+        if: hashFiles(format('{0}/package.json', inputs.working-directory)) != ''
+        run: |
+          npx --yes license-checker --production --summary             --onlyAllow "MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;0BSD;Unlicense;CC0-1.0;BlueOak-1.0.0"
+      - name: Non-Node repos
+        if: hashFiles(format('{0}/package.json', inputs.working-directory)) != '' == false
+        run: echo "No package.json; license-check skipped (add REUSE or go-licenses as needed)"
