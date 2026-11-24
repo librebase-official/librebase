@@ -62,15 +62,12 @@ jobs:
           echo "sha=$PIN" >> "$GITHUB_OUTPUT"
           echo "Resolved lidb pin: $PIN"
 
-      - name: Checkout lidb at pin
+      - name: Checkout lidb at pin (GitLab)
         id: lidb
-        uses: actions/checkout@v4
-        with:
-          repository: li-langverse/lidb
-          ref: ${{ steps.pin.outputs.sha }}
-          path: _deps/lidb
-          fetch-depth: 1
         continue-on-error: true
+        env:
+          LIDB_PIN: ${{ steps.pin.outputs.sha }}
+        run: bash scripts/checkout-li-gitlab.sh lidb "$LIDB_PIN" _deps/lidb
 
       - name: Build lidb-engine (smoke)
         id: build
@@ -103,8 +100,12 @@ jobs:
             allow_skip=true
           fi
 
-          if [ "${LIDB_CHECKOUT_OK}" != "success" ] || [ "${LIDB_BUILD_OK}" != "success" ] || [ ! -f "${LIDB_ENGINE:-}" ]; then
-            export SKIP_REASON="lidb checkout/build failed or lidb-engine missing (set LIDB_CHECKOUT_TOKEN if private; pin=${{ steps.pin.outputs.sha }})"
+          if [ "${LIDB_CHECKOUT_OK}" != "success" ]; then
+            export SKIP_REASON="lidb GitLab checkout failed (pin=${{ steps.pin.outputs.sha }})"
+          elif [ "${LIDB_BUILD_OK}" != "success" ] || [ ! -f "${LIDB_ENGINE:-}" ]; then
+            export SKIP_REASON="lidb build failed or lidb-engine binary missing (pin=${{ steps.pin.outputs.sha }})"
+          fi
+          if [ -n "${SKIP_REASON:-}" ]; then
             export SKIP_PIN="${{ steps.pin.outputs.sha }}"
             echo "ERROR: $SKIP_REASON"
             python3 - <<'PY'
@@ -224,25 +225,19 @@ jobs:
           echo "sha=$PIN" >> "$GITHUB_OUTPUT"
           echo "Resolved lis pin: $PIN"
 
-      - name: Checkout lidb at pin
+      - name: Checkout lidb at pin (GitLab)
         id: lidb
-        uses: actions/checkout@v4
-        with:
-          repository: li-langverse/lidb
-          ref: ${{ steps.lidb_pin.outputs.sha }}
-          path: _deps/lidb
-          fetch-depth: 1
         continue-on-error: true
+        env:
+          LIDB_PIN: ${{ steps.lidb_pin.outputs.sha }}
+        run: bash scripts/checkout-li-gitlab.sh lidb "$LIDB_PIN" _deps/lidb
 
-      - name: Checkout lis at pin
+      - name: Checkout lis at pin (GitLab)
         id: lis
-        uses: actions/checkout@v4
-        with:
-          repository: li-langverse/lis
-          ref: ${{ steps.lis_pin.outputs.sha }}
-          path: _deps/lis
-          fetch-depth: 1
         continue-on-error: true
+        env:
+          LIS_PIN: ${{ steps.lis_pin.outputs.sha }}
+        run: bash scripts/checkout-li-gitlab.sh lis "$LIS_PIN" _deps/lis
 
       - name: Build lidb-engine (smoke)
         id: build

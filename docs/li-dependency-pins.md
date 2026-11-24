@@ -6,12 +6,12 @@
 
 ## CI pins (GitHub Actions — full 40-char commit SHAs)
 
-Public mirrors: `li-langverse/lidb`, `li-langverse/lis` on GitHub. OLTP and HTTP compare workflows parse this table only (short SHAs fail `actions/checkout`).
+Source of truth: GitLab `https://gitlab.lilangverse.xyz/li-langverse/{lidb,lis}.git` (anonymous fetch). OLTP and HTTP compare workflows resolve pins from this table via `scripts/resolve-li-ci-pin.py` and `scripts/checkout-li-gitlab.sh` (short SHAs fail checkout).
 
 | Dep | Repository | Pin |
 |-----|------------|-----|
-| **lidb** | `li-langverse/lidb` | `675db587e0cc29955f3971fbad8a0df1bc7a01ba` |
-| **lis** | `li-langverse/lis` | `274773779d80a564872dc5cf73c3a1e1d5325348` |
+| **lidb** | `li-langverse/lidb` | `4abcb2ce394b169d728b06d66f5b2d4ca9b8a1e1` |
+| **lis** | `li-langverse/lis` | `a79627511eeaa421b3ce668d16d41d19cc6662a4` |
 
 ## Sibling paths (dev / harness)
 
@@ -29,9 +29,9 @@ Public mirrors: `li-langverse/lidb`, `li-langverse/lis` on GitHub. OLTP and HTTP
 | Dep | Absolute path | Git (branch @ SHA) | Notes |
 |-----|---------------|--------------------|-------|
 | **lic** | `C:\Users\Julian\Documents\Programming\li\lic-parity-w0` | `main` @ `1a466a6` | Fresh GitLab clone (replaces broken `lic` junction/worktrees). Wave 0 gate: stage0 build + `li-tests/self_host_parity/run_token_parity.sh` |
-| lidb | `C:\Users\Julian\Documents\Programming\li\lidb` | `main` @ `675db587e0cc29955f3971fbad8a0df1bc7a01ba` | Same as **CI pins** (OLTP hard gate) |
-| lidb (PH-DB-7 footprint) | same checkout | `main` @ `675db587e0cc29955f3971fbad8a0df1bc7a01ba` | Lean RSS gate + `lidb-bench --profile librebase-lean` |
-| lis | `C:\Users\Julian\Documents\Programming\li\lis` | `main` @ `274773779d80a564872dc5cf73c3a1e1d5325348` | Same as **CI pins** (HTTP compare when enabled) |
+| lidb | `C:\Users\Julian\Documents\Programming\li\lidb` | `main` @ `4abcb2ce394b169d728b06d66f5b2d4ca9b8a1e1` | Same as **CI pins** (OLTP hard gate) |
+| lidb (PH-DB-7 footprint) | same checkout | `main` @ `4abcb2ce394b169d728b06d66f5b2d4ca9b8a1e1` | Lean RSS gate + `lidb-bench --profile librebase-lean` |
+| lis | `C:\Users\Julian\Documents\Programming\li\lis` | `main` @ `a79627511eeaa421b3ce668d16d41d19cc6662a4` | Same as **CI pins** (HTTP compare when enabled) |
 | li-oauth | `C:\Users\Julian\Documents\Programming\li-oauth` | `main` @ `92501c6` | OAuth scaffold |
 | li-edge | `C:\Users\Julian\Documents\Programming\li-edge` | `main` @ `7ed02b5` | Merged to main: `scripts/invoke.py` real runtime (Wave 7); set `LI_EDGE_ROOT` or sibling auto-discover |
 | li-httpd | `C:\Users\Julian\Documents\Programming\li\li-httpd` | `main` @ `3b7472e` | Compose stub: `deploy/edge/librebase.httpd.toml` |
@@ -42,8 +42,8 @@ Public mirrors: `li-langverse/lidb`, `li-langverse/lis` on GitHub. OLTP and HTTP
 
 | Check | Where | Pin / gate |
 |-------|-------|------------|
-| OLTP SQL hard gate | [`.github/workflows/oltp-compare.yml`](../.github/workflows/oltp-compare.yml) | lidb @ **`675db587e0cc29955f3971fbad8a0df1bc7a01ba`** (`engine_execjson`, `check_gate.py`) |
-| Lean RSS ≤ 64 MB steady | lidb `scripts/smoke.sh` + `lidb-bench --profile librebase-lean` | lidb @ **`675db587e0cc29955f3971fbad8a0df1bc7a01ba`** (PH-DB-7 merged to main) |
+| OLTP SQL hard gate | [`.github/workflows/oltp-compare.yml`](../.github/workflows/oltp-compare.yml) | lidb @ **`4abcb2ce394b169d728b06d66f5b2d4ca9b8a1e1`** (`engine_execjson`, `check_gate.py`) |
+| Lean RSS ≤ 64 MB steady | lidb `scripts/smoke.sh` + `lidb-bench --profile librebase-lean` | lidb @ **`4abcb2ce394b169d728b06d66f5b2d4ca9b8a1e1`** (PH-DB-7 merged to main) |
 | Honesty doc | [lidb `docs/footprint.md`](https://gitlab.lilangverse.xyz/li-langverse/lidb/-/blob/main/docs/footprint.md) | Targets are **aims** until PH-DB-7 CI publishes green RSS rows |
 | Marketing unlock | [`benchmarks/oltp-compare/MARKETING_UNLOCK.md`](../benchmarks/oltp-compare/MARKETING_UNLOCK.md) | Requires measured RSS **or** keep “64 MB aim” copy forever |
 

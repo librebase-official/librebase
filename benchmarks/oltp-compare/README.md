@@ -62,8 +62,8 @@ Env knobs: `OLTP_RATIO_MAX` (default `1.2`), `OLTP_SOFT_RATIO_MAX` (default `1.5
 
 Workflow: [`.github/workflows/oltp-compare.yml`](../../.github/workflows/oltp-compare.yml) (`workflow_dispatch` / nightly).
 
-1. Parse lidb SHA from [`docs/li-dependency-pins.md`](../../docs/li-dependency-pins.md) (currently **`d7f5cb5`** sorted_tree).
-2. Checkout `li-langverse/lidb` at that pin (`LIDB_CHECKOUT_TOKEN` when the mirror is private).
+1. Parse lidb/lis SHAs from [`docs/li-dependency-pins.md`](../../docs/li-dependency-pins.md).
+2. Anonymous GitLab fetch via `scripts/checkout-li-gitlab.sh` at those pins.
 3. Build smoke `lidb-engine` (`cmake` → `build/smoke`).
 4. Run `--mode engine_execjson --scenarios core,range_scan_name_prefix` + `check_gate.py` — **fail** on skip, wrong mode, `index_unsupported`, or `point_lookup_with_index` / `range_scan_name_prefix` ratio breach (> `OLTP_RATIO_MAX`, default 1.2).
 5. Upload `latest.json` with `if: always()`.
